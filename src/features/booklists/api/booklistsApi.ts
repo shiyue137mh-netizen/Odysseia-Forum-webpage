@@ -6,6 +6,7 @@ import type {
   BooklistItem,
   BooklistItemAddInput,
   BooklistItemUpdateInput,
+  BooklistPublishRequest,
   BooklistUpdateResponse,
   PaginatedResponse,
 } from "@/entities/booklist/types";
@@ -135,6 +136,17 @@ export const booklistsApi = {
 
   remove: async (booklistId: number | string): Promise<void> => {
     await apiClient.delete(`/booklist/delete/${booklistId}`);
+  },
+
+  publish: async (
+    booklistId: number | string,
+    payload: BooklistPublishRequest,
+  ): Promise<void> => {
+    await apiClient.post(`/booklist/publish/${booklistId}`, payload);
+  },
+
+  unpublish: async (booklistId: number | string): Promise<void> => {
+    await apiClient.delete(`/booklist/publish/${booklistId}`);
   },
 
   listItems: async (

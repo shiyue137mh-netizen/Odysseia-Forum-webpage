@@ -526,7 +526,16 @@ export interface paths {
          *     - cover_image_url: 封面图 URL（可选）
          *     - is_public: 是否公开，默认为 True
          *     - is_anonymous: 是否匿名，默认为 False
-         *     - display_type: 展示方式，1=加入时间倒序，2=display_order，默认为1
+         *     - default_sort_method: 默认排序方式，默认为 join_time。可选值:
+         *         - "hot": Reddit Hot 算法 — score = log10(max(1, reaction_count)) + created_at_epoch / time_decay
+         *         - "created_at": 按发帖时间排序
+         *         - "reaction_count": 按点赞数排序
+         *         - "reply_count": 按回复数排序
+         *         - "collection_count": 按收藏数排序
+         *         - "last_active_at": 按最后发言时间排序
+         *         - "join_time": 按加入书单时间排序 (默认)
+         *         - "display_order": 按作者自定义排序权重排序
+         *     - default_sort_order: 默认排序顺序，默认为 desc
          */
         post: operations["create_booklist_v1_booklist_save_post"];
         delete?: never;
@@ -631,7 +640,16 @@ export interface paths {
          *     - cover_image_url: 新封面图URL（可选）
          *     - is_public: 是否公开（可选）
          *     - is_anonymous: 是否匿名（可选）
-         *     - display_type: 展示方式（可选）
+         *     - default_sort_method: 默认排序方式（可选）。可选值:
+         *         - "hot": Reddit Hot 算法 — score = log10(max(1, reaction_count)) + created_at_epoch / time_decay
+         *         - "created_at": 按发帖时间排序
+         *         - "reaction_count": 按点赞数排序
+         *         - "reply_count": 按回复数排序
+         *         - "collection_count": 按收藏数排序
+         *         - "last_active_at": 按最后发言时间排序
+         *         - "join_time": 按加入书单时间排序
+         *         - "display_order": 按作者自定义排序权重排序
+         *     - default_sort_order: 默认排序顺序（可选）
          */
         put: operations["update_booklist_v1_booklist_update__booklist_id__put"];
         post?: never;
@@ -658,6 +676,33 @@ export interface paths {
          *     - booklist_id: 书单ID
          */
         delete: operations["delete_booklist_v1_booklist_delete__booklist_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/booklist/publish/{booklist_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 发布书单到 Discord
+         * @description 发布（或更新）书单到指定的 Discord 讨论帖。
+         *
+         *     若该书单已发布到同一帖，则更新既有消息（幂等）。
+         *     接口立即返回，后台异步调用 discord-featured-bot 完成实际发布。
+         */
+        post: operations["publish_booklist_v1_booklist_publish__booklist_id__post"];
+        /**
+         * 取消发布书单
+         * @description 取消发布书单，删除所有发布记录。
+         */
+        delete: operations["unpublish_booklist_v1_booklist_publish__booklist_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -712,6 +757,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/booklist/item/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 批量修改帖子在多个书单中的存在性
+         * @description 批量修改/覆盖一个帖子在用户拥有的多个书单中的存在性。
+         *
+         *     - **thread_id**: 帖子ID
+         *     - **scope_booklist_ids**: 操作范围（必须全是当前用户拥有的书单）
+         *     - **target_booklist_ids**: 操作后应包含该帖子的书单（必须是 scope 的子集）
+         */
+        post: operations["sync_thread_in_booklists_v1_booklist_item_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/booklist/item/list/page/{booklist_id}": {
         parameters: {
             query?: never;
@@ -726,6 +795,8 @@ export interface paths {
          *     - booklist_id: 书单ID
          *     - limit: 返回数量
          *     - offset: 偏移量
+         *     - sort_method: 排序方式（可选），覆盖书单默认排序
+         *     - sort_order: 排序顺序（可选），覆盖书单默认排序
          */
         get: operations["get_booklist_items_v1_booklist_item_list_page__booklist_id__get"];
         put?: never;
@@ -1318,7 +1389,7 @@ export interface components {
         };
         /**
          * BannerApplicationRequest
-         * @description Banner申请请求
+         * @description Banner申请请求模型
          */
         BannerApplicationRequest: {
             /**
@@ -1443,14 +1514,13 @@ export interface components {
             title: string;
             /**
              * Created At
-             * Format: date-time
              * @description 创建时间
              */
             created_at: string;
         };
         /**
          * BooklistDetail
-         * @description 书单详情
+         * @description 书单详情（继承摘要，附加发布信息）
          */
         BooklistDetail: {
             /**
@@ -1507,10 +1577,17 @@ export interface components {
              */
             tournament_channel_id?: string | null;
             /**
-             * Display Type
-             * @description 展示方式: 1=加入时间倒序, 2=作者自定义排序(display_order)
+             * Default Sort Method
+             * @description 默认排序方式: hot, created_at, reaction_count, reply_count, collection_count, last_active_at, join_time, display_order
+             * @default join_time
              */
-            display_type: number;
+            default_sort_method: string;
+            /**
+             * Default Sort Order
+             * @description 默认排序顺序: asc, desc
+             * @default desc
+             */
+            default_sort_order: string;
             /**
              * Item Count
              * @description 书单内帖子数量
@@ -1527,14 +1604,18 @@ export interface components {
              */
             view_count: number;
             /**
+             * Publish Status
+             * @description 发布状态: 0-未发布 1-待处理 2-成功 3-失败
+             * @default 0
+             */
+            publish_status: number;
+            /**
              * Created At
-             * Format: date-time
              * @description 创建时间
              */
             created_at: string;
             /**
              * Updated At
-             * Format: date-time
              * @description 最后更新时间
              */
             updated_at: string;
@@ -1544,6 +1625,14 @@ export interface components {
              * @default false
              */
             collected_flag: boolean;
+            /**
+             * Is Marked
+             * @description 是否被标记帖子命中 (仅当请求传入mark_thread_id时有效)
+             * @default false
+             */
+            is_marked: boolean;
+            /** @description 发布信息（仅已发布书单返回） */
+            publish_info?: components["schemas"]["BooklistPublishInfo-Output"] | null;
         };
         /**
          * BooklistItemAddData
@@ -1637,7 +1726,6 @@ export interface components {
             author: components["schemas"]["AuthorDetail-Output"];
             /**
              * Created At
-             * Format: date-time
              * @description 帖子创建时间
              */
             created_at: string;
@@ -1715,7 +1803,6 @@ export interface components {
             display_order: number;
             /**
              * Added At
-             * Format: date-time
              * @description 加入书单的时间
              */
             added_at: string;
@@ -1758,6 +1845,137 @@ export interface components {
             thread_ids: (number | string)[];
         };
         /**
+         * BooklistItemsSyncRequest
+         * @description 批量同步帖子在多个书单中的存在性
+         */
+        BooklistItemsSyncRequest: {
+            /**
+             * Thread Id
+             * @description 帖子ID
+             */
+            thread_id: number;
+            /**
+             * Scope Booklist Ids
+             * @description 操作范围：要检查的书单ID列表
+             */
+            scope_booklist_ids: number[];
+            /**
+             * Target Booklist Ids
+             * @description 修改后应包含该帖子的书单ID列表（必须是 scope 的子集）
+             */
+            target_booklist_ids: number[];
+        };
+        /**
+         * BooklistItemsSyncResponse
+         * @description 批量同步结果
+         */
+        BooklistItemsSyncResponse: {
+            /**
+             * Thread Id
+             * @description 帖子ID
+             */
+            thread_id: number;
+            /**
+             * Added To Booklist Ids
+             * @description 新增了帖子的书单ID
+             */
+            added_to_booklist_ids?: number[];
+            /**
+             * Removed From Booklist Ids
+             * @description 移除了帖子的书单ID
+             */
+            removed_from_booklist_ids?: number[];
+            /**
+             * Unchanged Booklist Ids
+             * @description 未变更的书单ID
+             */
+            unchanged_booklist_ids?: number[];
+        };
+        /**
+         * BooklistPublishInfo
+         * @description 书单发布信息（仅详情接口返回）
+         */
+        "BooklistPublishInfo-Input": {
+            /**
+             * Guild Id
+             * @description Discord 服务器 ID
+             */
+            guild_id: number;
+            /**
+             * Thread Id
+             * @description Discord 讨论帖 ID
+             */
+            thread_id: number;
+            /**
+             * Thread Url
+             * @description Discord 讨论帖完整 URL
+             */
+            thread_url: string;
+            /**
+             * Message Id
+             * @description 已发布的 Discord 消息 ID
+             */
+            message_id?: number | null;
+            /**
+             * Message Url
+             * @description 已发布的 Discord 消息 URL
+             */
+            message_url?: string | null;
+            /**
+             * Published At
+             * Format: date-time
+             * @description 发布时间
+             */
+            published_at: string;
+        };
+        /**
+         * BooklistPublishInfo
+         * @description 书单发布信息（仅详情接口返回）
+         */
+        "BooklistPublishInfo-Output": {
+            /**
+             * Guild Id
+             * @description Discord 服务器 ID
+             */
+            guild_id: string | null;
+            /**
+             * Thread Id
+             * @description Discord 讨论帖 ID
+             */
+            thread_id: string | null;
+            /**
+             * Thread Url
+             * @description Discord 讨论帖完整 URL
+             */
+            thread_url: string;
+            /**
+             * Message Id
+             * @description 已发布的 Discord 消息 ID
+             */
+            message_id?: string | null;
+            /**
+             * Message Url
+             * @description 已发布的 Discord 消息 URL
+             */
+            message_url?: string | null;
+            /**
+             * Published At
+             * @description 发布时间
+             */
+            published_at: string;
+        };
+        /**
+         * BooklistPublishRequest
+         * @description 书单发布请求
+         */
+        BooklistPublishRequest: {
+            /**
+             * Thread Url
+             * @description Discord 讨论帖完整 URL
+             */
+            thread_url: string;
+        };
+        /**
          * BooklistSuggestion
          * @description 搜索建议中的书单模型
          */
@@ -1777,6 +1995,236 @@ export interface components {
              * @description 帖子数量
              */
             item_count: number;
+        };
+        /**
+         * BooklistSummary
+         * @description 书单摘要（列表用）
+         */
+        "BooklistSummary-Input": {
+            /**
+             * Id
+             * @description 书单ID
+             */
+            id: number;
+            /**
+             * Owner Id
+             * @description 创建者用户ID
+             */
+            owner_id: number;
+            /**
+             * Title
+             * @description 书单标题
+             */
+            title: string;
+            /**
+             * Description
+             * @description 书单简介
+             */
+            description?: string | null;
+            /**
+             * Cover Image Url
+             * @description 书单封面图URL
+             */
+            cover_image_url?: string | null;
+            /** @description 创建者信息 */
+            author?: components["schemas"]["AuthorDetail-Input"] | null;
+            /**
+             * Is Public
+             * @description 是否公开
+             */
+            is_public: boolean;
+            /**
+             * Is Anonymous
+             * @description 是否匿名
+             */
+            is_anonymous: boolean;
+            /**
+             * Is Default
+             * @description 是否为用户的默认书单
+             */
+            is_default: boolean;
+            /**
+             * Is Tournament
+             * @description 是否为赛事书单
+             * @default false
+             */
+            is_tournament: boolean;
+            /**
+             * Tournament Channel Id
+             * @description 赛事频道ID
+             */
+            tournament_channel_id?: number | null;
+            /**
+             * Default Sort Method
+             * @description 默认排序方式: hot, created_at, reaction_count, reply_count, collection_count, last_active_at, join_time, display_order
+             * @default join_time
+             */
+            default_sort_method: string;
+            /**
+             * Default Sort Order
+             * @description 默认排序顺序: asc, desc
+             * @default desc
+             */
+            default_sort_order: string;
+            /**
+             * Item Count
+             * @description 书单内帖子数量
+             */
+            item_count: number;
+            /**
+             * Collection Count
+             * @description 被收藏次数
+             */
+            collection_count: number;
+            /**
+             * View Count
+             * @description 被浏览次数
+             */
+            view_count: number;
+            /**
+             * Publish Status
+             * @description 发布状态: 0-未发布 1-待处理 2-成功 3-失败
+             * @default 0
+             */
+            publish_status: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 创建时间
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             * @description 最后更新时间
+             */
+            updated_at: string;
+            /**
+             * Collected Flag
+             * @description 当前用户是否收藏了该书单
+             * @default false
+             */
+            collected_flag: boolean;
+            /**
+             * Is Marked
+             * @description 是否被标记帖子命中 (仅当请求传入mark_thread_id时有效)
+             * @default false
+             */
+            is_marked: boolean;
+        };
+        /**
+         * BooklistSummary
+         * @description 书单摘要（列表用）
+         */
+        "BooklistSummary-Output": {
+            /**
+             * Id
+             * @description 书单ID
+             */
+            id: number;
+            /**
+             * Owner Id
+             * @description 创建者用户ID
+             */
+            owner_id: string;
+            /**
+             * Title
+             * @description 书单标题
+             */
+            title: string;
+            /**
+             * Description
+             * @description 书单简介
+             */
+            description?: string | null;
+            /**
+             * Cover Image Url
+             * @description 书单封面图URL
+             */
+            cover_image_url?: string | null;
+            /** @description 创建者信息 */
+            author?: components["schemas"]["AuthorDetail-Output"] | null;
+            /**
+             * Is Public
+             * @description 是否公开
+             */
+            is_public: boolean;
+            /**
+             * Is Anonymous
+             * @description 是否匿名
+             */
+            is_anonymous: boolean;
+            /**
+             * Is Default
+             * @description 是否为用户的默认书单
+             */
+            is_default: boolean;
+            /**
+             * Is Tournament
+             * @description 是否为赛事书单
+             * @default false
+             */
+            is_tournament: boolean;
+            /**
+             * Tournament Channel Id
+             * @description 赛事频道ID
+             */
+            tournament_channel_id?: string | null;
+            /**
+             * Default Sort Method
+             * @description 默认排序方式: hot, created_at, reaction_count, reply_count, collection_count, last_active_at, join_time, display_order
+             * @default join_time
+             */
+            default_sort_method: string;
+            /**
+             * Default Sort Order
+             * @description 默认排序顺序: asc, desc
+             * @default desc
+             */
+            default_sort_order: string;
+            /**
+             * Item Count
+             * @description 书单内帖子数量
+             */
+            item_count: number;
+            /**
+             * Collection Count
+             * @description 被收藏次数
+             */
+            collection_count: number;
+            /**
+             * View Count
+             * @description 被浏览次数
+             */
+            view_count: number;
+            /**
+             * Publish Status
+             * @description 发布状态: 0-未发布 1-待处理 2-成功 3-失败
+             * @default 0
+             */
+            publish_status: number;
+            /**
+             * Created At
+             * @description 创建时间
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * @description 最后更新时间
+             */
+            updated_at: string;
+            /**
+             * Collected Flag
+             * @description 当前用户是否收藏了该书单
+             * @default false
+             */
+            collected_flag: boolean;
+            /**
+             * Is Marked
+             * @description 是否被标记帖子命中 (仅当请求传入mark_thread_id时有效)
+             * @default false
+             */
+            is_marked: boolean;
         };
         /**
          * BooklistUpdateResponse
@@ -2237,6 +2685,12 @@ export interface components {
              * @default false
              */
             has_update: boolean;
+            /**
+             * Active Flag
+             * @description 是否为当前关注（True=当前关注，False=过去关注）
+             * @default true
+             */
+            active_flag: boolean;
         };
         /**
          * FollowedThreadResponse
@@ -2270,7 +2724,6 @@ export interface components {
             author?: components["schemas"]["AuthorDetail-Output"] | null;
             /**
              * Created At
-             * Format: date-time
              * @description 帖子创建时间
              */
             created_at: string;
@@ -2350,7 +2803,6 @@ export interface components {
             latest_update_link?: string | null;
             /**
              * Followed At
-             * Format: date-time
              * @description 用户关注该帖子的时间
              */
             followed_at: string;
@@ -2365,6 +2817,12 @@ export interface components {
              * @default false
              */
             has_update: boolean;
+            /**
+             * Active Flag
+             * @description 是否为当前关注（True=当前关注，False=过去关注）
+             * @default true
+             */
+            active_flag: boolean;
         };
         /**
          * FollowsListResponse
@@ -2501,6 +2959,26 @@ export interface components {
             /** Results */
             results: components["schemas"]["BooklistItemDetail"][];
         };
+        /** PaginatedResponse[BooklistSummary] */
+        PaginatedResponse_BooklistSummary_: {
+            /**
+             * Total
+             * @description 符合条件的总项目数
+             */
+            total: number;
+            /**
+             * Limit
+             * @description 本次查询每页的项目数
+             */
+            limit: number;
+            /**
+             * Offset
+             * @description 本次查询的偏移量
+             */
+            offset: number;
+            /** Results */
+            results: components["schemas"]["BooklistSummary-Output"][];
+        };
         /**
          * SearchRequest
          * @description 帖子搜索的 API 请求模型
@@ -2598,13 +3076,13 @@ export interface components {
             active_before?: string | null;
             /**
              * Reaction Count Range
-             * @description 点赞数范围 (例如: '>10', '5-20')
+             * @description 点赞数范围, 例如: [0, 10000000)
              * @default [0, 10000000)
              */
             reaction_count_range: string;
             /**
              * Reply Count Range
-             * @description 回复数范围 (例如: '>=5')
+             * @description 回复数范围, 例如: [0, 10000000)
              * @default [0, 10000000)
              */
             reply_count_range: string;
@@ -2872,7 +3350,6 @@ export interface components {
             author?: components["schemas"]["AuthorDetail-Output"] | null;
             /**
              * Created At
-             * Format: date-time
              * @description 帖子创建时间
              */
             created_at: string;
@@ -4157,7 +4634,15 @@ export interface operations {
                 cover_image_url?: string | null;
                 is_public?: boolean;
                 is_anonymous?: boolean;
-                display_type?: number;
+                /**
+                 * @deprecated
+                 * @description 已废弃，请使用 default_sort_method + default_sort_order
+                 */
+                display_type?: number | null;
+                /** @description 默认排序方式 */
+                default_sort_method?: string | null;
+                /** @description 默认排序顺序 */
+                default_sort_order?: string | null;
             };
             header?: never;
             path?: never;
@@ -4219,7 +4704,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_BooklistDetail_"];
+                    "application/json": components["schemas"]["PaginatedResponse_BooklistSummary_"];
                 };
             };
             /** @description Validation Error */
@@ -4252,6 +4737,8 @@ export interface operations {
                 limit?: number;
                 /** @description 结果的偏移量，从0开始 */
                 offset?: number;
+                /** @description 标记帖子ID：传入后为每个书单标注是否包含该帖子（不过滤结果集），配合is_marked字段使用 */
+                mark_thread_id?: number | null;
             };
             header?: never;
             path?: never;
@@ -4265,7 +4752,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedResponse_BooklistDetail_"];
+                    "application/json": components["schemas"]["PaginatedResponse_BooklistSummary_"];
                 };
             };
             /** @description Validation Error */
@@ -4318,7 +4805,15 @@ export interface operations {
                 cover_image_url?: string | null;
                 is_public?: boolean | null;
                 is_anonymous?: boolean | null;
+                /**
+                 * @deprecated
+                 * @description 已废弃，请使用 default_sort_method + default_sort_order
+                 */
                 display_type?: number | null;
+                /** @description 默认排序方式 */
+                default_sort_method?: string | null;
+                /** @description 默认排序顺序 */
+                default_sort_order?: string | null;
             };
             header?: never;
             path: {
@@ -4349,6 +4844,74 @@ export interface operations {
         };
     };
     delete_booklist_v1_booklist_delete__booklist_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booklist_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_booklist_v1_booklist_publish__booklist_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booklist_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BooklistPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unpublish_booklist_v1_booklist_publish__booklist_id__delete: {
         parameters: {
             query?: never;
             header?: never;
@@ -4449,6 +5012,39 @@ export interface operations {
             };
         };
     };
+    sync_thread_in_booklists_v1_booklist_item_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BooklistItemsSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BooklistItemsSyncResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_booklist_items_v1_booklist_item_list_page__booklist_id__get: {
         parameters: {
             query?: {
@@ -4456,6 +5052,10 @@ export interface operations {
                 limit?: number;
                 /** @description 结果的偏移量，从0开始 */
                 offset?: number;
+                /** @description 排序方式: hot(热门-Reddit Hot算法), created_at(发帖时间), reaction_count(点赞数), reply_count(回复数), collection_count(收藏数), last_active_at(最后发言时间), join_time(加入书单时间), display_order(作者自定义排序)。不传则使用书单默认排序 */
+                sort_method?: string | null;
+                /** @description 排序顺序: asc(升序) 或 desc(降序)。不传则使用书单默认排序 */
+                sort_order?: string | null;
             };
             header?: never;
             path: {
