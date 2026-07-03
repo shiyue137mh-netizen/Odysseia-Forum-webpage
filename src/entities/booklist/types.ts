@@ -6,6 +6,10 @@ export type BooklistCreateResponse =
   components["schemas"]["BooklistCreateResponse"];
 export type BooklistUpdateResponse =
   components["schemas"]["BooklistUpdateResponse"];
+export type BooklistPublishRequest =
+  components["schemas"]["BooklistPublishRequest"];
+export type BooklistPublishInfo =
+  components["schemas"]["BooklistPublishInfo-Output"];
 
 export interface PaginatedResponse<T> {
   total: number;

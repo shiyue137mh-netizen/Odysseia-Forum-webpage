@@ -4,13 +4,18 @@ import {
   ArrowLeft,
   BookOpen,
   Edit3,
+  ExternalLink,
   LayoutGrid,
+  Link2,
+  LoaderCircle,
+  MoreHorizontal,
   Plus,
   RefreshCw,
   Rows3,
   Share2,
   Star,
   Trash2,
+  Unlink,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,8 +28,10 @@ import {
   useBooklistDetail,
   useBooklistItems,
   useDeleteBooklist,
+  usePublishBooklist,
   useRemoveBooklistItems,
   useToggleBooklistCollection,
+  useUnpublishBooklist,
   useUpdateBooklist,
   useUpdateBooklistItem,
 } from "@/features/booklists/hooks/useBooklistsData";
@@ -32,14 +39,20 @@ import type { BooklistItem } from "@/entities/booklist/types";
 import { BooklistFormModal } from "@/features/booklists/components/BooklistFormModal";
 import { AddThreadsToBooklistModal } from "@/features/booklists/components/AddThreadsToBooklistModal";
 import { BooklistItemEditorModal } from "@/features/booklists/components/BooklistItemEditorModal";
+import { BooklistPublishModal } from "@/features/booklists/components/BooklistPublishModal";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import {
   buildBooklistShareText,
   copyTextToClipboard,
 } from "@/shared/lib/shareText";
 import { ShareTextDialog } from "@/shared/ui/ShareTextDialog";
-import { useCardGridClass, useSettings } from "@/shared/hooks/useSettings";
+import {
+  useCardGridClass,
+  useOpenModeSetting,
+  useSettings,
+} from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { resolveDiscordPublishedMessageUrl } from "@/shared/lib/discord";
 
 function toThread(item: BooklistItem): Thread {
   return {
@@ -68,6 +81,7 @@ export function BooklistDetailPage() {
   const { user } = useAuth();
   const { openPreview } = usePreviewThread();
   const { settings } = useSettings();
+  const openMode = useOpenModeSetting();
   const [layoutMode, setLayoutMode] = useLayoutPreference(
     "booklist-detail",
     settings.layoutMode,
@@ -77,6 +91,9 @@ export function BooklistDetailPage() {
   const booklistId = String(id || "").trim();
   const [showEdit, setShowEdit] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
+  const [clearPublishUrl, setClearPublishUrl] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [editingItem, setEditingItem] = useState<BooklistItem | null>(null);
   const [shareText, setShareText] = useState<string | null>(null);
 
@@ -96,6 +113,10 @@ export function BooklistDetailPage() {
     setShowEdit(false),
   );
   const deleteMutation = useDeleteBooklist(() => navigate("/booklists"));
+  const publishMutation = usePublishBooklist(booklistId, () =>
+    setShowPublish(false),
+  );
+  const unpublishMutation = useUnpublishBooklist(booklistId);
   const collectMutation = useToggleBooklistCollection();
   const addItemsMutation = useAddBooklistItems(booklistId, () =>
     setShowAdd(false),
@@ -104,6 +125,27 @@ export function BooklistDetailPage() {
   const updateItemMutation = useUpdateBooklistItem(booklistId, () =>
     setEditingItem(null),
   );
+
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!showMore) return;
+
+    const closeMenu = (event: MouseEvent) => {
+      if (!moreMenuRef.current?.contains(event.target as Node)) {
+        setShowMore(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowMore(false);
+    };
+
+    document.addEventListener("mousedown", closeMenu);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showMore]);
 
   // ─── 无限滚动触发器 ──────────────────────────────────────
   // 必须放在提前返回之前，遵循 Hooks 规则
@@ -154,6 +196,52 @@ export function BooklistDetailPage() {
   }
 
   const booklist = detailQuery.data;
+  const publishStatus = Number(booklist.publish_status);
+  const publishInfo = booklist.publish_info;
+  const webDiscussionUrl =
+    publishInfo?.message_url || publishInfo?.thread_url || null;
+  const discussionUrl = resolveDiscordPublishedMessageUrl({
+    openMode,
+    webUrl: webDiscussionUrl,
+    guildId: publishInfo?.guild_id,
+    threadId: publishInfo?.thread_id,
+    messageId: publishInfo?.message_id,
+  });
+  const usesDiscordAppLink = discussionUrl?.startsWith("discord://") ?? false;
+  const discussionLinkTarget = usesDiscordAppLink ? undefined : "_blank";
+  const discussionLinkRel = usesDiscordAppLink
+    ? undefined
+    : "noopener noreferrer";
+  const discussionLinkTitle = usesDiscordAppLink
+    ? "用 Discord App 打开"
+    : "在 Discord 网页端打开";
+  const canUnpublish = publishStatus !== 0;
+
+  const publishStatusLabel =
+    publishStatus === 1
+      ? "关联中"
+      : publishStatus === 3
+        ? "关联失败"
+        : ![0, 2].includes(publishStatus)
+          ? "关联状态未知"
+          : null;
+
+  const openPublishModal = (clearExistingUrl = false) => {
+    setShowMore(false);
+    setClearPublishUrl(clearExistingUrl);
+    setShowPublish(true);
+  };
+
+  const confirmUnpublish = () => {
+    setShowMore(false);
+    if (
+      !window.confirm(
+        "确认解除讨论帖关联？这会删除发布记录，但不会删除书单。",
+      )
+    )
+      return;
+    unpublishMutation.mutate();
+  };
 
   const handleCopyShareText = async () => {
     if (!shareText) return;
@@ -170,8 +258,8 @@ export function BooklistDetailPage() {
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-col gap-6">
           <div className="min-w-0 flex flex-col gap-4 border-b border-(--od-border) pb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
                 <button
                   type="button"
                   onClick={() => navigate(-1)}
@@ -181,8 +269,8 @@ export function BooklistDetailPage() {
                   <ArrowLeft className="h-4 w-4" />
                 </button>
 
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-(--od-text-primary)">
+                <div className="min-w-0">
+                  <h1 className="break-words text-2xl font-bold tracking-tight text-(--od-text-primary)">
                     {booklist.title}
                   </h1>
                   <p className="mt-1 whitespace-pre-line text-sm text-(--od-text-secondary)">
@@ -198,114 +286,233 @@ export function BooklistDetailPage() {
                       {booklist.collection_count}
                     </span>
                     <span>{booklist.is_public ? "公开书单" : "私有书单"}</span>
+                    {publishStatus === 2 && discussionUrl && (
+                      <a
+                        href={discussionUrl}
+                        target={discussionLinkTarget}
+                        rel={discussionLinkRel}
+                        title={discussionLinkTitle}
+                        className="inline-flex items-center gap-1 font-medium text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        讨论帖
+                      </a>
+                    )}
+                    {isOwner && publishStatusLabel && (
+                      <span
+                        className={`inline-flex items-center gap-1 font-medium ${
+                          publishStatus === 3
+                            ? "text-(--od-error)"
+                            : "text-(--od-accent)"
+                        }`}
+                      >
+                        {publishStatus === 1 && (
+                          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        )}
+                        {publishStatusLabel}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setLayoutMode("list")}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      layoutMode === "list"
-                        ? "bg-(--od-accent) text-white"
-                        : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                    }`}
-                    aria-label="切换到列表展示"
-                    title="列表展示"
-                  >
-                    <Rows3 className="h-3.5 w-3.5" />
-                    列表
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLayoutMode("grid")}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      layoutMode === "grid"
-                        ? "bg-(--od-accent) text-white"
-                        : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                    }`}
-                    aria-label="切换到网格展示"
-                    title="网格展示"
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                    网格
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => detailQuery.refetch()}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  刷新
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShareText(buildBooklistShareText(booklist))}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
-                >
-                  <Share2 className="h-3.5 w-3.5" />
-                  分享
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    collectMutation.mutate({
-                      id: Number(booklistId),
-                      collected: Boolean(booklist.collected_flag),
-                    })
-                  }
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold transition-colors hover:text-(--od-accent) ${
-                    booklist.collected_flag
-                      ? "text-(--od-accent)"
-                      : "text-(--od-text-secondary)"
-                  }`}
-                >
-                  <Star
-                    className={`h-3.5 w-3.5 ${booklist.collected_flag ? "fill-current" : ""}`}
-                  />
-                  {booklist.collected_flag ? "已收藏" : "收藏书单"}
-                </button>
-
+              <div className="flex w-full min-w-0 flex-col gap-2 lg:w-auto lg:items-end">
                 {isOwner && (
-                  <>
+                  <div className="order-1 flex w-full flex-wrap items-center justify-start gap-1 lg:w-auto lg:justify-end">
+                  {publishStatus !== 2 ? (
                     <button
                       type="button"
-                      onClick={() => setShowEdit(true)}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
+                      onClick={() => openPublishModal()}
+                      disabled={publishStatus === 1 || publishMutation.isPending}
+                      className="inline-flex h-9 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary) disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Edit3 className="h-3.5 w-3.5" />
-                      编辑
+                      {publishStatus === 1 ? (
+                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Link2 className="h-3.5 w-3.5" />
+                      )}
+                      {publishStatus === 1
+                        ? "关联中…"
+                        : publishStatus === 3
+                          ? "重试关联"
+                          : "关联讨论帖"}
                     </button>
+                  ) : null}
+
+                  {isOwner && (
                     <button
                       type="button"
                       onClick={() => setShowAdd(true)}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs font-semibold text-(--od-accent) transition-colors hover:text-(--od-accent-hover)"
+                      className="inline-flex h-9 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       添加帖子
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          !window.confirm(`确认删除书单「${booklist.title}」？`)
-                        )
-                          return;
-                        deleteMutation.mutate(Number(booklistId));
-                      }}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-error) transition-colors hover:text-(--od-error)"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      删除
-                    </button>
-                  </>
+                  )}
+
+                  {isOwner && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowEdit(true)}
+                        className="inline-flex h-9 items-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        编辑
+                      </button>
+                      <div ref={moreMenuRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowMore((value) => !value)}
+                          className="inline-flex h-9 items-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
+                          aria-haspopup="menu"
+                          aria-expanded={showMore}
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                          更多
+                        </button>
+
+                        {showMore && (
+                          <div
+                            role="menu"
+                            className="od-floating-panel-solid absolute right-0 top-11 z-30 w-44 overflow-hidden rounded-xl border border-(--od-border) p-1.5 shadow-xl"
+                          >
+                            {publishStatus === 2 && (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => openPublishModal(true)}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-text-primary) transition-colors hover:bg-(--od-bg-secondary)"
+                              >
+                                <Link2 className="h-4 w-4" />
+                                更换讨论帖
+                              </button>
+                            )}
+                            <div className="my-1 border-t border-(--od-border)" />
+                            {canUnpublish && (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={confirmUnpublish}
+                                disabled={unpublishMutation.isPending}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-error) transition-colors hover:bg-[color-mix(in_srgb,var(--od-error)_10%,transparent)] disabled:opacity-50"
+                              >
+                                {unpublishMutation.isPending ? (
+                                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Unlink className="h-4 w-4" />
+                                )}
+                                {unpublishMutation.isPending
+                                  ? "解除中…"
+                                  : "解除关联"}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setShowMore(false);
+                                if (
+                                  !window.confirm(
+                                    `确认删除书单「${booklist.title}」？`,
+                                  )
+                                )
+                                  return;
+                                deleteMutation.mutate(Number(booklistId));
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-error) transition-colors hover:bg-[color-mix(in_srgb,var(--od-error)_10%,transparent)]"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              删除书单
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  </div>
                 )}
+
+                <div className="order-2 flex w-full min-w-0 items-center gap-1 lg:w-auto lg:justify-end">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+                      <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
+                        <button
+                          type="button"
+                          onClick={() => setLayoutMode("list")}
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                            layoutMode === "list"
+                              ? "bg-(--od-accent) text-white"
+                              : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                          }`}
+                          aria-label="切换到列表展示"
+                          title="列表展示"
+                        >
+                          <Rows3 className="h-3.5 w-3.5" />
+                          列表
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLayoutMode("grid")}
+                          className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                            layoutMode === "grid"
+                              ? "bg-(--od-accent) text-white"
+                              : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                          }`}
+                          aria-label="切换到网格展示"
+                          title="网格展示"
+                        >
+                          <LayoutGrid className="h-3.5 w-3.5" />
+                          网格
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => detailQuery.refetch()}
+                        className="inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
+                      >
+                        <RefreshCw
+                          className={`h-3.5 w-3.5 ${detailQuery.isFetching ? "animate-spin" : ""}`}
+                        />
+                        刷新
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShareText(buildBooklistShareText(booklist))
+                        }
+                        className="inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
+                      >
+                        <Share2 className="h-3.5 w-3.5" />
+                        分享
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={collectMutation.isPending}
+                        onClick={() =>
+                          collectMutation.mutate({
+                            id: Number(booklistId),
+                            collected: Boolean(booklist.collected_flag),
+                          })
+                        }
+                        className={`inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs font-semibold transition-colors hover:text-(--od-accent) disabled:opacity-50 ${
+                          booklist.collected_flag
+                            ? "text-(--od-accent)"
+                            : "text-(--od-text-secondary)"
+                        }`}
+                      >
+                        <Star
+                          className={`h-3.5 w-3.5 ${booklist.collected_flag ? "fill-current" : ""}`}
+                        />
+                        {booklist.collected_flag ? "已收藏" : "收藏"}
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             </div>
           </div>
@@ -398,6 +605,16 @@ export function BooklistDetailPage() {
         submitting={addItemsMutation.isPending}
         onClose={() => setShowAdd(false)}
         onSubmit={(items) => addItemsMutation.mutate(items)}
+      />
+
+      <BooklistPublishModal
+        isOpen={showPublish}
+        initialUrl={clearPublishUrl ? null : publishInfo?.thread_url}
+        submitting={publishMutation.isPending}
+        onClose={() => setShowPublish(false)}
+        onSubmit={(threadUrl) =>
+          publishMutation.mutate({ thread_url: threadUrl })
+        }
       />
 
       <BooklistItemEditorModal

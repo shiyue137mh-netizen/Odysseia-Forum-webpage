@@ -10,6 +10,7 @@ import type {
   BooklistFormInput,
   BooklistItemAddInput,
   BooklistItemUpdateInput,
+  BooklistPublishRequest,
 } from "@/entities/booklist/types";
 import {
   extractErrorMessage,
@@ -100,6 +101,9 @@ export function useBooklistDetail(booklistId: number | string) {
     queryFn: () => booklistsApi.getDetail(booklistId),
     enabled: /^\d+$/.test(String(booklistId)),
     staleTime: 60 * 1000,
+    refetchInterval: (query) =>
+      query.state.data?.publish_status === 1 ? 3_000 : false,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -206,6 +210,39 @@ export function useDeleteBooklist(onSuccess?: () => void) {
       onSuccess?.();
     },
     onError: (error) => notifyError(extractErrorMessage(error, "删除书单失败")),
+  });
+}
+
+export function usePublishBooklist(
+  booklistId: number | string,
+  onSuccess?: () => void,
+) {
+  const invalidateBooklists = useInvalidateBooklists();
+
+  return useMutation({
+    mutationFn: (payload: BooklistPublishRequest) =>
+      booklistsApi.publish(booklistId, payload),
+    onSuccess: () => {
+      notifySuccess("讨论帖关联请求已提交");
+      invalidateBooklists(booklistId);
+      onSuccess?.();
+    },
+    onError: (error) =>
+      notifyError(extractErrorMessage(error, "关联讨论帖失败")),
+  });
+}
+
+export function useUnpublishBooklist(booklistId: number | string) {
+  const invalidateBooklists = useInvalidateBooklists();
+
+  return useMutation({
+    mutationFn: () => booklistsApi.unpublish(booklistId),
+    onSuccess: () => {
+      notifySuccess("已解除讨论帖关联");
+      invalidateBooklists(booklistId);
+    },
+    onError: (error) =>
+      notifyError(extractErrorMessage(error, "解除讨论帖关联失败")),
   });
 }
 

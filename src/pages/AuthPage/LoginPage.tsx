@@ -105,7 +105,7 @@ export function LoginPage() {
     }
 
     // 真实环境：跳转到后端 OAuth 登录接口
-    const loginPath = '/auth/login';
+    const loginPath = import.meta.env.DEV ? '/auth/login-dev' : '/auth/login';
     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://forum.shimmerday.top';
     const finalUrl = `${backendUrl}/v1${loginPath}`;
 

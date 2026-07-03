@@ -36,6 +36,7 @@ interface DiscordThreadLinkOptions {
     // Forum post/thread links use threadId as the route channel segment; this is the parent channel id.
     channelId?: string | null;
     threadId: string;
+    messageId?: string | null;
 }
 
 export type DiscordOpenMode = 'app' | 'web';
@@ -56,18 +57,42 @@ function resolveDiscordLinkSegments({ guildId, threadId }: DiscordThreadLinkOpti
 
 export function buildDiscordWebThreadUrl(options: DiscordThreadLinkOptions): string {
     const { guildId, threadId } = resolveDiscordLinkSegments(options);
-    return `${DISCORD_WEB_BASE}/channels/${guildId}/${threadId}`;
+    const messagePath = options.messageId ? `/${options.messageId}` : '';
+    return `${DISCORD_WEB_BASE}/channels/${guildId}/${threadId}${messagePath}`;
 }
 
 export function buildDiscordAppThreadUrl(options: DiscordThreadLinkOptions): string {
     const { guildId, threadId } = resolveDiscordLinkSegments(options);
-    return `discord://-/channels/${guildId}/${threadId}`;
+    const messagePath = options.messageId ? `/${options.messageId}` : '';
+    return `discord://-/channels/${guildId}/${threadId}${messagePath}`;
 }
 
 export function buildDiscordThreadUrl(options: DiscordThreadLinkOptions, openMode: DiscordOpenMode): string {
     return openMode === 'app'
         ? buildDiscordAppThreadUrl(options)
         : buildDiscordWebThreadUrl(options);
+}
+
+interface DiscordPublishedMessageLinkOptions {
+    openMode: DiscordOpenMode;
+    webUrl?: string | null;
+    guildId?: string | null;
+    threadId?: string | null;
+    messageId?: string | null;
+}
+
+export function resolveDiscordPublishedMessageUrl({
+    openMode,
+    webUrl,
+    guildId,
+    threadId,
+    messageId,
+}: DiscordPublishedMessageLinkOptions): string | null {
+    if (openMode === 'app' && guildId && threadId) {
+        return buildDiscordAppThreadUrl({ guildId, threadId, messageId });
+    }
+
+    return webUrl || null;
 }
 
 function resolveDiscordChannelSegments({ guildId, channelId }: DiscordChannelLinkOptions) {
