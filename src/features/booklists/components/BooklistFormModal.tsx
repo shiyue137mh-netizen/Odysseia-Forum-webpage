@@ -32,6 +32,17 @@ interface BooklistFormModalProps {
   onSubmit: (payload: BooklistFormInput) => void;
 }
 
+function getDisplayTypeFromSort(booklist?: Booklist | null): 1 | 2 {
+  if (
+    booklist?.default_sort_method === 'display_order' &&
+    booklist.default_sort_order === 'asc'
+  ) {
+    return 2;
+  }
+
+  return 1;
+}
+
 export function BooklistFormModal({
   isOpen,
   initialValue,
@@ -66,7 +77,7 @@ export function BooklistFormModal({
       description: initialValue?.description ?? '',
       cover_image_url: initialValue?.cover_image_url ?? '',
       is_public: initialValue?.is_public ?? true,
-      display_type: initialValue?.display_type ?? 1,
+      display_type: getDisplayTypeFromSort(initialValue),
     });
   }, [initialValue, isOpen, reset]);
 
