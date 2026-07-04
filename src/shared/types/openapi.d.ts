@@ -773,6 +773,7 @@ export interface paths {
          *     - **thread_id**: 帖子ID
          *     - **scope_booklist_ids**: 操作范围（必须全是当前用户拥有的书单）
          *     - **target_booklist_ids**: 操作后应包含该帖子的书单（必须是 scope 的子集）
+         *     - **comment**: 应用于目标书单项的推荐语（可选）
          */
         post: operations["sync_thread_in_booklists_v1_booklist_item_sync_post"];
         delete?: never;
@@ -1845,31 +1846,10 @@ export interface components {
             thread_ids: (number | string)[];
         };
         /**
-         * BooklistItemsSyncRequest
-         * @description 批量同步帖子在多个书单中的存在性
+         * BooklistItemsSyncDTO
+         * @description 批量同步书单项的结果。
          */
-        BooklistItemsSyncRequest: {
-            /**
-             * Thread Id
-             * @description 帖子ID
-             */
-            thread_id: number;
-            /**
-             * Scope Booklist Ids
-             * @description 操作范围：要检查的书单ID列表
-             */
-            scope_booklist_ids: number[];
-            /**
-             * Target Booklist Ids
-             * @description 修改后应包含该帖子的书单ID列表（必须是 scope 的子集）
-             */
-            target_booklist_ids: number[];
-        };
-        /**
-         * BooklistItemsSyncResponse
-         * @description 批量同步结果
-         */
-        BooklistItemsSyncResponse: {
+        BooklistItemsSyncDTO: {
             /**
              * Thread Id
              * @description 帖子ID
@@ -1890,6 +1870,32 @@ export interface components {
              * @description 未变更的书单ID
              */
             unchanged_booklist_ids?: number[];
+        };
+        /**
+         * BooklistItemsSyncRequest
+         * @description 批量同步帖子在多个书单中的存在性
+         */
+        BooklistItemsSyncRequest: {
+            /**
+             * Thread Id
+             * @description 帖子ID
+             */
+            thread_id: number;
+            /**
+             * Scope Booklist Ids
+             * @description 操作范围：要检查的书单ID列表
+             */
+            scope_booklist_ids: number[];
+            /**
+             * Target Booklist Ids
+             * @description 修改后应包含该帖子的书单ID列表（必须是 scope 的子集）
+             */
+            target_booklist_ids: number[];
+            /**
+             * Comment
+             * @description 推荐语/备注
+             */
+            comment?: string | null;
         };
         /**
          * BooklistPublishInfo
@@ -5031,7 +5037,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BooklistItemsSyncResponse"];
+                    "application/json": components["schemas"]["BooklistItemsSyncDTO"];
                 };
             };
             /** @description Validation Error */

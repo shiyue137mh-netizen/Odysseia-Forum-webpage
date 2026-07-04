@@ -6,6 +6,8 @@ import type {
   BooklistItem,
   BooklistItemAddInput,
   BooklistItemUpdateInput,
+  BooklistItemsSyncInput,
+  BooklistItemsSyncResponse,
   BooklistPublishRequest,
   BooklistUpdateResponse,
   PaginatedResponse,
@@ -32,6 +34,7 @@ interface MyBooklistListRequest {
   isTournament?: boolean;
   collectByCurrentUser?: boolean;
   createByCurrentUser?: boolean;
+  markThreadId?: string;
 }
 
 function toPageParams(pageIndex = 0, pageSize = 12) {
@@ -79,6 +82,7 @@ export const booklistsApi = {
           is_tournament: params.isTournament,
           collect_by_current_user: params.collectByCurrentUser,
           create_by_current_user: params.createByCurrentUser,
+          mark_thread_id: params.markThreadId,
           sort_method:
             params.sortMethod ?? (params.collectByCurrentUser ? 6 : 4),
           sort_order: params.sortOrder ?? "desc",
@@ -151,7 +155,11 @@ export const booklistsApi = {
 
   listItems: async (
     booklistId: number | string,
-    params: { limit?: number; offset?: number; exclude_thread_ids?: string[] } = {}
+    params: {
+      limit?: number;
+      offset?: number;
+      exclude_thread_ids?: string[];
+    } = {},
   ): Promise<PaginatedResponse<BooklistItem>> => {
     const response = await apiClient.get<PaginatedResponse<BooklistItem>>(
       `/booklist/item/list/page/${booklistId}`,
@@ -171,6 +179,16 @@ export const booklistsApi = {
     items: BooklistItemAddInput[],
   ): Promise<void> => {
     await apiClient.post(`/booklist/item/add/${booklistId}`, { items });
+  },
+
+  syncItems: async (
+    payload: BooklistItemsSyncInput,
+  ): Promise<BooklistItemsSyncResponse> => {
+    const response = await apiClient.post<BooklistItemsSyncResponse>(
+      "/booklist/item/sync",
+      payload,
+    );
+    return response.data;
   },
 
   removeItems: async (
