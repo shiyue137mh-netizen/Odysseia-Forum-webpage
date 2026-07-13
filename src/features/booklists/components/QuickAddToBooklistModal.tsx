@@ -26,9 +26,15 @@ export function QuickAddToBooklistModal({
   onClose,
 }: QuickAddToBooklistModalProps) {
   const queryClient = useQueryClient();
-  const myBooklistsQuery = useMyBooklistsList();
-  const [selectedBooklistId, setSelectedBooklistId] = useState<number | null>(
-    null,
+  const myBooklistsQuery = useMyBooklistsList({
+    markThreadId: threadId,
+    enabled: isOpen && /^\d+$/.test(threadId),
+  });
+  const [selectedBooklistIds, setSelectedBooklistIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [initialBooklistIds, setInitialBooklistIds] = useState<Set<number>>(
+    new Set(),
   );
   const [comment, setComment] = useState("");
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -40,32 +46,56 @@ export function QuickAddToBooklistModal({
       dialogRef.current?.close();
       return;
     }
-    setComment(""); // Reset on open
-    if (myBooklists.length > 0) {
-      setSelectedBooklistId(myBooklists[0].id);
-    } else {
-      setSelectedBooklistId(null);
-    }
-
     if (dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal();
     }
-  }, [isOpen, myBooklists]);
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !myBooklistsQuery.data) return;
+    const markedIds = new Set(
+      (myBooklistsQuery.data.results || [])
+        .filter((booklist) => booklist.is_marked)
+        .map((booklist) => booklist.id),
+    );
+    setSelectedBooklistIds(markedIds);
+    setInitialBooklistIds(new Set(markedIds));
+    setComment("");
+  }, [isOpen, myBooklistsQuery.data]);
 
   const canSubmit = useMemo(() => {
-    return /^\d+$/.test(threadId) && typeof selectedBooklistId === "number";
-  }, [selectedBooklistId, threadId]);
+    if (!/^\d+$/.test(threadId) || !myBooklistsQuery.isSuccess) return false;
+    const selectionChanged =
+      selectedBooklistIds.size !== initialBooklistIds.size ||
+      [...selectedBooklistIds].some((id) => !initialBooklistIds.has(id));
+    return (
+      selectionChanged ||
+      (selectedBooklistIds.size > 0 && comment.trim().length > 0)
+    );
+  }, [
+    comment,
+    initialBooklistIds,
+    myBooklistsQuery.isSuccess,
+    selectedBooklistIds,
+    threadId,
+  ]);
 
-  const addMutation = useMutation({
-    mutationFn: async (booklistId: number) => {
-      await booklistsApi.addItems(booklistId, [
-        { thread_id: threadId, comment: comment.trim() || undefined },
-      ]);
-      return booklistId;
-    },
-    onSuccess: (booklistId) => {
-      const target = myBooklists.find((item) => item.id === booklistId);
-      notifySuccess(`已加入书单「${target?.title || booklistId}」`);
+  const syncMutation = useMutation({
+    mutationFn: () =>
+      booklistsApi.syncItems({
+        thread_id: threadId,
+        scope_booklist_ids: myBooklists.map((booklist) => booklist.id),
+        target_booklist_ids: [...selectedBooklistIds],
+        comment: comment.trim() || undefined,
+      }),
+    onSuccess: (result) => {
+      const added = result.added_to_booklist_ids?.length || 0;
+      const removed = result.removed_from_booklist_ids?.length || 0;
+      const changes = [
+        added > 0 ? `加入 ${added} 个书单` : null,
+        removed > 0 ? `移出 ${removed} 个书单` : null,
+      ].filter(Boolean);
+      notifySuccess(changes.length > 0 ? changes.join("，") : "书单内容已更新");
       queryClient.invalidateQueries({ queryKey: booklistKeys.all });
       onClose();
     },
@@ -124,6 +154,19 @@ export function QuickAddToBooklistModal({
               <Loader2 className="h-4 w-4 animate-spin" />
               正在加载你的书单...
             </div>
+          ) : myBooklistsQuery.isError ? (
+            <div className="space-y-3 text-sm text-(--od-error)">
+              <p>
+                {extractErrorMessage(myBooklistsQuery.error, "加载书单失败")}
+              </p>
+              <button
+                type="button"
+                onClick={() => myBooklistsQuery.refetch()}
+                className="rounded-lg border border-(--od-border) px-3 py-2 text-(--od-text-secondary) hover:bg-(--od-bg-secondary)"
+              >
+                重新加载
+              </button>
+            </div>
           ) : myBooklists.length === 0 ? (
             <p className="text-sm text-(--od-text-secondary)">
               你还没有创建书单，先去书单页新建一个吧。
@@ -135,16 +178,22 @@ export function QuickAddToBooklistModal({
                   <label
                     key={booklist.id}
                     className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
-                      selectedBooklistId === booklist.id
+                      selectedBooklistIds.has(booklist.id)
                         ? "border-(--od-accent) bg-(--od-accent)/8"
                         : "border-(--od-border) hover:border-(--od-border-strong)"
                     }`}
                   >
                     <input
-                      type="radio"
-                      name="quick-add-booklist"
-                      checked={selectedBooklistId === booklist.id}
-                      onChange={() => setSelectedBooklistId(booklist.id)}
+                      type="checkbox"
+                      checked={selectedBooklistIds.has(booklist.id)}
+                      onChange={() => {
+                        setSelectedBooklistIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(booklist.id)) next.delete(booklist.id);
+                          else next.add(booklist.id);
+                          return next;
+                        });
+                      }}
                       className="mt-1"
                     />
                     <span className="min-w-0">
@@ -162,12 +211,12 @@ export function QuickAddToBooklistModal({
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-(--od-text-secondary)">
-                  推荐语 (可选)
+                  推荐语（可选）
                 </label>
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="说点为什么想收藏这个帖子吧..."
+                  placeholder="填写后会应用到所有勾选的书单..."
                   className="w-full min-h-[80px] rounded-lg border border-(--od-border) bg-(--od-surface-input) p-3 text-sm text-(--od-text-primary) outline-hidden focus:border-(--od-accent) transition-colors"
                 />
               </div>
@@ -184,24 +233,23 @@ export function QuickAddToBooklistModal({
             </button>
             <button
               type="button"
-              disabled={!canSubmit || addMutation.isPending}
+              disabled={!canSubmit || syncMutation.isPending}
               onClick={() => {
-                if (!selectedBooklistId) return;
-                addMutation.mutate(selectedBooklistId);
+                syncMutation.mutate();
               }}
               className="inline-flex items-center gap-2 rounded-lg bg-(--od-accent) px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--od-accent-hover) disabled:opacity-60"
             >
-              {addMutation.isPending ? (
+              {syncMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <BookmarkPlus className="h-4 w-4" />
               )}
-              加入书单
+              保存书单
             </button>
           </div>
         </div>
       </div>
     </dialog>,
-    document.body
+    document.body,
   );
 }

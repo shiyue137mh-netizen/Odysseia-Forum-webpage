@@ -1,4 +1,9 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { booklistsApi } from "@/features/booklists/api/booklistsApi";
 import {
@@ -48,16 +53,27 @@ export function useBooklistsList(params: {
   });
 }
 
-export function useMyBooklistsList() {
+export function useMyBooklistsList(
+  options: {
+    markThreadId?: string;
+    enabled?: boolean;
+  } = {},
+) {
   return useQuery({
-    queryKey: [...booklistKeys.mineLists(), "mine"],
+    queryKey: [
+      ...booklistKeys.mineLists(),
+      "mine",
+      { markThreadId: options.markThreadId },
+    ],
     queryFn: () =>
       booklistsApi.listMine({
         createByCurrentUser: true,
         pageIndex: 0,
         pageSize: 18,
         sortMethod: 5,
+        markThreadId: options.markThreadId,
       }),
+    enabled: options.enabled ?? true,
     staleTime: 60 * 1000,
   });
 }
@@ -127,7 +143,6 @@ export function useBooklistItems(booklistId: number | string) {
   });
 }
 
-
 function useInvalidateBooklists() {
   const queryClient = useQueryClient();
 
@@ -156,7 +171,9 @@ export function useToggleBooklistCollection() {
 
   return useMutation({
     mutationFn: ({ id, collected }: { id: number; collected: boolean }) =>
-      collected ? booklistsApi.uncollect([String(id)]) : booklistsApi.collect([String(id)]),
+      collected
+        ? booklistsApi.uncollect([String(id)])
+        : booklistsApi.collect([String(id)]),
     onSuccess: (_, variables) => {
       invalidateBooklists(variables.id);
     },

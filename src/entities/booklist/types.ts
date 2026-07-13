@@ -48,3 +48,18 @@ export interface BooklistItemUpdateInput {
   display_order?: number;
   tournament_participated_at?: string | null;
 }
+
+export interface BooklistItemsSyncInput {
+  // Discord Snowflake IDs must stay strings in the browser to avoid precision loss.
+  thread_id: string;
+  scope_booklist_ids: number[];
+  target_booklist_ids: number[];
+  comment?: string;
+}
+
+export interface BooklistItemsSyncResponse {
+  thread_id: string | number;
+  added_to_booklist_ids?: number[];
+  removed_from_booklist_ids?: number[];
+  unchanged_booklist_ids?: number[];
+}
