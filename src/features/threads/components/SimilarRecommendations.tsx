@@ -1,14 +1,13 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'motion/react';
-import { Sparkles } from 'lucide-react';
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "motion/react";
+import { Sparkles } from "lucide-react";
 
-import { ThreadCard } from '@/entities/thread/ThreadCard';
-import { ThreadCardSkeleton } from '@/entities/thread/ThreadCardSkeleton';
-import type { Thread } from '@/entities/thread/types';
-import { searchApi } from '@/features/search/api/searchApi';
-import { searchKeys } from '@/features/search/lib/queryKeys';
-import { usePreviewStore } from '@/features/search/store/previewStore';
+import type { Thread } from "@/entities/thread/types";
+import { searchApi } from "@/features/search/api/searchApi";
+import { searchKeys } from "@/features/search/lib/queryKeys";
+import { usePreviewStore } from "@/features/search/store/previewStore";
+import { CompactThreadCard } from "@/widgets/content-display/ContentDisplayCards";
 
 interface SimilarRecommendationsProps {
   currentThreadId: string;
@@ -17,17 +16,22 @@ interface SimilarRecommendationsProps {
 export function SimilarRecommendations({
   currentThreadId,
 }: SimilarRecommendationsProps) {
-  const setPreviewThreadId = usePreviewStore((state) => state.setPreviewThreadId);
+  const setPreviewThreadId = usePreviewStore(
+    (state) => state.setPreviewThreadId,
+  );
 
   const { data, isLoading } = useQuery({
-    queryKey: [...searchKeys.thread(currentThreadId), 'similar'],
+    queryKey: [...searchKeys.thread(currentThreadId), "similar"],
     queryFn: () => searchApi.getSimilarThreads(currentThreadId, 6),
     enabled: !!currentThreadId,
     staleTime: 5 * 60 * 1000,
   });
 
   const threads = useMemo(
-    () => ((data?.results || []) as Thread[]).filter((thread) => thread.thread_id !== currentThreadId),
+    () =>
+      ((data?.results || []) as Thread[]).filter(
+        (thread) => thread.thread_id !== currentThreadId,
+      ),
     [currentThreadId, data?.results],
   );
 
@@ -36,11 +40,16 @@ export function SimilarRecommendations({
       <div className="mt-12 border-t border-(--od-shell-line) pt-8">
         <div className="mb-6 flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-(--od-accent)" />
-          <h3 className="text-lg font-bold text-(--od-text-primary)">相似推荐</h3>
+          <h3 className="text-lg font-bold text-(--od-text-primary)">
+            相似推荐
+          </h3>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <ThreadCardSkeleton key={i} />
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i}>
+              <div className="aspect-square animate-pulse rounded-xl bg-(--od-surface-input)" />
+              <div className="mt-2 h-8 animate-pulse rounded-md bg-(--od-surface-input)" />
+            </div>
           ))}
         </div>
       </div>
@@ -63,7 +72,7 @@ export function SimilarRecommendations({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3">
         {threads.map((thread, index) => (
           <motion.div
             key={thread.thread_id}
@@ -71,10 +80,9 @@ export function SimilarRecommendations({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            <ThreadCard
+            <CompactThreadCard
               thread={thread}
-              onPreview={(item) => setPreviewThreadId(item.thread_id)}
-              index={index}
+              onOpen={(item) => setPreviewThreadId(item.thread_id)}
             />
           </motion.div>
         ))}

@@ -93,6 +93,7 @@ export function ThreadPreviewOverlay({
   const virtualOnlyTags = (thread.virtual_tags || []).filter(
     (tag) => !thread.tags?.includes(tag),
   );
+  const images = thread.thumbnail_urls || [];
 
   const searchableAuthorName =
     thread.author?.display_name ??
@@ -246,82 +247,85 @@ export function ThreadPreviewOverlay({
           >
             {thread.title}
           </h2>
-
-          {/* Images */}
-          {thread.thumbnail_urls && thread.thumbnail_urls.length > 0 && (
-            <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-(--od-shell-line)">
-              <ImageCarousel
-                images={thread.thumbnail_urls}
-                alt={thread.title}
-                className="h-75 sm:h-100"
-              />
-            </div>
-          )}
         </div>
 
         {/* Scrollable Content */}
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto bg-(--od-surface-floating) p-6 scrollbar-thin"
+          className="min-h-0 flex-1 overflow-y-auto bg-(--od-surface-floating) scrollbar-thin"
         >
-
-          {/* Tags */}
-          {thread.tags && thread.tags.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {thread.tags.map((tag) => (
-                <button
-                  type="button"
-                  key={tag}
-                  onClick={() => applySearchToken("tag", tag)}
-                  className="od-pill-chip"
-                  title={`添加标签筛选：${tag}`}
-                >
-                  <Hash className="h-3 w-3" />
-                  {tag}
-                </button>
-              ))}
-            </div>
-          )}
-          {virtualOnlyTags.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {virtualOnlyTags.map((tag) => (
-                <button
-                  type="button"
-                  key={`vt-${tag}`}
-                  onClick={() => applySearchToken("tag", tag)}
-                  className="inline-flex items-center gap-1 rounded-full border border-(--od-accent)/24 bg-(--od-accent)/10 px-3 py-1 text-xs font-semibold text-(--od-accent) transition-colors hover:bg-(--od-accent)/18"
-                  title={`添加标签筛选：${tag}`}
-                >
-                  <Hash className="h-3 w-3" />
-                  {tag}
-                </button>
-              ))}
+          {/* Images */}
+          {images.length > 0 && (
+            <div className="sticky top-0 h-[68dvh] min-h-[28rem] max-h-[46rem] overflow-hidden">
+              <ImageCarousel
+                images={images}
+                alt={thread.title}
+                className="h-full [&_img]:object-top"
+              />
             </div>
           )}
 
-          {/* Content Excerpt (Full) - Flat, no background */}
-          {thread.first_message_excerpt && (
-            <div
-              className={`mb-6 ${fontSizes.content} text-(--od-text-secondary)`}
-            >
-              <MarkdownText text={thread.first_message_excerpt} />
-            </div>
-          )}
+          <div
+            className={`od-floating-glass relative z-10 min-h-full px-6 pb-6 pt-6 backdrop-blur-[var(--od-glass-blur)] backdrop-saturate-125 ${images.length > 0 ? "-mt-12 rounded-t-[1.5rem] shadow-[0_-12px_30px_rgba(0,0,0,0.22)]" : ""}`}
+          >
+            {/* Tags */}
+            {thread.tags && thread.tags.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {thread.tags.map((tag) => (
+                  <button
+                    type="button"
+                    key={tag}
+                    onClick={() => applySearchToken("tag", tag)}
+                    className="od-pill-chip"
+                    title={`添加标签筛选：${tag}`}
+                  >
+                    <Hash className="h-3 w-3" />
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
+            {virtualOnlyTags.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {virtualOnlyTags.map((tag) => (
+                  <button
+                    type="button"
+                    key={`vt-${tag}`}
+                    onClick={() => applySearchToken("tag", tag)}
+                    className="inline-flex items-center gap-1 rounded-full border border-(--od-accent)/24 bg-(--od-accent)/10 px-3 py-1 text-xs font-semibold text-(--od-accent) transition-colors hover:bg-(--od-accent)/18"
+                    title={`添加标签筛选：${tag}`}
+                  >
+                    <Hash className="h-3 w-3" />
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            )}
 
-          {/* Recommendations */}
-          <ThreadTournamentBadges
-            thread={thread}
-            variant="tags"
-            onNavigate={handleClose}
-          />
-          <SimilarRecommendations currentThreadId={thread.thread_id} />
-          {thread.author?.id && (
-            <AuthorRecommendations
-              authorId={thread.author.id}
-              authorName={authorName}
-              currentThreadId={thread.thread_id}
+            {/* Content Excerpt (Full) - Flat, no background */}
+            {thread.first_message_excerpt && (
+              <div
+                className={`mb-6 ${fontSizes.content} text-(--od-text-secondary)`}
+              >
+                <MarkdownText text={thread.first_message_excerpt} />
+              </div>
+            )}
+
+            {/* Recommendations */}
+            <ThreadTournamentBadges
+              thread={thread}
+              variant="tags"
+              onNavigate={handleClose}
             />
-          )}
+            <SimilarRecommendations currentThreadId={thread.thread_id} />
+            {thread.author?.id && (
+              <AuthorRecommendations
+                authorId={thread.author.id}
+                authorName={authorName}
+                currentThreadId={thread.thread_id}
+              />
+            )}
+          </div>
         </div>
       </dialog>
       <QuickAddToBooklistModal

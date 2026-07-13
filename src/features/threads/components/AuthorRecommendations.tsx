@@ -1,14 +1,13 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { motion } from 'motion/react';
-import { searchApi } from '@/features/search/api/searchApi';
-import { searchKeys } from '@/features/search/lib/queryKeys';
-import { ThreadCard } from '@/entities/thread/ThreadCard';
-import { ThreadCardSkeleton } from '@/entities/thread/ThreadCardSkeleton';
-import { usePreviewStore } from '@/features/search/store/previewStore';
-import type { Thread } from '@/entities/thread/types';
-import { BookOpenText, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { motion } from "motion/react";
+import { searchApi } from "@/features/search/api/searchApi";
+import { searchKeys } from "@/features/search/lib/queryKeys";
+import { usePreviewStore } from "@/features/search/store/previewStore";
+import type { Thread } from "@/entities/thread/types";
+import { BookOpenText, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { CompactThreadCard } from "@/widgets/content-display/ContentDisplayCards";
 
 interface AuthorRecommendationsProps {
   authorId: string;
@@ -25,10 +24,17 @@ export function AuthorRecommendations({
   authorName,
   currentThreadId,
 }: AuthorRecommendationsProps) {
-  const setPreviewThreadId = usePreviewStore((state) => state.setPreviewThreadId);
+  const setPreviewThreadId = usePreviewStore(
+    (state) => state.setPreviewThreadId,
+  );
 
   const { data, isLoading } = useQuery({
-    queryKey: [...searchKeys.all, 'author-recommendations', authorId, currentThreadId],
+    queryKey: [
+      ...searchKeys.all,
+      "author-recommendations",
+      authorId,
+      currentThreadId,
+    ],
     queryFn: () =>
       searchApi.search({
         include_authors: [authorId],
@@ -36,14 +42,14 @@ export function AuthorRecommendations({
         exclude_thread_ids: [currentThreadId],
         apply_preferences: true,
         limit: 6,
-        sort_method: 'created_desc',
+        sort_method: "created_desc",
       }),
     enabled: !!authorId,
     staleTime: 5 * 60 * 1000,
   });
 
   const threads = useMemo(
-    () => ((data?.results || []) as Thread[]),
+    () => (data?.results || []) as Thread[],
     [data?.results],
   );
 
@@ -57,9 +63,12 @@ export function AuthorRecommendations({
             {authorName} 的其他作品
           </h3>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <ThreadCardSkeleton key={i} />
+        <div className="grid grid-cols-3 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i}>
+              <div className="aspect-square animate-pulse rounded-xl bg-(--od-surface-input)" />
+              <div className="mt-2 h-8 animate-pulse rounded-md bg-(--od-surface-input)" />
+            </div>
           ))}
         </div>
       </div>
@@ -101,7 +110,7 @@ export function AuthorRecommendations({
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3">
         {threads.map((thread, index) => (
           <motion.div
             key={thread.thread_id}
@@ -109,10 +118,9 @@ export function AuthorRecommendations({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            <ThreadCard
+            <CompactThreadCard
               thread={thread}
-              onPreview={(t) => setPreviewThreadId(t.thread_id)}
-              index={index}
+              onOpen={(item) => setPreviewThreadId(item.thread_id)}
             />
           </motion.div>
         ))}

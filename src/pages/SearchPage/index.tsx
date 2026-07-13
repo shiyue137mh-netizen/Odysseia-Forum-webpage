@@ -14,10 +14,15 @@ import {
   useBooklistsList,
   useToggleBooklistCollection,
 } from "@/features/booklists/hooks/useBooklistsData";
-import { useCardGridClass, useResultPagingModeSetting, useSettings } from "@/shared/hooks/useSettings";
+import {
+  useCardGridClass,
+  useResultPagingModeSetting,
+  useSettings,
+} from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { useMascotStore } from "@/features/mascot/store/mascotStore";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
+import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { useChannels } from "@/shared/hooks/useChannels";
 import { addToken, parseSearchQuery } from "@/shared/lib/searchTokenizer";
@@ -40,11 +45,11 @@ import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const searchSortOptions = [
-  { value: 'last_active_desc', label: '最近活跃' },
-  { value: 'created_desc', label: '最新发布' },
-  { value: 'reply_desc', label: '回复数' },
-  { value: 'reaction_desc', label: '反应数' },
-  { value: 'relevance', label: '相关度' },
+  { value: "last_active_desc", label: "最近活跃" },
+  { value: "created_desc", label: "最新发布" },
+  { value: "reply_desc", label: "回复数" },
+  { value: "reaction_desc", label: "反应数" },
+  { value: "relevance", label: "相关度" },
 ];
 
 export function SearchPage() {
@@ -52,7 +57,6 @@ export function SearchPage() {
   const location = useLocation();
   const { params, setParams } = useSearchURLParams();
   const { query, channel: selectedChannel } = params;
-
 
   const { preferences } = useUserPreferences({ guildId: GUILD_ID });
   const collectBooklistMutation = useToggleBooklistCollection();
@@ -75,12 +79,7 @@ export function SearchPage() {
     hasSearchFilters,
     ignoreDiscoveryPreferences,
     isPreferenceActive,
-    showPreferenceBanner,
-    queryState: {
-      isLoading,
-      isError,
-      refetch,
-    },
+    queryState: { isLoading, isError, refetch },
     infiniteQueryState,
     results,
     pageSize,
@@ -128,7 +127,6 @@ export function SearchPage() {
     };
   }, [location.pathname, location.search]);
 
-
   const handleTagClick = (tagName: string) => {
     const nextQuery = addToken(query || "", "tag", tagName, "include");
     setParams({ query: nextQuery });
@@ -168,14 +166,14 @@ export function SearchPage() {
     if (
       !hasTextSearch &&
       preferences?.sort_method &&
-      !new URLSearchParams(window.location.search).get('sort')
+      !new URLSearchParams(window.location.search).get("sort")
     ) {
       const sortMap: Record<string, typeof params.sortMethod> = {
-        comprehensive: 'relevance',
-        last_active: 'last_active_desc',
-        created_at: 'created_desc',
-        reply_count: 'reply_desc',
-        reaction_count: 'reaction_desc',
+        comprehensive: "relevance",
+        last_active: "last_active_desc",
+        created_at: "created_desc",
+        reply_count: "reply_desc",
+        reaction_count: "reaction_desc",
       };
       const preferredSort = sortMap[preferences.sort_method];
       if (preferredSort && preferredSort !== params.sortMethod) {
@@ -192,7 +190,11 @@ export function SearchPage() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && infiniteQueryState.hasNextPage && !infiniteQueryState.isFetchingNextPage) {
+        if (
+          entry.isIntersecting &&
+          infiniteQueryState.hasNextPage &&
+          !infiniteQueryState.isFetchingNextPage
+        ) {
           infiniteQueryState.fetchNextPage();
         }
       },
@@ -221,7 +223,14 @@ export function SearchPage() {
                     <span>搜索:</span>
                     {parseSearchQuery(query).map((token, i) => {
                       if (token.type === "text") {
-                        return <span key={i} className="truncate max-w-[200px] sm:max-w-md">{token.value}</span>;
+                        return (
+                          <span
+                            key={i}
+                            className="truncate max-w-[200px] sm:max-w-md"
+                          >
+                            {token.value}
+                          </span>
+                        );
                       }
 
                       const isNegative = token.mode === "exclude";
@@ -279,7 +288,10 @@ export function SearchPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div data-tour="search-type-toggle" className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
+            <div
+              data-tour="search-type-toggle"
+              className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1"
+            >
               <button
                 type="button"
                 onClick={() => setParams({ type: "thread" })}
@@ -326,7 +338,9 @@ export function SearchPage() {
                     })
                   }
                   className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-(--od-text-secondary) transition-colors hover:bg-(--od-surface-hover) hover:text-(--od-text-primary)"
-                  title={params.sortOrder === "desc" ? "当前为倒序" : "当前为正序"}
+                  title={
+                    params.sortOrder === "desc" ? "当前为倒序" : "当前为正序"
+                  }
                 >
                   {params.sortOrder === "desc" ? (
                     <MoveDown className="h-3.5 w-3.5" />
@@ -369,28 +383,6 @@ export function SearchPage() {
               </button>
             </div>
 
-            {isThreadTab &&
-              !ignoreDiscoveryPreferences &&
-              discoveryPreferenceContext && (
-                <button
-                  type="button"
-                  onClick={() => setIgnoreDiscoveryPreferences(true)}
-                  className="od-inline-action od-inline-action-soft"
-                >
-                  取消偏好以扩大范围
-                </button>
-              )}
-            {isThreadTab &&
-              ignoreDiscoveryPreferences &&
-              discoveryPreferenceContext && (
-                <button
-                  type="button"
-                  onClick={() => setIgnoreDiscoveryPreferences(false)}
-                  className="od-inline-action od-inline-action-ghost"
-                >
-                  恢复偏好展示
-                </button>
-              )}
             {isThreadTab && hasSearchFilters && (
               <button
                 onClick={() => {
@@ -412,70 +404,16 @@ export function SearchPage() {
           </div>
         </div>
 
-        {isThreadTab &&
-          showPreferenceBanner &&
-          discoveryPreferenceContext && (
-            <section className="mb-7 px-1">
-              <div className="od-inline-notice" data-tone="accent">
-                <div className="od-inline-notice-head">
-                  <div className="min-w-0">
-                    <div className="od-editorial-kicker">
-                      <Compass className="h-3.5 w-3.5" />
-                      Preference Filter Active
-                    </div>
-                    <p className="od-inline-notice-title mt-3">
-                      我先按你平时的偏好帮你收了一下范围
-                    </p>
-                    <p className="od-inline-notice-copy mt-2 max-w-3xl">
-                      这样不容易一上来就撞见你根本不想看的内容哦。
-                    </p>
-                  </div>
-
-                  <div className="od-inline-notice-actions shrink-0 sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIgnoreDiscoveryPreferences(true)}
-                      className="od-inline-action od-inline-action-soft"
-                    >
-                      暂时忽略偏好
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/me?tab=preferences")}
-                      className="od-inline-action od-inline-action-ghost"
-                    >
-                      去调整偏好
-                    </button>
-                  </div>
-                </div>
-
-                <div className="od-inline-notice-meta">
-                  {discoveryPreferenceContext.preferredChannelIds.length >
-                    0 && (
-                    <span className="od-pill-chip">
-                      频道{" "}
-                      {discoveryPreferenceContext.preferredChannelIds.length} 个
-                    </span>
-                  )}
-                  {discoveryPreferenceContext.includeTags.length > 0 && (
-                    <span className="od-pill-chip">
-                      包含标签 {discoveryPreferenceContext.includeTags.length}{" "}
-                      个
-                    </span>
-                  )}
-                  {discoveryPreferenceContext.excludeTags.length > 0 && (
-                    <span className="od-pill-chip">
-                      排除标签 {discoveryPreferenceContext.excludeTags.length}{" "}
-                      个
-                    </span>
-                  )}
-                  {discoveryPreferenceContext.sortMethod && (
-                    <span className="od-pill-chip">默认排序已生效</span>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
+        {isThreadTab && discoveryPreferenceContext && (
+          <section className="mb-7 px-1">
+            <PreferenceFilterNotice
+              ignored={ignoreDiscoveryPreferences}
+              onIgnore={() => setIgnoreDiscoveryPreferences(true)}
+              onRestore={() => setIgnoreDiscoveryPreferences(false)}
+              onOpenSettings={() => navigate("/me?tab=preferences")}
+            />
+          </section>
+        )}
 
         {isThreadTab && (
           <div className="mb-6 px-1">
@@ -558,7 +496,10 @@ export function SearchPage() {
               />
 
               {isInfiniteMode ? (
-                <div ref={loadMoreRef} className="flex justify-center py-8 text-sm text-(--od-text-secondary)">
+                <div
+                  ref={loadMoreRef}
+                  className="flex justify-center py-8 text-sm text-(--od-text-secondary)"
+                >
                   {infiniteQueryState.isFetchingNextPage
                     ? "正在加载更多帖子..."
                     : infiniteQueryState.hasNextPage
@@ -673,7 +614,6 @@ export function SearchPage() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

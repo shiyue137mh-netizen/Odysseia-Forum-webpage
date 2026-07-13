@@ -1,40 +1,51 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Compass, Dices, Plus, Sparkles, RotateCw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Dices, Plus, RotateCw, Trophy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import { ThreadCard } from '@/entities/thread/ThreadCard';
-import { BooklistCard } from '@/entities/booklist/BooklistCard';
-import { BannerCarousel } from '@/widgets/layout/BannerCarousel';
-import type { Booklist } from '@/entities/booklist/types';
-import { plazaApi, PLAZA_RAILS, type PlazaRailKey } from '@/features/plaza/api/plazaApi';
-import type { Thread } from '@/entities/thread/types';
-import { useToggleBooklistCollection } from '@/features/booklists/hooks/useBooklistsData';
-import { useUserPreferences } from '@/features/preferences/hooks/useUserPreferences';
-import { getDiscoveryPreferenceContext } from '@/features/preferences/lib/discoveryPreferences';
-import { filterThreadsByPreferences } from '@/entities/thread/lib/threadFilter';
-import { plazaKeys } from '@/features/plaza/lib/queryKeys';
-import { usePreviewStore } from '@/features/search/store/previewStore';
-import { GUILD_ID } from '@/shared/config/channelCategories.private';
-import { buildDiscordWebThreadUrl } from '@/shared/lib/discord';
-import { FluidDivider } from '@/shared/ui/FluidDivider';
-import { useCardGridClass } from '@/shared/hooks/useSettings';
+import type { Booklist } from "@/entities/booklist/types";
+import { BooklistCard } from "@/entities/booklist/BooklistCard";
+import { filterThreadsByPreferences } from "@/entities/thread/lib/threadFilter";
+import type { Thread } from "@/entities/thread/types";
+import { useToggleBooklistCollection } from "@/features/booklists/hooks/useBooklistsData";
+import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
+import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
+import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
+import { plazaApi, type PlazaRailKey } from "@/features/plaza/api/plazaApi";
+import { plazaKeys } from "@/features/plaza/lib/queryKeys";
+import { usePreviewStore } from "@/features/search/store/previewStore";
+import { useTournamentsList } from "@/features/tournaments/hooks/useTournamentsData";
+import { GUILD_ID } from "@/shared/config/channelCategories.private";
+import { buildDiscordWebThreadUrl } from "@/shared/lib/discord";
+import {
+  CompactBooklistCard,
+  CompactThreadCard,
+  ThreadRankingPanel,
+} from "@/widgets/content-display/ContentDisplayCards";
+import { BannerCarousel } from "@/widgets/layout/BannerCarousel";
+
+const RAIL_LIMIT = 20;
 
 interface RailRefreshButtonProps {
+  label: string;
   onRefresh: () => void;
   isLoading: boolean;
 }
 
-function RailRefreshButton({ onRefresh, isLoading }: RailRefreshButtonProps) {
+function RailRefreshButton({
+  label,
+  onRefresh,
+  isLoading,
+}: RailRefreshButtonProps) {
   return (
     <button
       type="button"
       onClick={onRefresh}
       disabled={isLoading}
-      className="od-inline-action od-inline-action-ghost gap-2 group/refresh transition-all active:scale-92 hover:bg-transparent hover:translate-y-0 hover:text-(--od-accent)"
+      className="od-inline-action od-inline-action-ghost gap-1.5"
     >
-      <RotateCw className={`h-3.5 w-3.5 transition-transform duration-500 ${isLoading ? 'animate-spin' : 'group-hover/refresh:rotate-180'}`} />
-      <span>换一批</span>
+      <RotateCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+      {label}
     </button>
   );
 }
@@ -44,29 +55,27 @@ export function PlazaPage() {
   const setPreviewThread = usePreviewStore((state) => state.setPreviewThread);
   const { preferences } = useUserPreferences({ guildId: GUILD_ID });
   const [ignorePreferenceFilter, setIgnorePreferenceFilter] = useState(false);
+  const [railThreadsMap, setRailThreadsMap] = useState<
+    Record<string, Thread[]>
+  >({});
+  const [refreshingKeys, setRefreshingKeys] = useState<Record<string, boolean>>(
+    {},
+  );
+  const [railOffsets, setRailOffsets] = useState<Record<string, number>>({});
 
-  // 判断是否有生效的偏好设置，用于展示 UI 提示
   const hasActivePreferences = useMemo(() => {
     if (!preferences) return false;
-    const channelIds = preferences.preferred_channels || [];
-    const includeTags = preferences.include_tags || [];
-    const excludeTags = preferences.exclude_tags || [];
-    return channelIds.length > 0 || includeTags.length > 0 || excludeTags.length > 0;
+    return Boolean(
+      preferences.preferred_channels?.length ||
+        preferences.include_tags?.length ||
+        preferences.exclude_tags?.length,
+    );
   }, [preferences]);
-
-  const showPreferenceNotice = hasActivePreferences && !ignorePreferenceFilter;
 
   const discoveryPreferenceContext = useMemo(
     () => getDiscoveryPreferenceContext(preferences),
     [preferences],
   );
-
-  const gridClass = useCardGridClass();
-
-  // 状态：存储每个轨道的具体帖子（由 query 或 refresh 产生）
-  const [railThreadsMap, setRailThreadsMap] = useState<Record<string, Thread[]>>({});
-  const [refreshingKeys, setRefreshingKeys] = useState<Record<string, boolean>>({});
-  const [railOffsets, setRailOffsets] = useState<Record<string, number>>({});
 
   const bannersQuery = useQuery({
     queryKey: plazaKeys.banners(),
@@ -80,122 +89,142 @@ export function PlazaPage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // 聚合查询所有轨道（初始化）
+  const tournamentsQuery = useTournamentsList({
+    pageIndex: 0,
+    pageSize: 3,
+    sortMethod: 4,
+    sortOrder: "desc",
+  });
+
   const railsQuery = useQuery({
     queryKey: plazaKeys.rails({
-      limit: 12,
+      limit: RAIL_LIMIT,
       days: 30,
       applyPreferences: !ignorePreferenceFilter,
     }),
-    queryFn: () => plazaApi.getRails({
-      limit: 12,
-      days: 30,
-      apply_preferences: !ignorePreferenceFilter,
-    }),
+    queryFn: () =>
+      plazaApi.getRails({
+        limit: RAIL_LIMIT,
+        days: 30,
+        apply_preferences: !ignorePreferenceFilter,
+      }),
     staleTime: 90 * 1000,
   });
 
-  // 当基础查询数据到达时，初始化 Map
   useEffect(() => {
-    if (railsQuery.data) {
-      const applyFilter = (threads: Thread[]) =>
-        !ignorePreferenceFilter ? filterThreadsByPreferences(threads, discoveryPreferenceContext) : threads;
+    if (!railsQuery.data) return;
 
-      setRailThreadsMap({
-        latest: applyFilter(railsQuery.data.latest || []),
-        reaction_surge: applyFilter(railsQuery.data.reaction_surge || []),
-        discussion_surge: applyFilter(railsQuery.data.discussion_surge || []),
-        collection_surge: applyFilter(railsQuery.data.collection_surge || []),
-        editors_pick: applyFilter((railsQuery.data as any).editors_pick || []),
-      });
-      setRailOffsets({
-        latest: railsQuery.data.latest?.length || 0,
-        reaction_surge: railsQuery.data.reaction_surge?.length || 0,
-        discussion_surge: railsQuery.data.discussion_surge?.length || 0,
-        collection_surge: railsQuery.data.collection_surge?.length || 0,
-        editors_pick: ((railsQuery.data as any).editors_pick || []).length,
-      });
-    }
+    const applyFilter = (threads: Thread[]) =>
+      !ignorePreferenceFilter
+        ? filterThreadsByPreferences(threads, discoveryPreferenceContext)
+        : threads;
+
+    setRailThreadsMap({
+      latest: applyFilter(railsQuery.data.latest || []),
+      reaction_surge: applyFilter(railsQuery.data.reaction_surge || []),
+      discussion_surge: applyFilter(railsQuery.data.discussion_surge || []),
+      collection_surge: applyFilter(railsQuery.data.collection_surge || []),
+    });
+    setRailOffsets({
+      latest: railsQuery.data.latest?.length || 0,
+      reaction_surge: railsQuery.data.reaction_surge?.length || 0,
+      discussion_surge: railsQuery.data.discussion_surge?.length || 0,
+      collection_surge: railsQuery.data.collection_surge?.length || 0,
+    });
   }, [railsQuery.data, ignorePreferenceFilter, discoveryPreferenceContext]);
 
-  const handleRefreshRail = useCallback(async (key: PlazaRailKey) => {
-    if (refreshingKeys[key]) return;
+  const handleRefreshRail = useCallback(
+    async (key: PlazaRailKey) => {
+      if (refreshingKeys[key]) return;
+      setRefreshingKeys((previous) => ({ ...previous, [key]: true }));
 
-    setRefreshingKeys(prev => ({ ...prev, [key]: true }));
-
-    try {
-      const currentList = railThreadsMap[key] || [];
-      const currentOffset = railOffsets[key] ?? currentList.length;
-
-      let nextThreads = await plazaApi.getRail(key, {
-        limit: 12,
-        days: 30,
-        offset: currentOffset,
-        apply_preferences: !ignorePreferenceFilter,
-      });
-
-      let nextOffset = currentOffset + nextThreads.length;
-
-      if (nextThreads.length === 0 && currentOffset > 0) {
-        nextThreads = await plazaApi.getRail(key, {
-          limit: 12,
+      try {
+        const currentList = railThreadsMap[key] || [];
+        const currentOffset = railOffsets[key] ?? currentList.length;
+        let nextThreads = await plazaApi.getRail(key, {
+          limit: RAIL_LIMIT,
           days: 30,
-          offset: 0,
+          offset: currentOffset,
           apply_preferences: !ignorePreferenceFilter,
         });
-        nextOffset = nextThreads.length;
-      }
+        let nextOffset = currentOffset + nextThreads.length;
 
-      if (nextThreads.length > 0) {
-        const filteredNextThreads = !ignorePreferenceFilter
+        if (nextThreads.length === 0 && currentOffset > 0) {
+          nextThreads = await plazaApi.getRail(key, {
+            limit: RAIL_LIMIT,
+            days: 30,
+            offset: 0,
+            apply_preferences: !ignorePreferenceFilter,
+          });
+          nextOffset = nextThreads.length;
+        }
+
+        if (nextThreads.length === 0) return;
+        const filteredThreads = !ignorePreferenceFilter
           ? filterThreadsByPreferences(nextThreads, discoveryPreferenceContext)
           : nextThreads;
 
-        setRailThreadsMap(prev => ({
-          ...prev,
-          [key]: filteredNextThreads,
+        setRailThreadsMap((previous) => ({
+          ...previous,
+          [key]: filteredThreads,
         }));
-        setRailOffsets(prev => ({
-          ...prev,
+        setRailOffsets((previous) => ({
+          ...previous,
           [key]: nextOffset,
         }));
+      } catch (error) {
+        console.error(`[PlazaPage] Failed to refresh rail ${key}:`, error);
+      } finally {
+        setRefreshingKeys((previous) => ({ ...previous, [key]: false }));
       }
-    } catch (error) {
-      console.error(`[PlazaPage] Failed to refresh rail ${key}:`, error);
-    } finally {
-      setRefreshingKeys(prev => ({ ...prev, [key]: false }));
-    }
-  }, [railThreadsMap, railOffsets, refreshingKeys, ignorePreferenceFilter, discoveryPreferenceContext]);
+    },
+    [
+      discoveryPreferenceContext,
+      ignorePreferenceFilter,
+      railOffsets,
+      railThreadsMap,
+      refreshingKeys,
+    ],
+  );
 
   const collectMutation = useToggleBooklistCollection();
+  const latestThreads = railThreadsMap.latest || [];
+  const reactionThreads = railThreadsMap.reaction_surge || [];
+  const discussionThreads = railThreadsMap.discussion_surge || [];
+  const collectionThreads = railThreadsMap.collection_surge || [];
+  const latestRankThreads =
+    latestThreads.length > 10 ? latestThreads.slice(10) : latestThreads;
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col min-h-screen">
-      {/* 顶部 Banner 区域：释放圆角约束，全宽展示 */}
+    <div className="flex min-h-screen flex-col animate-in fade-in duration-500">
       <section className="w-full">
         {bannersQuery.isLoading ? (
           <div className="h-48 w-full animate-pulse bg-(--od-surface-input) xl:h-64" />
         ) : bannersQuery.data && bannersQuery.data.length > 0 ? (
           <BannerCarousel
             fullWidth={true}
-            banners={bannersQuery.data!.map((b) => ({
-              id: b.thread_id,
-              image: b.cover_image_url,
-              title: b.title,
-              description: b.author ? `作者：${b.author.display_name || b.author.global_name || b.author.name}` : '点击可以直接探索原帖',
+            banners={bannersQuery.data.map((banner) => ({
+              id: banner.thread_id,
+              image: banner.cover_image_url,
+              title: banner.title,
+              description: banner.author
+                ? `作者：${banner.author.display_name || banner.author.global_name || banner.author.name}`
+                : "点击可以直接探索原帖",
               link: buildDiscordWebThreadUrl({
-                guildId: b.guild_id || GUILD_ID,
-                channelId: b.channel_id,
-                threadId: b.thread_id,
+                guildId: banner.guild_id || GUILD_ID,
+                channelId: banner.channel_id,
+                threadId: banner.thread_id,
               }),
             }))}
             onBannerClick={(banner) => {
-              const url = banner.link || buildDiscordWebThreadUrl({
-                guildId: GUILD_ID,
-                channelId: banner.id,
-                threadId: banner.id,
-              });
-              window.open(url, '_blank', 'noopener,noreferrer');
+              const url =
+                banner.link ||
+                buildDiscordWebThreadUrl({
+                  guildId: GUILD_ID,
+                  channelId: banner.id,
+                  threadId: banner.id,
+                });
+              window.open(url, "_blank", "noopener,noreferrer");
             }}
           />
         ) : (
@@ -203,187 +232,264 @@ export function PlazaPage() {
         )}
       </section>
 
-      {/* 主体内容区域：保持原有的间距设计 */}
-      <div className="flex flex-col gap-10 p-4 sm:p-6 lg:p-8">
-        <section className="relative">
-          <div className="relative z-10 flex flex-col justify-between pt-2 sm:pt-4">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="od-editorial-kicker mb-3 text-(--od-text-tertiary)">
-                  <Compass className="h-3.5 w-3.5" />
-                  Plaza Spotlight
-                </div>
-                <h1 className="od-hero-title max-w-2xl text-(--od-text-primary)">内容广场</h1>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 self-start lg:max-w-[24rem] lg:justify-end">
-                <button
-                  type="button"
-                  onClick={() => navigate('/draw')}
-                  className="od-inline-action od-inline-action-primary"
-                >
-                  <Dices className="h-4 w-4" />
-                  进入随机抽卡
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/booklists')}
-                  className="od-inline-action od-inline-action-ghost"
-                >
-                  <Plus className="h-4 w-4" />
-                  去书单页
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-      <section className="px-1 py-2">
-
-
-        <FluidDivider label="Discovery Feed" tone="strong" className="mb-6" />
-        {showPreferenceNotice && (
-          <div className="mb-0">
-            <div className="od-inline-notice" data-tone="accent">
-              <div className="od-inline-notice-head">
-                <div className="min-w-0">
-                  <div className="od-editorial-kicker">
-                    <Compass className="h-3.5 w-3.5" />
-                    Preference Filter Active
-                  </div>
-                  <p className="od-inline-notice-title mt-3">我先按你的偏好帮你筛过一遍啦</p>
-                </div>
-
-                <div className="od-inline-notice-actions shrink-0 sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIgnorePreferenceFilter(true)}
-                    className="od-inline-action od-inline-action-soft"
-                  >
-                    暂时忽略偏好
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/me?tab=preferences')}
-                    className="od-inline-action od-inline-action-ghost"
-                  >
-                    去调整偏好
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {!showPreferenceNotice && hasActivePreferences && ignorePreferenceFilter && (
-          <div className="mb-5 flex justify-end">
-            <button
-              type="button"
-              onClick={() => setIgnorePreferenceFilter(false)}
-              className="od-inline-action od-inline-action-ghost"
-            >
-              恢复偏好过滤
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section className="px-1">
-        {PLAZA_RAILS.map((rail) => {
-          const list = railThreadsMap[rail.key];
-          if (!list || list.length === 0) return null;
-
-          return (
-            <div key={rail.key} className="od-page-section py-4 sm:py-5">
-              <FluidDivider label={rail.label} className="mb-5" />
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="od-section-title">{rail.title}</h2>
-                  <p className="mt-1 text-sm text-(--od-text-secondary)">{rail.subtitle}</p>
-                </div>
-                <RailRefreshButton
-                  onRefresh={() => handleRefreshRail(rail.key)}
-                  isLoading={refreshingKeys[rail.key]}
-                />
-              </div>
-
-              <div className={gridClass}>
-                {list.map((thread) => (
-                  <ThreadCard
-                    key={`${rail.key}-${thread.thread_id}`}
-                    thread={thread}
-                    onPreview={(item) => setPreviewThread(item)}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      <section className="px-1">
-        <FluidDivider label="Booklists" tone="strong" className="mb-5" />
-        <div className="mb-5 flex items-center justify-between gap-3">
+      <header className="flex flex-col gap-4 px-4 pb-2 pt-6 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="od-section-title">书单精选</h2>
-            <p className="mt-1 text-sm text-(--od-text-secondary)">这些都是大家比较爱收的书单，我替你放在前面啦，说不定会刚好合你胃口。</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-(--od-text-primary)">
+              广场
+            </h1>
+            <p className="mt-1 text-sm text-(--od-text-secondary)">
+              新作、书单和社区热榜，都收在这里。
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => navigate('/booklists')}
-              className="od-inline-action od-inline-action-ghost"
-            >
-              全部书单
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/booklists')}
+              onClick={() => navigate("/draw")}
               className="od-inline-action od-inline-action-primary"
             >
-              <Plus className="h-3.5 w-3.5" />
-              创建
+              <Dices className="h-4 w-4" />
+              随机抽卡
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/booklists")}
+              className="od-inline-action od-inline-action-ghost"
+            >
+              <Plus className="h-4 w-4" />
+              书单
             </button>
           </div>
         </div>
 
-        {booklistsQuery.isLoading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, idx) => (
-              <div key={idx} className="h-72 animate-pulse rounded-xl bg-(--od-bg-tertiary)" />
-            ))}
-          </div>
-        ) : booklistsQuery.data && booklistsQuery.data.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {booklistsQuery.data!.map((booklist: Booklist) => (
-              <BooklistCard
-                key={booklist.id}
-                booklist={booklist}
-                canManage={false}
-                onOpen={(id) => navigate(`/booklists/${id}`)}
-                onToggleCollect={(item) =>
-                  collectMutation.mutate({ id: item.id, collected: Boolean(item.collected_flag) })
-                }
-                onEdit={() => undefined}
-                onDelete={() => undefined}
-                collectLoading={collectMutation.isPending}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-[1.25rem] bg-(--od-surface-input) p-6 text-sm text-(--od-text-secondary)">
-            这会儿还没有我想先塞给你的书单呢，晚点再来看看也许就有啦。
-          </div>
+        {hasActivePreferences && (
+          <PreferenceFilterNotice
+            ignored={ignorePreferenceFilter}
+            onIgnore={() => setIgnorePreferenceFilter(true)}
+            onRestore={() => setIgnorePreferenceFilter(false)}
+            onOpenSettings={() => navigate("/me?tab=preferences")}
+          />
         )}
-      </section>
+      </header>
 
-      <div className="px-1 text-xs text-(--od-text-tertiary)">
-        <div className="inline-flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-(--od-accent)" />
-          这些内容是我按最近的热度和时间顺手排出来的，先给你一个好逛的起点呀。
-        </div>
-      </div>
+      <main className="flex flex-col gap-10 p-4 sm:p-6 lg:p-8">
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-(--od-text-primary)">
+                <Trophy className="h-5 w-5 text-(--od-accent)" />
+                赛事精选
+              </h2>
+              <p className="mt-1 text-xs text-(--od-text-tertiary)">
+                最近创建的社区赛事
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/tournaments")}
+              className="od-inline-action od-inline-action-ghost"
+            >
+              全部赛事
+            </button>
+          </div>
 
-      </div>
+          {tournamentsQuery.isLoading ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-80 animate-pulse rounded-2xl bg-(--od-surface-input)"
+                />
+              ))}
+            </div>
+          ) : tournamentsQuery.data?.results.length ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {tournamentsQuery.data.results.slice(0, 3).map((tournament) => (
+                <BooklistCard
+                  key={tournament.id}
+                  booklist={tournament}
+                  canManage={false}
+                  onOpen={() => navigate(`/tournaments/${tournament.id}`)}
+                  onToggleCollect={(item) =>
+                    collectMutation.mutate({
+                      id: item.id,
+                      collected: Boolean(item.collected_flag),
+                    })
+                  }
+                  onEdit={() => undefined}
+                  onDelete={() => undefined}
+                  collectLoading={collectMutation.isPending}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-sm text-(--od-text-tertiary)">
+              暂时没有可展示的赛事。
+            </p>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <h2 className="text-lg font-semibold text-(--od-text-primary)">
+              正在发生
+            </h2>
+            <RailRefreshButton
+              label="换一批"
+              onRefresh={() => handleRefreshRail("latest")}
+              isLoading={refreshingKeys.latest}
+            />
+          </div>
+
+          {railsQuery.isLoading ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="aspect-square animate-pulse rounded-xl bg-(--od-surface-input)"
+                />
+              ))}
+            </div>
+          ) : latestThreads.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              {latestThreads.slice(0, 10).map((thread) => (
+                <CompactThreadCard
+                  key={thread.thread_id}
+                  thread={thread}
+                  onOpen={setPreviewThread}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-sm text-(--od-text-tertiary)">
+              暂时没有可展示的新内容。
+            </p>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-(--od-text-primary)">
+                书单精选
+              </h2>
+              <p className="mt-1 text-xs text-(--od-text-tertiary)">
+                由大家整理的专题入口
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate("/booklists")}
+                className="od-inline-action od-inline-action-ghost"
+              >
+                全部书单
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/booklists")}
+                className="od-inline-action od-inline-action-primary"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                创建
+              </button>
+            </div>
+          </div>
+
+          {booklistsQuery.isLoading ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-40 animate-pulse rounded-2xl bg-(--od-surface-input)"
+                />
+              ))}
+            </div>
+          ) : booklistsQuery.data && booklistsQuery.data.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {booklistsQuery.data.slice(0, 6).map((booklist: Booklist) => (
+                <CompactBooklistCard
+                  key={booklist.id}
+                  booklist={booklist}
+                  collectLoading={collectMutation.isPending}
+                  onOpen={(id) => navigate(`/booklists/${id}`)}
+                  onToggleCollect={(item) =>
+                    collectMutation.mutate({
+                      id: item.id,
+                      collected: Boolean(item.collected_flag),
+                    })
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-sm text-(--od-text-tertiary)">
+              暂时没有精选书单。
+            </p>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-(--od-text-primary)">
+              榜单精选
+            </h2>
+            <p className="mt-1 text-xs text-(--od-text-tertiary)">
+              上下滚动右侧排行，最靠近中心的内容会显示在左侧。
+            </p>
+          </div>
+
+          {railsQuery.isLoading ? (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-72 animate-pulse rounded-2xl bg-(--od-surface-input)"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <ThreadRankingPanel
+                title="点赞飙升"
+                badge="近 7 天"
+                threads={reactionThreads}
+                metric="reaction"
+                refreshing={refreshingKeys.reaction_surge}
+                onOpen={setPreviewThread}
+                onRefresh={() => handleRefreshRail("reaction_surge")}
+              />
+              <ThreadRankingPanel
+                title="讨论升温"
+                badge="近 7 天"
+                threads={discussionThreads}
+                metric="discussion"
+                refreshing={refreshingKeys.discussion_surge}
+                onOpen={setPreviewThread}
+                onRefresh={() => handleRefreshRail("discussion_surge")}
+              />
+              <ThreadRankingPanel
+                title="收藏上升"
+                badge="近 30 天"
+                threads={collectionThreads}
+                metric="collection"
+                refreshing={refreshingKeys.collection_surge}
+                onOpen={setPreviewThread}
+                onRefresh={() => handleRefreshRail("collection_surge")}
+              />
+              <ThreadRankingPanel
+                title="新作速递"
+                badge="刚刚更新"
+                threads={latestRankThreads}
+                metric="latest"
+                refreshing={refreshingKeys.latest}
+                onOpen={setPreviewThread}
+                onRefresh={() => handleRefreshRail("latest")}
+              />
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
