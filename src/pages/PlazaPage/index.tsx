@@ -193,7 +193,7 @@ export function PlazaPage() {
   const discussionThreads = railThreadsMap.discussion_surge || [];
   const collectionThreads = railThreadsMap.collection_surge || [];
   const latestRankThreads =
-    latestThreads.length > 10 ? latestThreads.slice(10) : latestThreads;
+    latestThreads.length > 8 ? latestThreads.slice(8) : latestThreads;
 
   return (
     <div className="flex min-h-screen flex-col animate-in fade-in duration-500">
@@ -275,62 +275,6 @@ export function PlazaPage() {
       <main className="flex flex-col gap-10 p-4 sm:p-6 lg:p-8">
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-(--od-text-primary)">
-                <Trophy className="h-5 w-5 text-(--od-accent)" />
-                赛事精选
-              </h2>
-              <p className="mt-1 text-xs text-(--od-text-tertiary)">
-                最近创建的社区赛事
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate("/tournaments")}
-              className="od-inline-action od-inline-action-ghost"
-            >
-              全部赛事
-            </button>
-          </div>
-
-          {tournamentsQuery.isLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="h-80 animate-pulse rounded-2xl bg-(--od-surface-input)"
-                />
-              ))}
-            </div>
-          ) : tournamentsQuery.data?.results.length ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {tournamentsQuery.data.results.slice(0, 3).map((tournament) => (
-                <BooklistCard
-                  key={tournament.id}
-                  booklist={tournament}
-                  canManage={false}
-                  onOpen={() => navigate(`/tournaments/${tournament.id}`)}
-                  onToggleCollect={(item) =>
-                    collectMutation.mutate({
-                      id: item.id,
-                      collected: Boolean(item.collected_flag),
-                    })
-                  }
-                  onEdit={() => undefined}
-                  onDelete={() => undefined}
-                  collectLoading={collectMutation.isPending}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="py-8 text-sm text-(--od-text-tertiary)">
-              暂时没有可展示的赛事。
-            </p>
-          )}
-        </section>
-
-        <section>
-          <div className="mb-4 flex items-end justify-between gap-3">
             <h2 className="text-lg font-semibold text-(--od-text-primary)">
               正在发生
             </h2>
@@ -342,8 +286,8 @@ export function PlazaPage() {
           </div>
 
           {railsQuery.isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-              {Array.from({ length: 10 }).map((_, index) => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+              {Array.from({ length: 8 }).map((_, index) => (
                 <div
                   key={index}
                   className="aspect-square animate-pulse rounded-xl bg-(--od-surface-input)"
@@ -351,8 +295,8 @@ export function PlazaPage() {
               ))}
             </div>
           ) : latestThreads.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-              {latestThreads.slice(0, 10).map((thread) => (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+              {latestThreads.slice(0, 8).map((thread) => (
                 <CompactThreadCard
                   key={thread.thread_id}
                   thread={thread}
@@ -487,6 +431,62 @@ export function PlazaPage() {
                 onRefresh={() => handleRefreshRail("latest")}
               />
             </div>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-(--od-text-primary)">
+                <Trophy className="h-5 w-5 text-(--od-accent)" />
+                赛事精选
+              </h2>
+              <p className="mt-1 text-xs text-(--od-text-tertiary)">
+                最近创建的社区赛事
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/tournaments")}
+              className="od-inline-action od-inline-action-ghost"
+            >
+              全部赛事
+            </button>
+          </div>
+
+          {tournamentsQuery.isLoading ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-80 animate-pulse rounded-2xl bg-(--od-surface-input)"
+                />
+              ))}
+            </div>
+          ) : tournamentsQuery.data?.results.length ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {tournamentsQuery.data.results.slice(0, 3).map((tournament) => (
+                <BooklistCard
+                  key={tournament.id}
+                  booklist={tournament}
+                  canManage={false}
+                  onOpen={() => navigate(`/tournaments/${tournament.id}`)}
+                  onToggleCollect={(item) =>
+                    collectMutation.mutate({
+                      id: item.id,
+                      collected: Boolean(item.collected_flag),
+                    })
+                  }
+                  onEdit={() => undefined}
+                  onDelete={() => undefined}
+                  collectLoading={collectMutation.isPending}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-sm text-(--od-text-tertiary)">
+              暂时没有可展示的赛事。
+            </p>
           )}
         </section>
       </main>
