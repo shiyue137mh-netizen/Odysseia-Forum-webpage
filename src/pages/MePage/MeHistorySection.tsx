@@ -1,7 +1,7 @@
 import { Eye, RefreshCw, Trash2 } from 'lucide-react';
 
 import type { BrowseHistoryItem } from '@/shared/lib/browseHistory';
-import { formatPreciseRelativeDateTime } from '@/shared/lib/dateTime';
+import { formatRelativeDateTime } from '@/shared/lib/dateTime';
 import { FluidDivider } from '@/shared/ui/FluidDivider';
 import { LazyImage } from '@/shared/ui/LazyImage';
 
@@ -88,7 +88,7 @@ export function MeHistorySection({
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-(--od-text-secondary)">
                   {item.authorName && <span>@{item.authorName}</span>}
                   {item.channelId && <span>频道 {item.channelId}</span>}
-                  <span>{formatPreciseRelativeDateTime(item.visitedAt)}</span>
+                  <span>{formatRelativeDateTime(item.visitedAt)}</span>
                 </div>
               </div>
 

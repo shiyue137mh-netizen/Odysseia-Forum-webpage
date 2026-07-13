@@ -8,7 +8,7 @@ import { APP_VERSION } from '@/shared/config/appInfo';
 import { resolveStaticNotifications, type NotificationKind } from '@/features/notifications/notificationsConfig';
 import { usePreviewStore } from '@/features/search/store/previewStore';
 import { useThemeSettings } from '@/shared/hooks/useSettings';
-import { formatPreciseRelativeDateTime } from '@/shared/lib/dateTime';
+import { formatRelativeDateTime } from '@/shared/lib/dateTime';
 import { LazyImage } from '@/shared/ui/LazyImage';
 
 // ── LocalStorage 工具 ──────────────────────────────────
@@ -373,7 +373,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
                       )}
                       {item.created_at && (
                         <span className="whitespace-nowrap text-[10px] text-(--od-text-tertiary)">
-                          {formatPreciseRelativeDateTime(item.created_at)}
+                          {formatRelativeDateTime(item.created_at)}
                         </span>
                       )}
                       {item.kind !== 'follow_update' && (

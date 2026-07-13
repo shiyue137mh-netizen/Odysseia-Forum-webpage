@@ -44,12 +44,3 @@ export function formatRelativeDateTime(
 
   return `${amount}${unit}${suffix}`;
 }
-
-export function formatPreciseRelativeDateTime(
-  value: string | number | Date | null | undefined,
-): string {
-  const absolute = formatAbsoluteDateTime(value);
-  if (absolute === "时间未知") return absolute;
-
-  return `${absolute} · ${formatRelativeDateTime(value)}`;
-}

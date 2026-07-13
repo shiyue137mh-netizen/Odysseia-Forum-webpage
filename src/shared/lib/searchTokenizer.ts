@@ -132,6 +132,24 @@ export function addToken(
   return tokensToQuery([...nonTextTokens, newToken, ...textTokens]);
 }
 
+export function setTokenMode(
+  query: string,
+  type: Exclude<TokenType, 'text'>,
+  value: string,
+  mode: SearchTokenMode,
+): string {
+  const tokens = parseSearchQuery(query);
+  const same = tokens.find(
+    (token) => token.type === type && token.value === value && token.mode === mode,
+  );
+  if (same) return query;
+
+  const opposite = tokens.find(
+    (token) => token.type === type && token.value === value && token.mode !== mode,
+  );
+  return addToken(opposite ? removeToken(query, opposite) : query, type, value, mode);
+}
+
 /**
  * 从查询字符串中移除一个 token
  */

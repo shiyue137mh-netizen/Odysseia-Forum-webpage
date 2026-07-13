@@ -13,6 +13,8 @@ export type PreferencesSortUi =
 
 export interface PreferencesFormValue {
   preferredChannelIds: string[];
+  includeAuthorIds: string[];
+  excludeAuthorIds: string[];
   includeTagsText: string;
   excludeTagsText: string;
   includeKeywordsText: string;
@@ -56,6 +58,8 @@ function parseCommaSeparatedText(value?: string | null): string[] {
 export function toPreferencesFormValue(prefs?: UserPreferencesResponse | null): PreferencesFormValue {
   return {
     preferredChannelIds: (prefs?.preferred_channels || []).map((id) => String(id)),
+    includeAuthorIds: (prefs?.include_authors || []).map((id) => String(id)),
+    excludeAuthorIds: (prefs?.exclude_authors || []).map((id) => String(id)),
     includeTagsText: (prefs?.include_tags || []).join(', '),
     excludeTagsText: (prefs?.exclude_tags || []).join(', '),
     includeKeywordsText: prefs?.include_keywords || '',
@@ -80,6 +84,8 @@ export function toPreferencesUpdatePayload(
     // Discord snowflake exceeds JS safe integer range.
     // Keep raw digit strings in JSON so backend can parse them without precision loss.
     preferred_channels: preferredChannels,
+    include_authors: value.includeAuthorIds,
+    exclude_authors: value.excludeAuthorIds,
     include_tags: includeTags,
     exclude_tags: excludeTags,
     include_keywords: value.includeKeywordsText.trim(),

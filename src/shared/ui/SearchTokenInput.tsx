@@ -4,6 +4,7 @@ import {
   SearchToken,
   tokensToQuery,
 } from "@/shared/lib/searchTokenizer";
+import { LazyImage } from "@/shared/ui/LazyImage";
 import { Tag as TagIcon, User, X } from "lucide-react";
 import {
   ChangeEvent,
@@ -24,6 +25,7 @@ interface SearchTokenInputProps {
   externalInputRef?: MutableRefObject<HTMLInputElement | null>;
   placeholder?: string;
   className?: string;
+  authorDetails?: Record<string, { displayName: string; avatarUrl?: string | null }>;
 }
 
 export function SearchTokenInput({
@@ -35,6 +37,7 @@ export function SearchTokenInput({
   externalInputRef,
   placeholder = "搜索...",
   className = "",
+  authorDetails = {},
 }: SearchTokenInputProps) {
   const [tokens, setTokens] = useState<SearchToken[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -190,8 +193,19 @@ export function SearchTokenInput({
     }
   };
 
-  const getTokenIcon = (type: SearchToken["type"]) => {
-    switch (type) {
+  const getTokenIcon = (token: SearchToken) => {
+    const author = token.type === "author" ? authorDetails[token.value] : null;
+    if (author) {
+      return (
+        <LazyImage
+          src={author.avatarUrl || "https://cdn.discordapp.com/embed/avatars/0.png"}
+          alt={author.displayName}
+          className="h-4 w-4 shrink-0 rounded-full object-cover"
+        />
+      );
+    }
+
+    switch (token.type) {
       case "tag":
         return <TagIcon className="h-3 w-3" />;
       case "author":
@@ -233,6 +247,7 @@ export function SearchTokenInput({
         .filter((token) => token.type !== "text")
         .map((token, index) => {
           const isEditing = editingTokenIndex === index;
+          const author = token.type === "author" ? authorDetails[token.value] : null;
 
           return (
             <div
@@ -241,7 +256,7 @@ export function SearchTokenInput({
                 isEditing ? "ring-2 ring-(--od-accent)" : "hover:scale-105"
               } ${getTokenColor(token)}`}
             >
-              {getTokenIcon(token.type)}
+              {getTokenIcon(token)}
 
               {isEditing ? (
                 <input
@@ -270,12 +285,13 @@ export function SearchTokenInput({
                 <span
                   className="max-w-[72px] truncate cursor-pointer"
                   onClick={(e) => {
+                    if (author) return;
                     e.stopPropagation();
                     handleTokenClick(token);
                   }}
-                  title="点击修改"
+                  title={author ? author.displayName : "点击修改"}
                 >
-                  {token.value || "(空)"}
+                  {author?.displayName || token.value || "(空)"}
                 </span>
               )}
 

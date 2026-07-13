@@ -1,7 +1,7 @@
 import type { Booklist } from "@/entities/booklist/types";
 import { BookOpen, Eye, Globe, Lock, Pencil, Star, Trash2 } from "lucide-react";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
-import { formatPreciseRelativeDateTime } from "@/shared/lib/dateTime";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 interface BooklistCardProps {
   booklist: Booklist;
@@ -22,7 +22,7 @@ export function BooklistCard({
   onDelete,
   collectLoading,
 }: BooklistCardProps) {
-  const updatedText = formatPreciseRelativeDateTime(booklist.updated_at);
+  const updatedText = formatRelativeDateTime(booklist.updated_at);
   const ownerName =
     booklist.author?.display_name ||
     booklist.author?.global_name ||

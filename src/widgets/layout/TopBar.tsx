@@ -7,6 +7,7 @@ import {
   type SearchSuggestionAction,
 } from "@/features/search/components/SearchSuggestions";
 import { useSearchAutocomplete } from "@/features/search/hooks/useSearchAutocomplete";
+import { useAuthorProfiles } from "@/features/search/hooks/useAuthorProfiles";
 import type {
   TagLogic,
 } from "@/features/search/hooks/useSearchParams";
@@ -81,32 +82,27 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
 
   const {
     applyInputChange,
+    authorTokens,
     clearFilters,
     clearHistory,
     closePanels,
     debouncedQuery,
-    excludeAuthorDraft,
-    excludeAuthorTokens,
     executeSearch,
     applyHistoryItem,
     handleInputFocus,
     handleSearch,
     historyItems,
-    includeAuthorDraft,
-    includeAuthorTokens,
     isPanelOpen,
     removeAuthorToken,
     removeHistoryItem,
     searchContainerRef,
     searchInput,
     searchInputRef,
-    setExcludeAuthorDraft,
-    setIncludeAuthorDraft,
+    selectAuthorToken,
     setShowFilters,
     setShowSuggestions,
     showFilters,
     showSuggestions,
-    submitAuthorDraft,
     toggleFilters,
     updateQueryFromTokenMutation,
   } = useTopBarSearchController({
@@ -123,6 +119,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
     suggestionTags,
     suggestionThreads,
     suggestionBooklists,
+    suggestionQuery,
     virtualTagOriginChannelMap,
   } = useSearchAutocomplete({
     params,
@@ -138,6 +135,21 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
       updateQueryFromTokenMutation,
       virtualTagOriginChannelMap,
     });
+
+  const authorProfiles = useAuthorProfiles(authorTokens.map((token) => token.value));
+  const authorDetails = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(authorProfiles).map(([id, profile]) => [
+          id,
+          {
+            displayName: profile.display_name || profile.name,
+            avatarUrl: profile.avatar_url,
+          },
+        ]),
+      ),
+    [authorProfiles],
+  );
 
   const handleSuggestionSelect = useCallback(
     (action: SearchSuggestionAction) => {
@@ -168,6 +180,16 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
         return;
       }
 
+      if (action.type === "add_token") {
+        if (action.tokenType === "author") {
+          selectAuthorToken(action.value, action.mode);
+        } else {
+          toggleTagToken(action.value, action.mode);
+        }
+        closePanels();
+        return;
+      }
+
       // 移除最后一段正在输入的关键词，替换为建议的 Token
       const words = searchInput.trimEnd().split(/\s+/);
       if (words.length > 0 && words[0] !== "") {
@@ -187,7 +209,9 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
       closePanels,
       executeSearch,
       searchInput,
+      selectAuthorToken,
       setPreviewThreadId,
+      toggleTagToken,
     ],
   );
 
@@ -274,6 +298,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                 externalInputRef={searchInputRef}
                 placeholder="搜索标题、作者或内容..."
                 className="min-h-[40px] rounded-[24px] bg-transparent"
+                authorDetails={authorDetails}
               />
             </div>
 
@@ -354,18 +379,13 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                 {showFilters ? (
                   <SearchFilterPanel
                     availableTags={availableTags}
-                    excludeAuthorDraft={excludeAuthorDraft}
-                    excludeAuthorTokens={excludeAuthorTokens}
+                    authorTokens={authorTokens}
                     hasPanelFilters={hasPanelFilters}
-                    includeAuthorDraft={includeAuthorDraft}
-                    includeAuthorTokens={includeAuthorTokens}
                     mergedExcludeTags={params.excludeTags}
                     mergedIncludeTags={params.includeTags}
                     onClearFilters={clearFilters}
-                    onExcludeAuthorDraftChange={setExcludeAuthorDraft}
-                    onIncludeAuthorDraftChange={setIncludeAuthorDraft}
                     onRemoveAuthorToken={removeAuthorToken}
-                    onSubmitAuthorDraft={submitAuthorDraft}
+                    onSelectAuthorToken={selectAuthorToken}
                     onTagLogicChange={(value: TagLogic) =>
                       setParams({ tagLogic: value })
                     }
@@ -391,7 +411,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                     threads={suggestionThreads}
                     booklists={suggestionBooklists}
                     suggestedTags={
-                      searchInput.trim()
+                      suggestionQuery
                         ? suggestionTags
                         : []
                     }

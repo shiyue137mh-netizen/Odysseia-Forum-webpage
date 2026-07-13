@@ -6,6 +6,8 @@ export type DiscoveryPreferenceMode = 'search-active' | 'suggestion' | 'plaza';
 
 export interface DiscoveryPreferenceContext {
   preferredChannelIds: string[];
+  includeAuthorIds: string[];
+  excludeAuthorIds: string[];
   includeTags: string[];
   excludeTags: string[];
   sortMethod?: UISortMethod;
@@ -24,6 +26,8 @@ export function getDiscoveryPreferenceContext(
 
   const mapped = toPreferencesFormValue(preferences);
   const preferredChannelIds = normalizeStringList(mapped.preferredChannelIds);
+  const includeAuthorIds = normalizeStringList(mapped.includeAuthorIds);
+  const excludeAuthorIds = normalizeStringList(mapped.excludeAuthorIds);
   const includeTags = normalizeStringList(
     mapped.includeTagsText.split(',').map((item) => item.trim()),
   );
@@ -35,6 +39,8 @@ export function getDiscoveryPreferenceContext(
 
   const hasUsefulContent =
     preferredChannelIds.length > 0 ||
+    includeAuthorIds.length > 0 ||
+    excludeAuthorIds.length > 0 ||
     includeTags.length > 0 ||
     excludeTags.length > 0;
 
@@ -42,12 +48,16 @@ export function getDiscoveryPreferenceContext(
 
   return {
     preferredChannelIds,
+    includeAuthorIds,
+    excludeAuthorIds,
     includeTags,
     excludeTags,
     sortMethod,
     resultsPerPage,
     signature: JSON.stringify({
       preferredChannelIds,
+      includeAuthorIds,
+      excludeAuthorIds,
       includeTags,
       excludeTags,
       sortMethod,

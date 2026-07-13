@@ -23,7 +23,7 @@ import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { useFontSizeSetting } from "@/shared/hooks/useSettings";
 import {
   formatAbsoluteDateTime,
-  formatPreciseRelativeDateTime,
+  formatRelativeDateTime,
 } from "@/shared/lib/dateTime";
 import { addToken } from "@/shared/lib/searchTokenizer";
 import { fontSizeMap } from "@/shared/lib/settings";
@@ -85,10 +85,10 @@ export function ThreadPreviewOverlay({
     handleClose();
   };
 
-  const createdTime = formatPreciseRelativeDateTime(thread.created_at);
+  const createdTime = formatRelativeDateTime(thread.created_at);
   const fullTime = formatAbsoluteDateTime(thread.created_at);
   const lastActiveTime = thread.last_active_at
-    ? formatPreciseRelativeDateTime(thread.last_active_at)
+    ? formatRelativeDateTime(thread.last_active_at)
     : null;
   const virtualOnlyTags = (thread.virtual_tags || []).filter(
     (tag) => !thread.tags?.includes(tag),
@@ -246,6 +246,17 @@ export function ThreadPreviewOverlay({
           >
             {thread.title}
           </h2>
+
+          {/* Images */}
+          {thread.thumbnail_urls && thread.thumbnail_urls.length > 0 && (
+            <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-(--od-shell-line)">
+              <ImageCarousel
+                images={thread.thumbnail_urls}
+                alt={thread.title}
+                className="h-75 sm:h-100"
+              />
+            </div>
+          )}
         </div>
 
         {/* Scrollable Content */}
@@ -285,17 +296,6 @@ export function ThreadPreviewOverlay({
                   {tag}
                 </button>
               ))}
-            </div>
-          )}
-
-          {/* Images */}
-          {thread.thumbnail_urls && thread.thumbnail_urls.length > 0 && (
-            <div className="mb-6 overflow-hidden rounded-[1.25rem] border border-(--od-shell-line)">
-              <ImageCarousel
-                images={thread.thumbnail_urls}
-                alt={thread.title}
-                className="h-75 sm:h-100"
-              />
             </div>
           )}
 

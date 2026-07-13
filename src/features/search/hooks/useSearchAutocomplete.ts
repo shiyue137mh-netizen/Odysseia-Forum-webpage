@@ -8,7 +8,7 @@ import {
   getDiscoveryPreferenceContext,
 } from "@/features/preferences/lib/discoveryPreferences";
 import { ALL_VIRTUAL_TAGS } from "@/shared/config/navigation";
-import { parseSearchQuery } from "@/shared/lib/searchTokenizer";
+import { parseSearchQuery, tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
 import type { SearchParams } from "@/features/search/hooks/useSearchParams";
 import { searchKeys } from "@/features/search/lib/queryKeys";
 
@@ -33,6 +33,10 @@ export function useSearchAutocomplete({
   debouncedQuery,
   showSuggestions,
 }: UseSearchAutocompleteOptions) {
+  const suggestionQuery = useMemo(
+    () => tokenizeSearchPayload(debouncedQuery).text,
+    [debouncedQuery],
+  );
   const activeVirtualTag = useMemo(() => {
     const tokens = parseSearchQuery(searchInput || "");
     const tagToken = tokens.find(
@@ -98,12 +102,12 @@ export function useSearchAutocomplete({
   // 使用后端专用的搜索建议 API，一次请求返回作者、帖子和书单
   const { data: suggestionsData } = useQuery({
     queryKey: searchKeys.suggestions({
-      query: debouncedQuery,
+      query: suggestionQuery,
       channel: params.channel,
       preferenceSignature: discoveryPreferenceContext?.signature,
     }),
-    queryFn: () => searchApi.getSuggestions(debouncedQuery),
-    enabled: showSuggestions && debouncedQuery.length > 0,
+    queryFn: () => searchApi.getSuggestions(suggestionQuery),
+    enabled: showSuggestions && suggestionQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,
   });
@@ -134,6 +138,7 @@ export function useSearchAutocomplete({
     suggestionTags,
     suggestionThreads,
     suggestionBooklists,
+    suggestionQuery,
     virtualTagOriginChannelMap,
   };
 }

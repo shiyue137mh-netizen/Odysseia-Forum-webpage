@@ -3,13 +3,18 @@ import type { components } from '@shared-types/openapi';
 
 type RawUserPreferencesResponse = components['schemas']['UserPreferencesResponse'];
 type RawUserPreferencesUpdateRequest = components['schemas']['UserPreferencesUpdateRequest'];
+type SnowflakeListField = 'preferred_channels' | 'include_authors' | 'exclude_authors';
 
-export type UserPreferencesResponse = Omit<RawUserPreferencesResponse, 'preferred_channels'> & {
+export type UserPreferencesResponse = Omit<RawUserPreferencesResponse, SnowflakeListField> & {
   preferred_channels?: string[] | null;
+  include_authors?: string[] | null;
+  exclude_authors?: string[] | null;
 };
 
-export type UserPreferencesUpdateRequest = Omit<RawUserPreferencesUpdateRequest, 'preferred_channels'> & {
+export type UserPreferencesUpdateRequest = Omit<RawUserPreferencesUpdateRequest, SnowflakeListField> & {
   preferred_channels?: string[] | null;
+  include_authors?: string[] | null;
+  exclude_authors?: string[] | null;
 };
 
 export interface PreferencesApiOptions {
@@ -25,7 +30,7 @@ function toGuildQuery(guildId?: string | number) {
 
 function parsePreferencesResponseText(text: string): UserPreferencesResponse {
   const patched = text.replace(
-    /("preferred_channels"\s*:\s*)\[(.*?)\]/,
+    /("(?:preferred_channels|include_authors|exclude_authors)"\s*:\s*)\[(.*?)\]/g,
     (_match, prefix: string, inner: string) => {
       const normalized = inner
         .split(',')
@@ -45,6 +50,8 @@ function normalizePreferencesPayload(payload: UserPreferencesUpdateRequest): Raw
   return {
     ...payload,
     preferred_channels: (payload.preferred_channels || []) as unknown as number[] | null,
+    include_authors: (payload.include_authors || []) as unknown as number[] | null,
+    exclude_authors: (payload.exclude_authors || []) as unknown as number[] | null,
   };
 }
 

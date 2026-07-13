@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseSearchQuery, addToken, removeToken, migrateLegacySyntax } from './searchTokenizer';
+import {
+  parseSearchQuery,
+  addToken,
+  removeToken,
+  migrateLegacySyntax,
+  setTokenMode,
+} from './searchTokenizer';
 
 describe('searchTokenizer', () => {
   describe('parseSearchQuery', () => {
@@ -50,7 +56,7 @@ describe('searchTokenizer', () => {
     it('应该能在现有文本后追加 token', () => {
       const query = 'hello';
       const result = addToken(query, 'tag', 'world');
-      expect(result).toBe('hello $tag:world$');
+      expect(result).toBe('$tag:world$ hello');
     });
   });
 
@@ -61,6 +67,14 @@ describe('searchTokenizer', () => {
       const tagToken = tokens.find(t => t.type === 'tag')!;
       const result = removeToken(query, tagToken);
       expect(result).toBe('hello');
+    });
+  });
+
+  describe('setTokenMode', () => {
+    it('应该用反选 token 替换同值的正选 token', () => {
+      expect(setTokenMode('$author:123$', 'author', '123', 'exclude')).toBe(
+        '-$author:123$',
+      );
     });
   });
 

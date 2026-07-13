@@ -24,7 +24,8 @@ import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import { usePretextClampText } from "@/shared/hooks/usePretextClampText";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
-import { formatPreciseRelativeDateTime } from "@/shared/lib/dateTime";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
+import { AuthorWorksHoverCard } from "@/features/authors/components/AuthorWorksHoverCard";
 
 interface ThreadListItemProps {
   thread: Thread;
@@ -51,9 +52,9 @@ function ThreadListItemImpl({
   const fontSizes = fontSizeMap[fontSize];
   const [quickAddOpen, setQuickAddOpen] = useState(false);
 
-  const createdTime = formatPreciseRelativeDateTime(thread.created_at);
+  const createdTime = formatRelativeDateTime(thread.created_at);
   const lastActiveTime = thread.last_active_at
-    ? formatPreciseRelativeDateTime(thread.last_active_at)
+    ? formatRelativeDateTime(thread.last_active_at)
     : null;
   const virtualOnlyTags = (thread.virtual_tags || []).filter(
     (tag) => !thread.tags.includes(tag),
@@ -233,16 +234,28 @@ function ThreadListItemImpl({
           <div
             className={`mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 ${fontSizes.meta} text-(--od-text-tertiary)`}
           >
-            <button
-              type="button"
-              onClick={handleAuthorClick}
-              className="shrink-0 rounded-full"
-            >
+            {thread.author?.id ? (
+              <AuthorWorksHoverCard
+                author={thread.author}
+                currentThreadId={thread.thread_id}
+              >
+                <button
+                  type="button"
+                  onClick={handleAuthorClick}
+                  className="shrink-0 rounded-full"
+                >
+                  <AuthorAvatar
+                    author={thread.author}
+                    className="h-6 w-6 md:h-7 md:w-7"
+                  />
+                </button>
+              </AuthorWorksHoverCard>
+            ) : (
               <AuthorAvatar
                 author={thread.author}
                 className="h-6 w-6 md:h-7 md:w-7"
               />
-            </button>
+            )}
             <button
               type="button"
               onClick={handleAuthorClick}

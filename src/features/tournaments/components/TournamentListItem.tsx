@@ -6,7 +6,7 @@ import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
 import { tournamentsApi } from "@/features/tournaments/api/tournamentsApi";
 import { tournamentKeys } from "@/features/tournaments/lib/queryKeys";
 import { LazyImage } from "@/shared/ui/LazyImage";
-import { formatPreciseRelativeDateTime } from "@/shared/lib/dateTime";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 interface TournamentListItemProps {
   tournament: Tournament;
@@ -42,7 +42,7 @@ export function TournamentListItem({
     tournament.author?.global_name ||
     tournament.author?.name ||
     `用户 ${tournament.owner_id}`;
-  const updatedText = formatPreciseRelativeDateTime(tournament.updated_at);
+  const updatedText = formatRelativeDateTime(tournament.updated_at);
 
   return (
     <article

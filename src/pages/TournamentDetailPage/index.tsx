@@ -35,7 +35,7 @@ import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { ShareTextDialog } from "@/shared/ui/ShareTextDialog";
 import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
-import { formatPreciseRelativeDateTime } from "@/shared/lib/dateTime";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 function toTournamentThread(item: TournamentItem, tournament: Tournament): Thread {
   return {
@@ -282,7 +282,7 @@ export function TournamentDetailPage() {
                   <Star className="h-3.5 w-3.5" />
                   {tournament.collection_count} 次收藏
                 </span>
-                <span>{formatPreciseRelativeDateTime(tournament.updated_at)}</span>
+                <span>{formatRelativeDateTime(tournament.updated_at)}</span>
                 <span>{tournament.is_public ? "公开赛事" : "私有赛事"}</span>
               </div>
 

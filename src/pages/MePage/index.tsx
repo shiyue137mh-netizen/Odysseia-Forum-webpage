@@ -62,6 +62,8 @@ type FollowStatusFilter = "current" | "past" | "all";
 
 const DEFAULT_FORM: PreferencesFormValue = {
   preferredChannelIds: [],
+  includeAuthorIds: [],
+  excludeAuthorIds: [],
   includeTagsText: "",
   excludeTagsText: "",
   includeKeywordsText: "",

@@ -14,6 +14,7 @@ import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import type { Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorWorksHoverCard } from "@/features/authors/components/AuthorWorksHoverCard";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
 import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
@@ -21,7 +22,7 @@ import {
   useCardSizeSetting,
   useFontSizeSetting,
 } from "@/shared/hooks/useSettings";
-import { formatPreciseRelativeDateTime } from "@/shared/lib/dateTime";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { fontSizeMap } from "@/shared/lib/settings";
 import { DiscordMarkdownText } from "@/shared/ui/DiscordMarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
@@ -99,9 +100,9 @@ function ThreadCardImpl({
     return () => window.removeEventListener("resize", updateTitleShift);
   }, [thread.title, fontSize, searchQuery]);
 
-  const createdTime = formatPreciseRelativeDateTime(thread.created_at);
+  const createdTime = formatRelativeDateTime(thread.created_at);
   const lastActiveTime = thread.last_active_at
-    ? formatPreciseRelativeDateTime(thread.last_active_at)
+    ? formatRelativeDateTime(thread.last_active_at)
     : null;
   const virtualOnlyTags = (thread.virtual_tags || []).filter(
     (tag) => !thread.tags.includes(tag),
@@ -164,16 +165,28 @@ function ThreadCardImpl({
         >
           <div className="flex flex-col gap-2 px-1 pb-3 pt-1 text-(--od-text-primary)">
             <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-              <button
-                type="button"
-                onClick={handleAuthorClick}
-                className="rounded-full shrink-0"
-              >
+              {thread.author?.id ? (
+                <AuthorWorksHoverCard
+                  author={thread.author}
+                  currentThreadId={thread.thread_id}
+                >
+                  <button
+                    type="button"
+                    onClick={handleAuthorClick}
+                    className="rounded-full shrink-0"
+                  >
+                    <AuthorAvatar
+                      author={thread.author}
+                      className="h-6 w-6 md:h-7 md:w-7 ring-1 ring-(--od-border-strong)/25"
+                    />
+                  </button>
+                </AuthorWorksHoverCard>
+              ) : (
                 <AuthorAvatar
                   author={thread.author}
                   className="h-6 w-6 md:h-7 md:w-7 ring-1 ring-(--od-border-strong)/25"
                 />
-              </button>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex h-4 min-w-0 items-center gap-1">
                   <button

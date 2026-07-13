@@ -181,9 +181,17 @@ function buildSearchRequest(params: SearchUIRequest): ApiSearchParams {
   const channelIdsFromTokens = normalizeIdList(tokenized.channels);
   const channel_ids = channelIdsFromUrl ?? channelIdsFromTokens;
 
-  const includeAuthorNames = dedupeStrings(tokenized.includeAuthors);
-  const includeAuthorIds = normalizeIdList(params.include_authors ?? []);
-  const excludeAuthorIds = normalizeIdList(params.exclude_authors ?? []);
+  const includeAuthorNames = dedupeStrings(
+    tokenized.includeAuthors.filter((value) => !/^\d+$/.test(value)),
+  );
+  const includeAuthorIds = normalizeIdList([
+    ...(params.include_authors ?? []),
+    ...tokenized.includeAuthors.filter((value) => /^\d+$/.test(value)),
+  ]);
+  const excludeAuthorIds = normalizeIdList([
+    ...(params.exclude_authors ?? []),
+    ...tokenized.excludeAuthors.filter((value) => /^\d+$/.test(value)),
+  ]);
 
   const includeTags = dedupeStrings([...(params.include_tags || []), ...tokenized.includeTags]);
   const excludeTags = dedupeStrings([...(params.exclude_tags || []), ...tokenized.excludeTags]);

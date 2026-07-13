@@ -2,7 +2,7 @@ import { BookOpen, Eye, Globe, Lock, Pencil, Star, Trash2 } from "lucide-react";
 
 import type { Booklist } from "@/entities/booklist/types";
 import { LazyImage } from "@/shared/ui/LazyImage";
-import { formatPreciseRelativeDateTime } from "@/shared/lib/dateTime";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 interface BooklistListItemProps {
   booklist: Booklist;
@@ -29,7 +29,7 @@ export function BooklistListItem({
   onDelete,
   collectLoading,
 }: BooklistListItemProps) {
-  const updatedText = formatPreciseRelativeDateTime(booklist.updated_at);
+  const updatedText = formatRelativeDateTime(booklist.updated_at);
 
   const ownerFallbackName = ownerName || `用户 ${booklist.owner_id}`;
 

@@ -1,23 +1,18 @@
 import type { SearchToken } from '@/shared/lib/searchTokenizer';
-import { User, X } from 'lucide-react';
 import { Select } from '@/shared/ui/Select';
 
+import { AuthorModePicker } from '@/features/search/components/AuthorModePicker';
 import type { TagLogic } from '@/features/search/hooks/useSearchParams';
 
 interface SearchFilterPanelProps {
   availableTags: string[];
-  excludeAuthorDraft: string;
-  excludeAuthorTokens: SearchToken[];
+  authorTokens: SearchToken[];
   hasPanelFilters: boolean;
-  includeAuthorDraft: string;
-  includeAuthorTokens: SearchToken[];
   mergedExcludeTags: string[];
   mergedIncludeTags: string[];
   onClearFilters: () => void;
-  onExcludeAuthorDraftChange: (value: string) => void;
-  onIncludeAuthorDraftChange: (value: string) => void;
   onRemoveAuthorToken: (token: SearchToken) => void;
-  onSubmitAuthorDraft: (mode: 'include' | 'exclude') => void;
+  onSelectAuthorToken: (authorId: string, mode: 'include' | 'exclude') => void;
   onTagLogicChange: (value: TagLogic) => void;
   onTimeFromChange: (value: string) => void;
   onTimeToChange: (value: string) => void;
@@ -31,18 +26,13 @@ interface SearchFilterPanelProps {
 
 export function SearchFilterPanel({
   availableTags,
-  excludeAuthorDraft,
-  excludeAuthorTokens,
+  authorTokens,
   hasPanelFilters,
-  includeAuthorDraft,
-  includeAuthorTokens,
   mergedExcludeTags,
   mergedIncludeTags,
   onClearFilters,
-  onExcludeAuthorDraftChange,
-  onIncludeAuthorDraftChange,
   onRemoveAuthorToken,
-  onSubmitAuthorDraft,
+  onSelectAuthorToken,
   onTagLogicChange,
   onTimeFromChange,
   onTimeToChange,
@@ -180,88 +170,20 @@ export function SearchFilterPanel({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-(--od-text-tertiary)">
-              <User className="h-3.5 w-3.5" />
-              包含作者
-            </label>
-            <div className="flex gap-2">
-              <input
-                value={includeAuthorDraft}
-                onChange={(e) => onIncludeAuthorDraftChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    onSubmitAuthorDraft('include');
-                  }
-                }}
-                placeholder="输入昵称或用户名"
-                className="od-chrome-surface w-full rounded-xl border border-white/6 px-3 py-2 text-sm text-(--od-text-primary) outline-hidden transition-colors focus:border-(--od-accent)"
-              />
-              <button
-                type="button"
-                onClick={() => onSubmitAuthorDraft('include')}
-                className="rounded-xl bg-emerald-500/20 px-3 text-sm text-emerald-300 transition-colors hover:bg-emerald-500/30"
-              >
-                添加
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {includeAuthorTokens.map((token) => (
-                <button
-                  key={`${token.mode}-${token.value}`}
-                  type="button"
-                  onClick={() => onRemoveAuthorToken(token)}
-                  className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-300"
-                >
-                  {token.value}
-                  <X className="h-3 w-3" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-(--od-text-tertiary)">
-              <User className="h-3.5 w-3.5" />
-              排除作者
-            </label>
-            <div className="flex gap-2">
-              <input
-                value={excludeAuthorDraft}
-                onChange={(e) => onExcludeAuthorDraftChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    onSubmitAuthorDraft('exclude');
-                  }
-                }}
-                placeholder="输入昵称或用户名"
-                className="od-chrome-surface w-full rounded-xl border border-white/6 px-3 py-2 text-sm text-(--od-text-primary) outline-hidden transition-colors focus:border-(--od-accent)"
-              />
-              <button
-                type="button"
-                onClick={() => onSubmitAuthorDraft('exclude')}
-                className="rounded-xl bg-rose-500/20 px-3 text-sm text-rose-300 transition-colors hover:bg-rose-500/30"
-              >
-                添加
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {excludeAuthorTokens.map((token) => (
-                <button
-                  key={`${token.mode}-${token.value}`}
-                  type="button"
-                  onClick={() => onRemoveAuthorToken(token)}
-                  className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-3 py-1 text-xs text-rose-300"
-                >
-                  {token.value}
-                  <X className="h-3 w-3" />
-                </button>
-              ))}
-            </div>
-          </div>
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-(--od-text-tertiary)">
+            作者筛选
+          </p>
+          <AuthorModePicker
+            selected={authorTokens.map((token) => ({ id: token.value, mode: token.mode }))}
+            onSelect={(author, mode) => onSelectAuthorToken(author.id, mode)}
+            onRemove={(selection) => {
+              const token = authorTokens.find(
+                (item) => item.value === selection.id && item.mode === selection.mode,
+              );
+              if (token) onRemoveAuthorToken(token);
+            }}
+          />
         </div>
       </div>
     </div>

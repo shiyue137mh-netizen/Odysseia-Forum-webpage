@@ -886,7 +886,7 @@
       "post": {
         "tags": ["书单"],
         "summary": "创建书单",
-        "description": "创建新书单\n\n- title: 书单标题（必填）\n- description: 书单简介（可选）\n- cover_image_url: 封面图 URL（可选）\n- is_public: 是否公开，默认为 True\n- is_anonymous: 是否匿名，默认为 False\n- display_type: 展示方式，1=加入时间倒序，2=display_order，默认为1",
+        "description": "创建新书单\n\n- title: 书单标题（必填）\n- description: 书单简介（可选）\n- cover_image_url: 封面图 URL（可选）\n- is_public: 是否公开，默认为 True\n- is_anonymous: 是否匿名，默认为 False\n- default_sort_method: 默认排序方式，默认为 join_time。可选值:\n    - \"hot\": Reddit Hot 算法 — score = log10(max(1, reaction_count)) + created_at_epoch / time_decay\n    - \"created_at\": 按发帖时间排序\n    - \"reaction_count\": 按点赞数排序\n    - \"reply_count\": 按回复数排序\n    - \"collection_count\": 按收藏数排序\n    - \"last_active_at\": 按最后发言时间排序\n    - \"join_time\": 按加入书单时间排序 (默认)\n    - \"display_order\": 按作者自定义排序权重排序\n- default_sort_order: 默认排序顺序，默认为 desc",
         "operationId": "create_booklist_v1_booklist_save_post",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -939,10 +939,35 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
-              "default": 1,
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "description": "已废弃，请使用 default_sort_method + default_sort_order",
+              "deprecated": true,
               "title": "Display Type"
-            }
+            },
+            "description": "已废弃，请使用 default_sort_method + default_sort_order",
+            "deprecated": true
+          },
+          {
+            "name": "default_sort_method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "默认排序方式",
+              "title": "Default Sort Method"
+            },
+            "description": "默认排序方式"
+          },
+          {
+            "name": "default_sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "默认排序顺序",
+              "title": "Default Sort Order"
+            },
+            "description": "默认排序顺序"
           }
         ],
         "responses": {
@@ -1088,7 +1113,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_BooklistDetail_"
+                  "$ref": "#/components/schemas/PaginatedResponse_BooklistSummary_"
                 }
               }
             }
@@ -1206,6 +1231,17 @@
               "title": "Offset"
             },
             "description": "结果的偏移量，从0开始"
+          },
+          {
+            "name": "mark_thread_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "description": "标记帖子ID：传入后为每个书单标注是否包含该帖子（不过滤结果集），配合is_marked字段使用",
+              "title": "Mark Thread Id"
+            },
+            "description": "标记帖子ID：传入后为每个书单标注是否包含该帖子（不过滤结果集），配合is_marked字段使用"
           }
         ],
         "responses": {
@@ -1214,7 +1250,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PaginatedResponse_BooklistDetail_"
+                  "$ref": "#/components/schemas/PaginatedResponse_BooklistSummary_"
                 }
               }
             }
@@ -1269,7 +1305,7 @@
       "put": {
         "tags": ["书单"],
         "summary": "更新书单",
-        "description": "更新书单信息\n\n- booklist_id: 书单ID\n- title: 新标题（可选）\n- description: 新简介（可选）\n- cover_image_url: 新封面图URL（可选）\n- is_public: 是否公开（可选）\n- is_anonymous: 是否匿名（可选）\n- display_type: 展示方式（可选）",
+        "description": "更新书单信息\n\n- booklist_id: 书单ID\n- title: 新标题（可选）\n- description: 新简介（可选）\n- cover_image_url: 新封面图URL（可选）\n- is_public: 是否公开（可选）\n- is_anonymous: 是否匿名（可选）\n- default_sort_method: 默认排序方式（可选）。可选值:\n    - \"hot\": Reddit Hot 算法 — score = log10(max(1, reaction_count)) + created_at_epoch / time_decay\n    - \"created_at\": 按发帖时间排序\n    - \"reaction_count\": 按点赞数排序\n    - \"reply_count\": 按回复数排序\n    - \"collection_count\": 按收藏数排序\n    - \"last_active_at\": 按最后发言时间排序\n    - \"join_time\": 按加入书单时间排序\n    - \"display_order\": 按作者自定义排序权重排序\n- default_sort_order: 默认排序顺序（可选）",
         "operationId": "update_booklist_v1_booklist_update__booklist_id__put",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1330,8 +1366,34 @@
             "required": false,
             "schema": {
               "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "description": "已废弃，请使用 default_sort_method + default_sort_order",
+              "deprecated": true,
               "title": "Display Type"
-            }
+            },
+            "description": "已废弃，请使用 default_sort_method + default_sort_order",
+            "deprecated": true
+          },
+          {
+            "name": "default_sort_method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "默认排序方式",
+              "title": "Default Sort Method"
+            },
+            "description": "默认排序方式"
+          },
+          {
+            "name": "default_sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "默认排序顺序",
+              "title": "Default Sort Order"
+            },
+            "description": "默认排序顺序"
           }
         ],
         "responses": {
@@ -1362,6 +1424,84 @@
         "summary": "删除书单",
         "description": "删除书单及其所有关联项\n\n- booklist_id: 书单ID",
         "operationId": "delete_booklist_v1_booklist_delete__booklist_id__delete",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "booklist_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "Booklist Id" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": { "application/json": { "schema": {} } }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/booklist/publish/{booklist_id}": {
+      "post": {
+        "tags": ["书单"],
+        "summary": "发布书单到 Discord",
+        "description": "发布（或更新）书单到指定的 Discord 讨论帖。\n\n若该书单已发布到同一帖，则更新既有消息（幂等）。\n接口立即返回，后台异步调用 discord-featured-bot 完成实际发布。",
+        "operationId": "publish_booklist_v1_booklist_publish__booklist_id__post",
+        "security": [{ "HTTPBearer": [] }],
+        "parameters": [
+          {
+            "name": "booklist_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "title": "Booklist Id" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BooklistPublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Publish Booklist V1 Booklist Publish  Booklist Id  Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["书单"],
+        "summary": "取消发布书单",
+        "description": "取消发布书单，删除所有发布记录。",
+        "operationId": "unpublish_booklist_v1_booklist_publish__booklist_id__delete",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
           {
@@ -1479,11 +1619,50 @@
         }
       }
     },
+    "/v1/booklist/item/sync": {
+      "post": {
+        "tags": ["书单"],
+        "summary": "批量修改帖子在多个书单中的存在性",
+        "description": "批量修改/覆盖一个帖子在用户拥有的多个书单中的存在性。\n\n- **thread_id**: 帖子ID\n- **scope_booklist_ids**: 操作范围（必须全是当前用户拥有的书单）\n- **target_booklist_ids**: 操作后应包含该帖子的书单（必须是 scope 的子集）\n- **comment**: 应用于目标书单项的推荐语（可选）",
+        "operationId": "sync_thread_in_booklists_v1_booklist_item_sync_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BooklistItemsSyncRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BooklistItemsSyncDTO"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
+              }
+            }
+          }
+        },
+        "security": [{ "HTTPBearer": [] }]
+      }
+    },
     "/v1/booklist/item/list/page/{booklist_id}": {
       "get": {
         "tags": ["书单"],
         "summary": "分页获取书单内的帖子详情",
-        "description": "分页获取书单内的帖子详情\n\n- booklist_id: 书单ID\n- limit: 返回数量\n- offset: 偏移量",
+        "description": "分页获取书单内的帖子详情\n\n- booklist_id: 书单ID\n- limit: 返回数量\n- offset: 偏移量\n- sort_method: 排序方式（可选），覆盖书单默认排序\n- sort_order: 排序顺序（可选），覆盖书单默认排序",
         "operationId": "get_booklist_items_v1_booklist_item_list_page__booklist_id__get",
         "security": [{ "HTTPBearer": [] }],
         "parameters": [
@@ -1519,6 +1698,28 @@
               "title": "Offset"
             },
             "description": "结果的偏移量，从0开始"
+          },
+          {
+            "name": "sort_method",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "排序方式: hot(热门-Reddit Hot算法), created_at(发帖时间), reaction_count(点赞数), reply_count(回复数), collection_count(收藏数), last_active_at(最后发言时间), join_time(加入书单时间), display_order(作者自定义排序)。不传则使用书单默认排序",
+              "title": "Sort Method"
+            },
+            "description": "排序方式: hot(热门-Reddit Hot算法), created_at(发帖时间), reaction_count(点赞数), reply_count(回复数), collection_count(收藏数), last_active_at(最后发言时间), join_time(加入书单时间), display_order(作者自定义排序)。不传则使用书单默认排序"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "description": "排序顺序: asc(升序) 或 desc(降序)。不传则使用书单默认排序",
+              "title": "Sort Order"
+            },
+            "description": "排序顺序: asc(升序) 或 desc(降序)。不传则使用书单默认排序"
           }
         ],
         "responses": {
@@ -2641,7 +2842,7 @@
         "type": "object",
         "required": ["thread_link", "cover_image_url", "target_scope"],
         "title": "BannerApplicationRequest",
-        "description": "Banner申请请求"
+        "description": "Banner申请请求模型"
       },
       "BannerApplicationResponse": {
         "properties": {
@@ -2715,18 +2916,12 @@
             "default": 1
           },
           "start_time": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Start Time",
             "description": "Banner 展示开始时间"
           },
           "end_time": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "End Time",
             "description": "Banner 展示结束时间"
           }
@@ -2756,7 +2951,6 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "创建时间"
           }
@@ -2822,10 +3016,17 @@
             "title": "Tournament Channel Id",
             "description": "赛事频道ID"
           },
-          "display_type": {
-            "type": "integer",
-            "title": "Display Type",
-            "description": "展示方式: 1=加入时间倒序, 2=作者自定义排序(display_order)"
+          "default_sort_method": {
+            "type": "string",
+            "title": "Default Sort Method",
+            "description": "默认排序方式: hot, created_at, reaction_count, reply_count, collection_count, last_active_at, join_time, display_order",
+            "default": "join_time"
+          },
+          "default_sort_order": {
+            "type": "string",
+            "title": "Default Sort Order",
+            "description": "默认排序顺序: asc, desc",
+            "default": "desc"
           },
           "item_count": {
             "type": "integer",
@@ -2842,15 +3043,19 @@
             "title": "View Count",
             "description": "被浏览次数"
           },
+          "publish_status": {
+            "type": "integer",
+            "title": "Publish Status",
+            "description": "发布状态: 0-未发布 1-待处理 2-成功 3-失败",
+            "default": 0
+          },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "创建时间"
           },
           "updated_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Updated At",
             "description": "最后更新时间"
           },
@@ -2859,6 +3064,19 @@
             "title": "Collected Flag",
             "description": "当前用户是否收藏了该书单",
             "default": false
+          },
+          "is_marked": {
+            "type": "boolean",
+            "title": "Is Marked",
+            "description": "是否被标记帖子命中 (仅当请求传入mark_thread_id时有效)",
+            "default": false
+          },
+          "publish_info": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/BooklistPublishInfo-Output" },
+              { "type": "null" }
+            ],
+            "description": "发布信息（仅已发布书单返回）"
           }
         },
         "type": "object",
@@ -2869,7 +3087,6 @@
           "is_public",
           "is_anonymous",
           "is_default",
-          "display_type",
           "item_count",
           "collection_count",
           "view_count",
@@ -2877,7 +3094,7 @@
           "updated_at"
         ],
         "title": "BooklistDetail",
-        "description": "书单详情"
+        "description": "书单详情（继承摘要，附加发布信息）"
       },
       "BooklistItemAddData": {
         "properties": {
@@ -2982,15 +3199,11 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "帖子创建时间"
           },
           "last_active_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Last Active At",
             "description": "帖子最后活跃时间"
           },
@@ -3016,10 +3229,7 @@
             "description": "帖子首条消息摘要"
           },
           "latest_update_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Latest Update At",
             "description": "最新更新时间"
           },
@@ -3058,10 +3268,7 @@
             "description": "书单主对该帖子的推荐语"
           },
           "tournament_participated_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Tournament Participated At",
             "description": "参赛时间（赛事专用）"
           },
@@ -3072,7 +3279,6 @@
           },
           "added_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Added At",
             "description": "加入书单的时间"
           },
@@ -3149,6 +3355,157 @@
         "required": ["thread_ids"],
         "title": "BooklistItemsDeleteRequest"
       },
+      "BooklistItemsSyncDTO": {
+        "properties": {
+          "thread_id": {
+            "type": "integer",
+            "title": "Thread Id",
+            "description": "帖子ID"
+          },
+          "added_to_booklist_ids": {
+            "items": { "type": "integer" },
+            "type": "array",
+            "title": "Added To Booklist Ids",
+            "description": "新增了帖子的书单ID"
+          },
+          "removed_from_booklist_ids": {
+            "items": { "type": "integer" },
+            "type": "array",
+            "title": "Removed From Booklist Ids",
+            "description": "移除了帖子的书单ID"
+          },
+          "unchanged_booklist_ids": {
+            "items": { "type": "integer" },
+            "type": "array",
+            "title": "Unchanged Booklist Ids",
+            "description": "未变更的书单ID"
+          }
+        },
+        "type": "object",
+        "required": ["thread_id"],
+        "title": "BooklistItemsSyncDTO",
+        "description": "批量同步书单项的结果。"
+      },
+      "BooklistItemsSyncRequest": {
+        "properties": {
+          "thread_id": {
+            "type": "integer",
+            "title": "Thread Id",
+            "description": "帖子ID"
+          },
+          "scope_booklist_ids": {
+            "items": { "type": "integer" },
+            "type": "array",
+            "title": "Scope Booklist Ids",
+            "description": "操作范围：要检查的书单ID列表"
+          },
+          "target_booklist_ids": {
+            "items": { "type": "integer" },
+            "type": "array",
+            "title": "Target Booklist Ids",
+            "description": "修改后应包含该帖子的书单ID列表（必须是 scope 的子集）"
+          },
+          "comment": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Comment",
+            "description": "推荐语/备注"
+          }
+        },
+        "type": "object",
+        "required": ["thread_id", "scope_booklist_ids", "target_booklist_ids"],
+        "title": "BooklistItemsSyncRequest",
+        "description": "批量同步帖子在多个书单中的存在性"
+      },
+      "BooklistPublishInfo-Input": {
+        "properties": {
+          "guild_id": {
+            "type": "integer",
+            "title": "Guild Id",
+            "description": "Discord 服务器 ID"
+          },
+          "thread_id": {
+            "type": "integer",
+            "title": "Thread Id",
+            "description": "Discord 讨论帖 ID"
+          },
+          "thread_url": {
+            "type": "string",
+            "title": "Thread Url",
+            "description": "Discord 讨论帖完整 URL"
+          },
+          "message_id": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Message Id",
+            "description": "已发布的 Discord 消息 ID"
+          },
+          "message_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Message Url",
+            "description": "已发布的 Discord 消息 URL"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At",
+            "description": "发布时间"
+          }
+        },
+        "type": "object",
+        "required": ["guild_id", "thread_id", "thread_url", "published_at"],
+        "title": "BooklistPublishInfo",
+        "description": "书单发布信息（仅详情接口返回）"
+      },
+      "BooklistPublishInfo-Output": {
+        "properties": {
+          "guild_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Guild Id",
+            "description": "Discord 服务器 ID"
+          },
+          "thread_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Thread Id",
+            "description": "Discord 讨论帖 ID"
+          },
+          "thread_url": {
+            "type": "string",
+            "title": "Thread Url",
+            "description": "Discord 讨论帖完整 URL"
+          },
+          "message_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Message Id",
+            "description": "已发布的 Discord 消息 ID"
+          },
+          "message_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Message Url",
+            "description": "已发布的 Discord 消息 URL"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At",
+            "description": "发布时间"
+          }
+        },
+        "type": "object",
+        "required": ["guild_id", "thread_id", "thread_url", "published_at"],
+        "title": "BooklistPublishInfo",
+        "description": "书单发布信息（仅详情接口返回）"
+      },
+      "BooklistPublishRequest": {
+        "properties": {
+          "thread_url": {
+            "type": "string",
+            "title": "Thread Url",
+            "description": "Discord 讨论帖完整 URL"
+          }
+        },
+        "type": "object",
+        "required": ["thread_url"],
+        "title": "BooklistPublishRequest",
+        "description": "书单发布请求"
+      },
       "BooklistSuggestion": {
         "properties": {
           "id": { "type": "integer", "title": "Id", "description": "书单 ID" },
@@ -3167,6 +3524,266 @@
         "required": ["id", "title", "item_count"],
         "title": "BooklistSuggestion",
         "description": "搜索建议中的书单模型"
+      },
+      "BooklistSummary-Input": {
+        "properties": {
+          "id": { "type": "integer", "title": "Id", "description": "书单ID" },
+          "owner_id": {
+            "type": "integer",
+            "title": "Owner Id",
+            "description": "创建者用户ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "书单标题"
+          },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description",
+            "description": "书单简介"
+          },
+          "cover_image_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Cover Image Url",
+            "description": "书单封面图URL"
+          },
+          "author": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/AuthorDetail-Input" },
+              { "type": "null" }
+            ],
+            "description": "创建者信息"
+          },
+          "is_public": {
+            "type": "boolean",
+            "title": "Is Public",
+            "description": "是否公开"
+          },
+          "is_anonymous": {
+            "type": "boolean",
+            "title": "Is Anonymous",
+            "description": "是否匿名"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "description": "是否为用户的默认书单"
+          },
+          "is_tournament": {
+            "type": "boolean",
+            "title": "Is Tournament",
+            "description": "是否为赛事书单",
+            "default": false
+          },
+          "tournament_channel_id": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }],
+            "title": "Tournament Channel Id",
+            "description": "赛事频道ID"
+          },
+          "default_sort_method": {
+            "type": "string",
+            "title": "Default Sort Method",
+            "description": "默认排序方式: hot, created_at, reaction_count, reply_count, collection_count, last_active_at, join_time, display_order",
+            "default": "join_time"
+          },
+          "default_sort_order": {
+            "type": "string",
+            "title": "Default Sort Order",
+            "description": "默认排序顺序: asc, desc",
+            "default": "desc"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count",
+            "description": "书单内帖子数量"
+          },
+          "collection_count": {
+            "type": "integer",
+            "title": "Collection Count",
+            "description": "被收藏次数"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count",
+            "description": "被浏览次数"
+          },
+          "publish_status": {
+            "type": "integer",
+            "title": "Publish Status",
+            "description": "发布状态: 0-未发布 1-待处理 2-成功 3-失败",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At",
+            "description": "最后更新时间"
+          },
+          "collected_flag": {
+            "type": "boolean",
+            "title": "Collected Flag",
+            "description": "当前用户是否收藏了该书单",
+            "default": false
+          },
+          "is_marked": {
+            "type": "boolean",
+            "title": "Is Marked",
+            "description": "是否被标记帖子命中 (仅当请求传入mark_thread_id时有效)",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "owner_id",
+          "title",
+          "is_public",
+          "is_anonymous",
+          "is_default",
+          "item_count",
+          "collection_count",
+          "view_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "BooklistSummary",
+        "description": "书单摘要（列表用）"
+      },
+      "BooklistSummary-Output": {
+        "properties": {
+          "id": { "type": "integer", "title": "Id", "description": "书单ID" },
+          "owner_id": {
+            "type": "string",
+            "title": "Owner Id",
+            "description": "创建者用户ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "书单标题"
+          },
+          "description": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Description",
+            "description": "书单简介"
+          },
+          "cover_image_url": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Cover Image Url",
+            "description": "书单封面图URL"
+          },
+          "author": {
+            "anyOf": [
+              { "$ref": "#/components/schemas/AuthorDetail-Output" },
+              { "type": "null" }
+            ],
+            "description": "创建者信息"
+          },
+          "is_public": {
+            "type": "boolean",
+            "title": "Is Public",
+            "description": "是否公开"
+          },
+          "is_anonymous": {
+            "type": "boolean",
+            "title": "Is Anonymous",
+            "description": "是否匿名"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "description": "是否为用户的默认书单"
+          },
+          "is_tournament": {
+            "type": "boolean",
+            "title": "Is Tournament",
+            "description": "是否为赛事书单",
+            "default": false
+          },
+          "tournament_channel_id": {
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
+            "title": "Tournament Channel Id",
+            "description": "赛事频道ID"
+          },
+          "default_sort_method": {
+            "type": "string",
+            "title": "Default Sort Method",
+            "description": "默认排序方式: hot, created_at, reaction_count, reply_count, collection_count, last_active_at, join_time, display_order",
+            "default": "join_time"
+          },
+          "default_sort_order": {
+            "type": "string",
+            "title": "Default Sort Order",
+            "description": "默认排序顺序: asc, desc",
+            "default": "desc"
+          },
+          "item_count": {
+            "type": "integer",
+            "title": "Item Count",
+            "description": "书单内帖子数量"
+          },
+          "collection_count": {
+            "type": "integer",
+            "title": "Collection Count",
+            "description": "被收藏次数"
+          },
+          "view_count": {
+            "type": "integer",
+            "title": "View Count",
+            "description": "被浏览次数"
+          },
+          "publish_status": {
+            "type": "integer",
+            "title": "Publish Status",
+            "description": "发布状态: 0-未发布 1-待处理 2-成功 3-失败",
+            "default": 0
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "title": "Updated At",
+            "description": "最后更新时间"
+          },
+          "collected_flag": {
+            "type": "boolean",
+            "title": "Collected Flag",
+            "description": "当前用户是否收藏了该书单",
+            "default": false
+          },
+          "is_marked": {
+            "type": "boolean",
+            "title": "Is Marked",
+            "description": "是否被标记帖子命中 (仅当请求传入mark_thread_id时有效)",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "owner_id",
+          "title",
+          "is_public",
+          "is_anonymous",
+          "is_default",
+          "item_count",
+          "collection_count",
+          "view_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "BooklistSummary",
+        "description": "书单摘要（列表用）"
       },
       "BooklistUpdateResponse": {
         "properties": {
@@ -3711,6 +4328,12 @@
             "title": "Has Update",
             "description": "自 last_viewed_at 后帖子是否有新内容",
             "default": false
+          },
+          "active_flag": {
+            "type": "boolean",
+            "title": "Active Flag",
+            "description": "是否为当前关注（True=当前关注，False=过去关注）",
+            "default": true
           }
         },
         "type": "object",
@@ -3758,15 +4381,11 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "帖子创建时间"
           },
           "last_active_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Last Active At",
             "description": "帖子最后活跃时间"
           },
@@ -3834,10 +4453,7 @@
             "description": "所属赛事书单信息列表"
           },
           "latest_update_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Latest Update At",
             "description": "帖子最近一次有新消息的时间"
           },
@@ -3848,15 +4464,11 @@
           },
           "followed_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Followed At",
             "description": "用户关注该帖子的时间"
           },
           "last_viewed_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Last Viewed At",
             "description": "用户最近一次查看该帖子的时间"
           },
@@ -3865,6 +4477,12 @@
             "title": "Has Update",
             "description": "自 last_viewed_at 后帖子是否有新内容",
             "default": false
+          },
+          "active_flag": {
+            "type": "boolean",
+            "title": "Active Flag",
+            "description": "是否为当前关注（True=当前关注，False=过去关注）",
+            "default": true
           }
         },
         "type": "object",
@@ -4047,6 +4665,33 @@
         "required": ["total", "limit", "offset", "results"],
         "title": "PaginatedResponse[BooklistItemDetail]"
       },
+      "PaginatedResponse_BooklistSummary_": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "符合条件的总项目数"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "本次查询每页的项目数"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "本次查询的偏移量"
+          },
+          "results": {
+            "items": { "$ref": "#/components/schemas/BooklistSummary-Output" },
+            "type": "array",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": ["total", "limit", "offset", "results"],
+        "title": "PaginatedResponse[BooklistSummary]"
+      },
       "SearchRequest": {
         "properties": {
           "guild_id": {
@@ -4173,13 +4818,13 @@
           "reaction_count_range": {
             "type": "string",
             "title": "Reaction Count Range",
-            "description": "点赞数范围 (例如: '>10', '5-20')",
+            "description": "点赞数范围, 例如: [0, 10000000)",
             "default": "[0, 10000000)"
           },
           "reply_count_range": {
             "type": "string",
             "title": "Reply Count Range",
-            "description": "回复数范围 (例如: '>=5')",
+            "description": "回复数范围, 例如: [0, 10000000)",
             "default": "[0, 10000000)"
           },
           "sort_method": {
@@ -4488,15 +5133,11 @@
           },
           "created_at": {
             "type": "string",
-            "format": "date-time",
             "title": "Created At",
             "description": "帖子创建时间"
           },
           "last_active_at": {
-            "anyOf": [
-              { "type": "string", "format": "date-time" },
-              { "type": "null" }
-            ],
+            "anyOf": [{ "type": "string" }, { "type": "null" }],
             "title": "Last Active At",
             "description": "帖子最后活跃时间"
           },

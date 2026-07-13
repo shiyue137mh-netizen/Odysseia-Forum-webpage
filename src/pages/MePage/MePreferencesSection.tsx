@@ -2,6 +2,7 @@ import { Save, Search } from "lucide-react";
 
 import { PreferenceTagSelector } from "@/features/preferences/components/PreferenceTagSelector";
 import type { PreferencesFormValue } from "@/features/preferences/lib/preferencesMapper";
+import { AuthorModePicker } from "@/features/search/components/AuthorModePicker";
 import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 
@@ -131,6 +132,49 @@ export function MePreferencesSection({
                 className="w-full rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4 py-3 text-sm text-(--od-text-primary)"
               />
             </label>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-(--od-text-primary)">
+                作者偏好
+              </p>
+              <p className="mt-1 text-sm leading-6 text-(--od-text-secondary)">
+                输入作者名称后，用 + 只看该作者，用 − 屏蔽该作者。
+              </p>
+            </div>
+            <AuthorModePicker
+              selected={[
+                ...form.includeAuthorIds.map((id) => ({ id, mode: "include" as const })),
+                ...form.excludeAuthorIds.map((id) => ({ id, mode: "exclude" as const })),
+              ]}
+              onSelect={(author, mode) => {
+                onUpdateForm((prev) => ({
+                  ...prev,
+                  includeAuthorIds:
+                    mode === "include"
+                      ? Array.from(new Set([...prev.includeAuthorIds, author.id]))
+                      : prev.includeAuthorIds.filter((id) => id !== author.id),
+                  excludeAuthorIds:
+                    mode === "exclude"
+                      ? Array.from(new Set([...prev.excludeAuthorIds, author.id]))
+                      : prev.excludeAuthorIds.filter((id) => id !== author.id),
+                }));
+              }}
+              onRemove={(selection) => {
+                onUpdateForm((prev) => ({
+                  ...prev,
+                  includeAuthorIds:
+                    selection.mode === "include"
+                      ? prev.includeAuthorIds.filter((id) => id !== selection.id)
+                      : prev.includeAuthorIds,
+                  excludeAuthorIds:
+                    selection.mode === "exclude"
+                      ? prev.excludeAuthorIds.filter((id) => id !== selection.id)
+                      : prev.excludeAuthorIds,
+                }));
+              }}
+            />
           </div>
 
           <div className="grid gap-6 sm:grid-cols-2">

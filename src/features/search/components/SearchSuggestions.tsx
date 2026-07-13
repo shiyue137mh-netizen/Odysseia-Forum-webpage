@@ -10,7 +10,9 @@ import {
   Flame,
   Hash,
   History,
+  Minus,
   MessageCircle,
+  Plus,
   User,
   X,
 } from "lucide-react";
@@ -21,9 +23,16 @@ import {
   type SearchHistoryItem,
 } from "@/shared/lib/searchHistory";
 import { LazyImage } from "@/shared/ui/LazyImage";
+import { tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
 
 export type SearchSuggestionAction =
   | { type: "append"; value: string }
+  | {
+      type: "add_token";
+      tokenType: "tag" | "author";
+      value: string;
+      mode: "include" | "exclude";
+    }
   | { type: "replace_query"; value: string; submit?: boolean }
   | { type: "apply_history"; item: SearchHistoryItem }
   | {
@@ -124,10 +133,11 @@ export function SearchSuggestions({
         itemCount?: number;
       };
 
-  const isZeroState = !currentQuery.trim();
+  const queryText = tokenizeSearchPayload(currentQuery).text;
+  const isZeroState = !queryText;
 
   const groups = useMemo(() => {
-    const queryLower = currentQuery.toLowerCase();
+    const queryLower = queryText.toLowerCase();
     const existingTags = currentQuery.match(/\$tag:([^$]+)\$/g) || [];
     const existingTagNames = existingTags
       .map((token) => token.match(/\$tag:([^$]+)\$/)?.[1] || "")
@@ -168,7 +178,7 @@ export function SearchSuggestions({
           key: `tag-pop-${tag}-${index}`,
           type: "tag",
           display: tag,
-          value: ` $tag:${tag}$`,
+          value: tag,
           icon: Flame,
         }));
 
@@ -187,7 +197,7 @@ export function SearchSuggestions({
           key: `author-${author.id}-${index}`,
           type: "author",
           display: author.display_name || author.name,
-          value: ` $author:${author.name}$`,
+          value: author.id,
           avatar: author.avatar_url,
           icon: User,
         }));
@@ -248,7 +258,7 @@ export function SearchSuggestions({
           key: `tag-${tag}-${index}`,
           type: "tag",
           display: tag,
-          value: ` $tag:${tag}$`,
+          value: tag,
           icon: Hash,
         }));
       if (relevantTags.length > 0) {
@@ -290,6 +300,7 @@ export function SearchSuggestions({
     history,
     isZeroState,
     randomTags,
+    queryText,
     suggestedTags,
     threads,
   ]);
@@ -321,7 +332,10 @@ export function SearchSuggestions({
     setSelectedIndex(-1);
   }, [currentQuery]);
 
-  const handleSelect = (item: SuggestionItem) => {
+  const handleSelect = (
+    item: SuggestionItem,
+    mode: "include" | "exclude" = "include",
+  ) => {
     if (item.type === "thread") {
       onSelect({
         type: "open_thread",
@@ -337,6 +351,16 @@ export function SearchSuggestions({
 
     if (item.type === "history") {
       onSelect({ type: "apply_history", item: item.historyItem });
+      return;
+    }
+
+    if (item.type === "tag" || item.type === "author") {
+      onSelect({
+        type: "add_token",
+        tokenType: item.type,
+        value: item.value,
+        mode,
+      });
       return;
     }
 
@@ -439,6 +463,33 @@ export function SearchSuggestions({
                               {describeSearchHistoryContext(item.historyItem)}
                             </span>
                           )}
+                      </div>
+                    )}
+
+                    {(item.type === "tag" || item.type === "author") && (
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleSelect(item, "include");
+                          }}
+                          aria-label={`包含${item.type === "author" ? "作者" : "标签"} ${item.display}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-(--od-text-tertiary) transition-colors hover:bg-emerald-500/15 hover:text-emerald-300"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleSelect(item, "exclude");
+                          }}
+                          aria-label={`排除${item.type === "author" ? "作者" : "标签"} ${item.display}`}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-(--od-text-tertiary) transition-colors hover:bg-rose-500/15 hover:text-rose-300"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
                       </div>
                     )}
 

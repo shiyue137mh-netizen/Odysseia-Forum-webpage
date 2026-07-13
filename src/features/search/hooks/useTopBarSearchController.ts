@@ -9,9 +9,9 @@ import {
   type SearchHistoryItem,
 } from "@/shared/lib/searchHistory";
 import {
-  addToken,
   parseSearchQuery,
   removeToken,
+  setTokenMode,
   type SearchToken,
 } from "@/shared/lib/searchTokenizer";
 import {
@@ -80,8 +80,6 @@ export function useTopBarSearchController({
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery.trim());
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [includeAuthorDraft, setIncludeAuthorDraft] = useState("");
-  const [excludeAuthorDraft, setExcludeAuthorDraft] = useState("");
   const [historyItems, setHistoryItems] = useState(() => getSearchHistory());
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -282,18 +280,8 @@ export function useTopBarSearchController({
     () => parseSearchQuery(searchInput),
     [searchInput],
   );
-  const includeAuthorTokens = useMemo(
-    () =>
-      allQueryTokens.filter(
-        (token) => token.type === "author" && token.mode === "include",
-      ),
-    [allQueryTokens],
-  );
-  const excludeAuthorTokens = useMemo(
-    () =>
-      allQueryTokens.filter(
-        (token) => token.type === "author" && token.mode === "exclude",
-      ),
+  const authorTokens = useMemo(
+    () => allQueryTokens.filter((token) => token.type === "author"),
     [allQueryTokens],
   );
 
@@ -320,29 +308,16 @@ export function useTopBarSearchController({
     [params.query, updateQuery],
   );
 
-  const submitAuthorDraft = useCallback(
-    (mode: "include" | "exclude") => {
-      const draft = (
-        mode === "include" ? includeAuthorDraft : excludeAuthorDraft
-      ).trim();
-      if (!draft) return;
-
-      updateQuery(addToken(params.query || "", "author", draft, mode).trim());
-
-      if (mode === "include") {
-        setIncludeAuthorDraft("");
-      } else {
-        setExcludeAuthorDraft("");
-      }
+  const selectAuthorToken = useCallback(
+    (authorId: string, mode: "include" | "exclude") => {
+      updateQuery(setTokenMode(params.query || "", "author", authorId, mode).trim());
     },
-    [excludeAuthorDraft, includeAuthorDraft, params.query, updateQuery],
+    [params.query, updateQuery],
   );
 
   const clearFilters = useCallback(() => {
     setSearchInput("");
     setPersistedDraftQuery("");
-    setIncludeAuthorDraft("");
-    setExcludeAuthorDraft("");
     setParams({
       query: "",
       sortMethod: "last_active_desc",
@@ -366,32 +341,27 @@ export function useTopBarSearchController({
 
   return {
     applyInputChange,
+    authorTokens,
     clearFilters,
     clearHistory,
     closePanels,
     debouncedQuery,
-    excludeAuthorDraft,
-    excludeAuthorTokens,
     executeSearch,
     handleInputFocus,
     handleSearch,
     applyHistoryItem,
     historyItems,
-    includeAuthorDraft,
-    includeAuthorTokens,
     isPanelOpen: showSuggestions || showFilters,
     removeAuthorToken,
     removeHistoryItem,
     searchContainerRef,
     searchInput,
     searchInputRef,
-    setExcludeAuthorDraft,
-    setIncludeAuthorDraft,
+    selectAuthorToken,
     setShowFilters,
     setShowSuggestions,
     showFilters,
     showSuggestions,
-    submitAuthorDraft,
     updateQuery,
     updateQueryFromTokenMutation,
     toggleFilters,
