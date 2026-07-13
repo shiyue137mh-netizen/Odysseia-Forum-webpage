@@ -5,6 +5,7 @@ import { BooklistCard } from "@/entities/booklist/BooklistCard";
 import { BooklistListItem } from "@/entities/booklist/BooklistListItem";
 import { useSearchWhisper } from "@/features/easter-eggs/hooks/useSearchWhisper";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
+import { SearchDiscoveryHub } from "@/features/search/components/SearchDiscoveryHub";
 import {
   getSearchTagLogicPreference,
   useSearchURLParams,
@@ -33,10 +34,10 @@ import { scrollPageToTop } from "@/shared/lib/pageScroll";
 import {
   ArrowUpDown,
   Compass,
-  Dices,
   MoveDown,
   MoveUp,
   LayoutGrid,
+  Columns3,
   Rows3,
   Search,
   SlidersHorizontal,
@@ -133,6 +134,8 @@ export function SearchPage() {
   };
 
   const gridClass = useCardGridClass();
+  const threadGridClass =
+    "grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5";
   const selectedChannelName =
     channelsData?.channels.find((channel) => channel.id === selectedChannel)
       ?.name || null;
@@ -206,6 +209,15 @@ export function SearchPage() {
   }, [infiniteQueryState, isInfiniteMode]);
 
   const isThreadTab = params.type === "thread";
+  const showDiscoveryHub =
+    isThreadTab &&
+    !params.query.trim() &&
+    params.includeTags.length === 0 &&
+    params.excludeTags.length === 0 &&
+    params.includeAuthors.length === 0 &&
+    params.excludeAuthors.length === 0 &&
+    !params.timeFrom &&
+    !params.timeTo;
 
   return (
     <div className="flex min-h-full min-w-0 flex-col">
@@ -353,6 +365,22 @@ export function SearchPage() {
             )}
 
             <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
+              {isThreadTab && (
+                <button
+                  type="button"
+                  onClick={() => setLayoutMode("masonry")}
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                    layoutMode === "masonry"
+                      ? "bg-(--od-accent) text-white"
+                      : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                  }`}
+                  aria-label="切换到实验性瀑布流展示"
+                  title="瀑布流展示（实验性）"
+                >
+                  <Columns3 className="h-3.5 w-3.5" />
+                  瀑布
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setLayoutMode("list")}
@@ -371,7 +399,8 @@ export function SearchPage() {
                 type="button"
                 onClick={() => setLayoutMode("grid")}
                 className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "grid"
+                  layoutMode === "grid" ||
+                  (!isThreadTab && layoutMode === "masonry")
                     ? "bg-(--od-accent) text-white"
                     : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
                 }`}
@@ -415,36 +444,13 @@ export function SearchPage() {
           </section>
         )}
 
-        {isThreadTab && (
-          <div className="mb-6 px-1">
-            <div className="od-inline-notice" data-tone="accent">
-              <div className="od-inline-notice-head">
-                <div className="min-w-0">
-                  <div className="od-editorial-kicker">
-                    <Dices className="h-3.5 w-3.5" />
-                    Surprise Discovery
-                  </div>
-                  <p className="od-inline-notice-title mt-3">
-                    一下子想不到搜什么吗？
-                  </p>
-                  <p className="od-inline-notice-copy mt-2 max-w-3xl">
-                    那就先去抽一抽呀。说不定运气好还能抽到个宝藏呢～
-                  </p>
-                </div>
-
-                <div className="od-inline-notice-actions shrink-0 sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/draw")}
-                    className="od-inline-action od-inline-action-primary"
-                  >
-                    <Dices className="h-4 w-4" />
-                    去抽卡
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+        {showDiscoveryHub && (
+          <SearchDiscoveryHub
+            channelId={selectedChannel}
+            applyPreferences={!ignoreDiscoveryPreferences}
+            onOpen={openPreview}
+            onTagSelect={handleTagClick}
+          />
         )}
 
         {isThreadTab ? (
@@ -453,12 +459,18 @@ export function SearchPage() {
               className={
                 layoutMode === "list"
                   ? "flex flex-col space-y-od-list-gap"
-                  : gridClass
+                  : layoutMode === "masonry"
+                    ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+                    : threadGridClass
               }
             >
               {Array.from({ length: 8 }).map((_, index) =>
                 layoutMode === "list" ? (
                   <ThreadListItemSkeleton key={index} />
+                ) : layoutMode === "masonry" ? (
+                  <div key={index} className="mb-4 break-inside-avoid">
+                    <ThreadCardSkeleton hideBottomDivider />
+                  </div>
                 ) : (
                   <ThreadCardSkeleton key={index} />
                 ),
@@ -490,7 +502,7 @@ export function SearchPage() {
                 searchQuery={query}
                 onAuthorClick={(author) => navigate(`/u/${author.id}`)}
                 onPreview={openPreview}
-                gridClassName={gridClass}
+                gridClassName={threadGridClass}
                 listClassName="flex flex-col space-y-od-list-gap pb-4"
                 layoutMode={layoutMode}
               />

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
-export type LayoutMode = "grid" | "list";
+export type LayoutMode = "grid" | "list" | "masonry";
 
 const LAYOUT_PREFERENCES_KEY = "odysseia_layout_preferences";
 const LAYOUT_PREFERENCE_EVENT = "odysseia:layout-preference-change";
 
 function isLayoutMode(value: unknown): value is LayoutMode {
-  return value === "grid" || value === "list";
+  return value === "grid" || value === "list" || value === "masonry";
 }
 
 function readPreferences(): Record<string, LayoutMode> {

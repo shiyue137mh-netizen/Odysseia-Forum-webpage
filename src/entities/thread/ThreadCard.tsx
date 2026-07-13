@@ -36,7 +36,11 @@ interface ThreadCardProps {
   onPreview?: (thread: Thread) => void;
   booklistComment?: string | null;
   index?: number;
+  hideBottomDivider?: boolean;
+  masonry?: boolean;
 }
+
+const thumbnailAspectRatioCache = new Map<string, number>();
 
 function ThreadCardImpl({
   thread,
@@ -46,6 +50,8 @@ function ThreadCardImpl({
   onPreview,
   booklistComment,
   index = 0,
+  hideBottomDivider = false,
+  masonry = false,
 }: ThreadCardProps) {
   const ariaLabel = `帖子：${thread.title}。作者：${thread.author?.display_name || thread.author?.name || "未知"}。${thread.reply_count}条回复，${thread.reaction_count}个点赞。标签：${thread.tags.join(", ")}`;
 
@@ -71,6 +77,9 @@ function ThreadCardImpl({
     [thread.thumbnail_urls],
   );
   const [thumbnailSrc, setThumbnailSrc] = useState(initialThumbnail);
+  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
+    () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
+  );
   const titleViewportRef = useRef<HTMLSpanElement>(null);
   const titleTrackRef = useRef<HTMLSpanElement>(null);
   const [titleShift, setTitleShift] = useState(0);
@@ -80,6 +89,9 @@ function ThreadCardImpl({
 
   useEffect(() => {
     setThumbnailSrc(initialThumbnail);
+    setNaturalAspectRatio(
+      thumbnailAspectRatioCache.get(initialThumbnail) || null,
+    );
   }, [initialThumbnail, thread.thread_id]);
 
   useEffect(() => {
@@ -135,7 +147,7 @@ function ThreadCardImpl({
         aria-label={ariaLabel}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className="group flex h-full w-full cursor-pointer flex-col animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) rounded-[1.45rem]"
+        className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
           animationDelay: `${(index % 24) * 40}ms`,
           WebkitTapHighlightColor: "transparent",
@@ -151,7 +163,7 @@ function ThreadCardImpl({
         {/* 拦截 Tab 焦点进入内部元素，并对辅助技术隐藏内部细节 */}
         <div
           aria-hidden="true"
-          className="flex h-full w-full flex-col pointer-events-auto"
+          className={`flex w-full flex-col pointer-events-auto ${masonry ? "h-auto" : "h-full"}`}
           ref={(el) => {
             if (el) {
               const focusables = el.querySelectorAll(
@@ -268,6 +280,11 @@ function ThreadCardImpl({
 
           <div
             className={`relative w-full overflow-hidden rounded-[1.45rem] border border-(--od-shell-line) bg-(--od-surface-shell) shadow-(--od-shadow-soft) ${mediaAspectClass}`}
+            style={
+              masonry
+                ? { aspectRatio: naturalAspectRatio || 3 / 4 }
+                : undefined
+            }
           >
             {thumbnailSrc ? (
               <LazyImage
@@ -277,6 +294,13 @@ function ThreadCardImpl({
                 threadId={thread.thread_id}
                 channelId={thread.channel_id}
                 index={index}
+                onNaturalSize={(width, height) => {
+                  if (!masonry || width <= 0 || height <= 0) return;
+                  // ponytail: 限制极端长图比例以避免单张图片占据整列；需要完整长图时可改为展开查看。
+                  const ratio = Math.min(1.5, Math.max(0.58, width / height));
+                  thumbnailAspectRatioCache.set(thumbnailSrc, ratio);
+                  setNaturalAspectRatio(ratio);
+                }}
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-[color-mix(in_srgb,var(--od-surface-raised)_15%,transparent)]">
@@ -397,7 +421,9 @@ function ThreadCardImpl({
               </span>
             </div>
 
-            <div className="h-px w-full bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-border-strong)_36%,transparent),transparent)]" />
+            {!hideBottomDivider && (
+              <div className="h-px w-full bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-border-strong)_36%,transparent),transparent)]" />
+            )}
           </div>
         </div>
       </article>

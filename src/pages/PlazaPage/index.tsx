@@ -8,10 +8,14 @@ import { BooklistCard } from "@/entities/booklist/BooklistCard";
 import { filterThreadsByPreferences } from "@/entities/thread/lib/threadFilter";
 import type { Thread } from "@/entities/thread/types";
 import { useToggleBooklistCollection } from "@/features/booklists/hooks/useBooklistsData";
+import {
+  discoveryApi,
+  type DiscoveryRailKey,
+} from "@/features/discovery/api/discoveryApi";
 import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
-import { plazaApi, type PlazaRailKey } from "@/features/plaza/api/plazaApi";
+import { plazaApi } from "@/features/plaza/api/plazaApi";
 import { plazaKeys } from "@/features/plaza/lib/queryKeys";
 import { usePreviewStore } from "@/features/search/store/previewStore";
 import { useTournamentsList } from "@/features/tournaments/hooks/useTournamentsData";
@@ -20,6 +24,7 @@ import { buildDiscordWebThreadUrl } from "@/shared/lib/discord";
 import {
   CompactBooklistCard,
   CompactThreadCard,
+  CompactThreadCardSkeleton,
   ThreadRankingPanel,
 } from "@/widgets/content-display/ContentDisplayCards";
 import { BannerCarousel } from "@/widgets/layout/BannerCarousel";
@@ -103,7 +108,7 @@ export function PlazaPage() {
       applyPreferences: !ignorePreferenceFilter,
     }),
     queryFn: () =>
-      plazaApi.getRails({
+      discoveryApi.getRails({
         limit: RAIL_LIMIT,
         days: 30,
         apply_preferences: !ignorePreferenceFilter,
@@ -134,14 +139,14 @@ export function PlazaPage() {
   }, [railsQuery.data, ignorePreferenceFilter, discoveryPreferenceContext]);
 
   const handleRefreshRail = useCallback(
-    async (key: PlazaRailKey) => {
+    async (key: DiscoveryRailKey) => {
       if (refreshingKeys[key]) return;
       setRefreshingKeys((previous) => ({ ...previous, [key]: true }));
 
       try {
         const currentList = railThreadsMap[key] || [];
         const currentOffset = railOffsets[key] ?? currentList.length;
-        let nextThreads = await plazaApi.getRail(key, {
+        let nextThreads = await discoveryApi.getRail(key, {
           limit: RAIL_LIMIT,
           days: 30,
           offset: currentOffset,
@@ -150,7 +155,7 @@ export function PlazaPage() {
         let nextOffset = currentOffset + nextThreads.length;
 
         if (nextThreads.length === 0 && currentOffset > 0) {
-          nextThreads = await plazaApi.getRail(key, {
+          nextThreads = await discoveryApi.getRail(key, {
             limit: RAIL_LIMIT,
             days: 30,
             offset: 0,
@@ -288,10 +293,7 @@ export function PlazaPage() {
           {railsQuery.isLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {Array.from({ length: 8 }).map((_, index) => (
-                <div
-                  key={index}
-                  className="aspect-square animate-pulse rounded-xl bg-(--od-surface-input)"
-                />
+                <CompactThreadCardSkeleton key={index} />
               ))}
             </div>
           ) : latestThreads.length > 0 ? (

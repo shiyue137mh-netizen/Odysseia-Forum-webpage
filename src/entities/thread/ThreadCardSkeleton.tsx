@@ -1,4 +1,8 @@
-export function ThreadCardSkeleton() {
+export function ThreadCardSkeleton({
+  hideBottomDivider = false,
+}: {
+  hideBottomDivider?: boolean;
+}) {
   return (
     <article className="flex h-full w-full flex-col">
       <div className="flex flex-col gap-2 px-1 pb-3 pt-1 text-(--od-text-primary)">
@@ -42,7 +46,9 @@ export function ThreadCardSkeleton() {
           <div className="h-3 w-8 animate-pulse rounded bg-(--od-bg-tertiary)" />
         </div>
 
-        <div className="h-px w-full bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-border-strong)_36%,transparent),transparent)]" />
+        {!hideBottomDivider && (
+          <div className="h-px w-full bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-border-strong)_36%,transparent),transparent)]" />
+        )}
       </div>
     </article>
   );

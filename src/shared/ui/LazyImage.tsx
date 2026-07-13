@@ -14,6 +14,7 @@ interface LazyImageProps {
   channelId?: string;
   index?: number; // Used for staggered animation delay
   imageIndex?: number; // Used to identify which picture in the sequence this is
+  onNaturalSize?: (width: number, height: number) => void;
 }
 
 export function LazyImage({
@@ -27,6 +28,7 @@ export function LazyImage({
   channelId,
   index = 0,
   imageIndex = 0,
+  onNaturalSize,
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -122,6 +124,12 @@ export function LazyImage({
                 transitionDelay: isLoaded ? `${(index % 24) * 60}ms` : '0ms',
               }}
               onLoad={() => {
+                if (imageRef.current) {
+                  onNaturalSize?.(
+                    imageRef.current.naturalWidth,
+                    imageRef.current.naturalHeight,
+                  );
+                }
                 // 使用 decode() 确保图片不仅加载完，且已完成解码可以立即显示
                 imageRef.current?.decode()
                   .then(() => setIsLoaded(true))

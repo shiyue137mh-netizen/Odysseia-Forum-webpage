@@ -1,8 +1,7 @@
-import type { Thread, Author } from "@/entities/thread/types";
+import type { Author } from "@/entities/thread/types";
 import type { Booklist } from "@/entities/booklist/types";
 import { bannerApi } from "@/features/banner/api/bannerApi";
 import { booklistsApi } from "@/features/booklists/api/booklistsApi";
-import { apiClient } from "@/shared/api/client";
 
 export interface PlazaBannerItem {
   thread_id: string;
@@ -11,70 +10,6 @@ export interface PlazaBannerItem {
   channel_id?: string;
   guild_id?: string;
   author?: Author;
-}
-
-export type PlazaRailKey =
-  | "latest"
-  | "reaction_surge"
-  | "discussion_surge"
-  | "collection_surge"
-  | "editors_pick";
-
-export interface PlazaRailConfig {
-  key: PlazaRailKey;
-  label: string;
-  title: string;
-  subtitle: string;
-}
-
-
-export interface DiscoveryRailsResponse {
-  latest: Thread[];
-  reaction_surge: Thread[];
-  discussion_surge: Thread[];
-  collection_surge: Thread[];
-}
-
-export const PLAZA_RAILS: PlazaRailConfig[] = [
-  {
-    key: "latest",
-    label: "LATEST",
-    title: "正在上新",
-    subtitle: "按发布时间倒序，追踪最新内容",
-  },
-  {
-    key: "reaction_surge",
-    label: "POPULAR",
-    title: "点赞数飙升",
-    subtitle: "近 7 天互动强势增长的帖子",
-  },
-  {
-    key: "discussion_surge",
-    label: "TRENDING",
-    title: "讨论升温",
-    subtitle: "近 7 天回复活跃的讨论串",
-  },
-  {
-    key: "collection_surge",
-    label: "SAVED",
-    title: "收藏飙升",
-    subtitle: "被大家偷偷藏起来的好东西",
-  },
-  {
-    key: "editors_pick",
-    label: "FEATURED",
-    title: "今日精选",
-    subtitle: "综合排序下的高质量探索位",
-  },
-];
-
-function dedupeThreads(threads: Thread[]): Thread[] {
-  const map = new Map<string, Thread>();
-  for (const thread of threads) {
-    if (!thread?.thread_id) continue;
-    if (!map.has(thread.thread_id)) map.set(thread.thread_id, thread);
-  }
-  return Array.from(map.values());
 }
 
 export const plazaApi = {
@@ -94,77 +29,6 @@ export const plazaApi = {
       guild_id: item.guild_id ? String(item.guild_id) : undefined,
       author: item.author,
     }));
-  },
-
-  getRail: async (
-    key: PlazaRailKey,
-    params: {
-      limit?: number;
-      days?: number;
-      offset?: number;
-      apply_preferences?: boolean;
-    } = {},
-  ): Promise<Thread[]> => {
-    if (key === "editors_pick") return [];
-
-    const response = await apiClient.get<Thread[]>(`/discovery/rails/${key}`, {
-      params: {
-        limit: params.limit ?? 12,
-        days: params.days ?? 30,
-        offset: params.offset ?? 0,
-        apply_preferences: params.apply_preferences ?? true,
-      },
-    });
-
-    return dedupeThreads(response.data || []);
-  },
-
-  getRails: async (
-    params: { limit?: number; days?: number; apply_preferences?: boolean } = {},
-  ): Promise<DiscoveryRailsResponse> => {
-    const response = await apiClient.get<DiscoveryRailsResponse>(
-      "/discovery/rails",
-      {
-        params: {
-          limit: params.limit ?? 12,
-          days: params.days ?? 30,
-          apply_preferences: params.apply_preferences ?? true,
-        },
-      },
-    );
-    return response.data;
-  },
-
-  getRandomThreads: async (
-    params: {
-      limit?: number;
-      channel_ids?: string[] | null;
-      include_tags?: string[] | null;
-      exclude_tags?: string[] | null;
-      tag_logic?: "and" | "or";
-    } = {},
-  ): Promise<Thread[]> => {
-    const normalizedChannelIds = (params.channel_ids || [])
-      .flatMap((id) => String(id).split(","))
-      .map((id) => id.trim())
-      .filter(Boolean);
-
-    const response = await apiClient.get<Thread[]>("/discovery/random", {
-      params: {
-        limit: params.limit ?? 10,
-        channel_ids: normalizedChannelIds.length
-          ? normalizedChannelIds
-          : undefined,
-        include_tags: params.include_tags || undefined,
-        exclude_tags: params.exclude_tags || undefined,
-        tag_logic: params.tag_logic ?? "and",
-      },
-      // Ensure arrays are serialized as channel_ids=1&channel_ids=2
-      paramsSerializer: {
-        indexes: null, 
-      },
-    });
-    return response.data;
   },
 
   getFeaturedBooklists: async (): Promise<Booklist[]> => {

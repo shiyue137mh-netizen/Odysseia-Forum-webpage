@@ -28,6 +28,19 @@ interface CompactThreadCardProps {
   onOpen: (thread: Thread) => void;
 }
 
+export function CompactThreadCardSkeleton() {
+  return (
+    <article aria-hidden="true" className="min-w-0 animate-pulse">
+      <div className="aspect-square rounded-xl bg-(--od-surface-input)" />
+      <div className="mt-2 h-8 rounded-md bg-(--od-surface-input)" />
+      <div className="mt-1.5 flex items-center gap-1.5">
+        <div className="h-4.5 w-4.5 shrink-0 rounded-full bg-(--od-surface-input)" />
+        <div className="h-2.5 w-16 rounded bg-(--od-surface-input)" />
+      </div>
+    </article>
+  );
+}
+
 export function CompactThreadCard({ thread, onOpen }: CompactThreadCardProps) {
   const thumbnail = thread.thumbnail_urls?.[0];
   const authorName = getAuthorName(thread);

@@ -14,7 +14,7 @@ import { Select } from "@/shared/ui/Select";
 import { ThreadCard } from "@/entities/thread/ThreadCard";
 import type { Thread } from "@/entities/thread/types";
 import { DrawRevealOverlay } from "@/features/draw/components/DrawRevealOverlay";
-import { plazaApi } from "@/features/plaza/api/plazaApi";
+import { discoveryApi } from "@/features/discovery/api/discoveryApi";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
@@ -39,7 +39,6 @@ function loadDrawHistory(): Thread[] {
     return [];
   }
 }
-
 /** 将抽卡结果持久化到 localStorage */
 function saveDrawHistory(results: Thread[]): void {
   try {
@@ -165,7 +164,7 @@ export function DrawPage() {
         setOverlayPhase("charging");
       }
 
-      const results = await plazaApi.getRandomThreads({
+      const results = await discoveryApi.getRandomThreads({
         limit: count,
         channel_ids: effectiveChannelIds,
         include_tags: includeTags,
