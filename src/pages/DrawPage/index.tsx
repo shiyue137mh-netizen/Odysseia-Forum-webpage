@@ -11,10 +11,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Select } from "@/shared/ui/Select";
 
-import { ThreadCard } from "@/entities/thread/ThreadCard";
 import type { Thread } from "@/entities/thread/types";
 import { DrawRevealOverlay } from "@/features/draw/components/DrawRevealOverlay";
 import { discoveryApi } from "@/features/discovery/api/discoveryApi";
+import { DiscoveryThreadCarousel } from "@/features/discovery/components/DiscoveryThreadCarousel";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
@@ -91,6 +91,7 @@ export function DrawPage() {
 
   // 历史记录：从 localStorage 恢复
   const [historyResults, setHistoryResults] = useState<Thread[]>(() => loadDrawHistory());
+  const [historyActiveIndex, setHistoryActiveIndex] = useState(0);
 
   // 持久化揭晓开关
   useEffect(() => {
@@ -484,6 +485,7 @@ export function DrawPage() {
                 type="button"
                 onClick={() => {
                   setHistoryResults([]);
+                  setHistoryActiveIndex(0);
                   saveDrawHistory([]);
                 }}
                 className="text-xs text-(--od-text-tertiary) transition-colors hover:text-(--od-text-secondary)"
@@ -492,24 +494,23 @@ export function DrawPage() {
               </button>
             </div>
 
-            {/* 统一横向滚动展示 */}
-            <div className="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-              {historyResults.map((thread, index) => (
-                <div
-                  key={thread.thread_id}
-                  className="w-[18rem] shrink-0 snap-start animate-in fade-in zoom-in-95 duration-300"
-                  style={{ animationDelay: `${index * 90}ms` }}
-                >
-                  <ThreadCard thread={thread} onPreview={openPreview} />
-                </div>
-              ))}
-            </div>
+            <DiscoveryThreadCarousel
+              threads={historyResults}
+              ariaLabel="上次抽卡结果，可滚轮或左右滑动"
+              emptyMessage="暂时没有抽卡记录。"
+              onOpen={openPreview}
+              onActiveChange={(_, index) => setHistoryActiveIndex(index)}
+            />
 
             {/* 快速操作（居中） */}
             <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
               <button
                 type="button"
-                onClick={() => openPreview(historyResults[0])}
+                onClick={() =>
+                  openPreview(
+                    historyResults[historyActiveIndex] || historyResults[0],
+                  )
+                }
                 className="od-inline-action od-inline-action-primary"
               >
                 <Eye className="h-4 w-4" />

@@ -5,8 +5,9 @@ import {
   MessageCircle,
   RotateCw,
   Star,
+  ThumbsUp,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Booklist } from "@/entities/booklist/types";
 import type { Thread } from "@/entities/thread/types";
@@ -64,12 +65,18 @@ export function CompactThreadCard({ thread, onOpen }: CompactThreadCardProps) {
               imageIndex={0}
             />
           ) : (
-            <span className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_70%_25%,color-mix(in_srgb,var(--od-accent)_24%,transparent),transparent_38%),linear-gradient(145deg,var(--od-surface-raised),var(--od-surface-shell))]">
+            <span className="flex h-full w-full items-center justify-center bg-(--od-surface-shell)">
               <ImageIcon className="h-5 w-5 text-(--od-text-tertiary)" />
             </span>
           )}
-          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/38 px-2 py-1 text-[10px] font-medium text-white backdrop-blur-sm">
-            <Heart className="h-3 w-3" />
+          <span
+            className={`absolute left-2 top-2 inline-flex items-center gap-1 text-[10px] font-medium ${
+              thumbnail
+                ? "text-white drop-shadow-[0_1px_3px_rgb(0_0_0_/_0.9)]"
+                : "text-(--od-text-tertiary)"
+            }`}
+          >
+            <ThumbsUp className="h-3 w-3" />
             {thread.reaction_count}
           </span>
         </span>
@@ -205,29 +212,11 @@ export function ThreadRankingPanel({
   const wheelLockedRef = useRef(false);
   const wheelUnlockTimerRef = useRef<number | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
   const MetricIcon = getMetricIcon(metric);
 
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const firstRow = viewport.querySelector<HTMLElement>("[data-rank-row]");
-    const rowHeight = firstRow?.offsetHeight || 44;
-    const initialIndex = Math.min(2, Math.max(items.length - 1, 0));
-    viewport.scrollTop = initialIndex * rowHeight;
-    setActiveIndex(initialIndex);
-  }, [signature]);
-
-  useEffect(() => {
-    return () => {
-      if (wheelUnlockTimerRef.current !== null) {
-        window.clearTimeout(wheelUnlockTimerRef.current);
-      }
-    };
-  }, []);
-
-  if (items.length === 0) return null;
-
-  const scrollToIndex = (index: number) => {
+  const scrollToIndex = useCallback((index: number) => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const firstRow = viewport.querySelector<HTMLElement>("[data-rank-row]");
@@ -238,7 +227,56 @@ export function ThreadRankingPanel({
       top: index * rowHeight,
       behavior: reducedMotion ? "auto" : "smooth",
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const firstRow = viewport.querySelector<HTMLElement>("[data-rank-row]");
+    const rowHeight = firstRow?.offsetHeight || 44;
+    const initialIndex = Math.min(2, Math.max(items.length - 1, 0));
+    viewport.scrollTop = initialIndex * rowHeight;
+    setActiveIndex(initialIndex);
+  }, [items.length, scrollToIndex, signature]);
+
+  useEffect(() => {
+    return () => {
+      if (wheelUnlockTimerRef.current !== null) {
+        window.clearTimeout(wheelUnlockTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (wheelLockedRef.current) return;
+      wheelDeltaRef.current += event.deltaY;
+      if (Math.abs(wheelDeltaRef.current) < 24) return;
+
+      const direction = wheelDeltaRef.current > 0 ? 1 : -1;
+      wheelDeltaRef.current = 0;
+      wheelLockedRef.current = true;
+      scrollToIndex(
+        Math.max(
+          0,
+          Math.min(items.length - 1, activeIndexRef.current + direction),
+        ),
+      );
+      // ponytail: 220ms 固定锁定用于压住触控板惯性；若以后需要可配置手感，再改为设置项。
+      wheelUnlockTimerRef.current = window.setTimeout(() => {
+        wheelLockedRef.current = false;
+        wheelDeltaRef.current = 0;
+        wheelUnlockTimerRef.current = null;
+      }, 220);
+    };
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  }, [signature]);
+
+  if (items.length === 0) return null;
 
   const activeThread = items[activeIndex] || items[0];
   const activeThumbnail = activeThread?.thumbnail_urls?.[0];
@@ -309,24 +347,6 @@ export function ThreadRankingPanel({
                 ),
               ),
             );
-          }}
-          onWheel={(event) => {
-            event.preventDefault();
-            wheelDeltaRef.current += event.deltaY;
-            if (wheelLockedRef.current || Math.abs(wheelDeltaRef.current) < 24)
-              return;
-
-            const direction = wheelDeltaRef.current > 0 ? 1 : -1;
-            wheelDeltaRef.current = 0;
-            wheelLockedRef.current = true;
-            scrollToIndex(
-              Math.max(0, Math.min(items.length - 1, activeIndex + direction)),
-            );
-            // ponytail: 220ms 固定锁定用于压住触控板惯性；若以后需要可配置手感，再改为设置项。
-            wheelUnlockTimerRef.current = window.setTimeout(() => {
-              wheelLockedRef.current = false;
-              wheelUnlockTimerRef.current = null;
-            }, 220);
           }}
           className="h-[13.75rem] min-w-0 snap-y snap-mandatory scroll-smooth overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >

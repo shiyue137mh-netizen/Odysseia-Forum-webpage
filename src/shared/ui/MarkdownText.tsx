@@ -144,7 +144,7 @@ export function MarkdownText({ text }: MarkdownTextProps) {
   return (
     <>
       <div
-        className="od-md text-(--od-text-secondary) text-xs sm:text-sm leading-relaxed"
+        className="od-md min-w-0 max-w-full text-xs leading-relaxed text-(--od-text-secondary) [overflow-wrap:anywhere] [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto sm:text-sm"
         onClickCapture={handleClickCapture}
         dangerouslySetInnerHTML={{ __html: html }}
       />

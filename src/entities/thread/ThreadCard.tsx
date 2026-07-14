@@ -211,7 +211,7 @@ function ThreadCardImpl({
                   <ThreadTournamentBadges thread={thread} variant="icon" />
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-(--od-text-tertiary)">
-                  <span className="inline-flex min-w-0 items-center gap-1">
+                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
                     <Calendar className="h-3 w-3 shrink-0" />
                     <span>{createdTime}</span>
                   </span>

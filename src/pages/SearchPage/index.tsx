@@ -135,7 +135,7 @@ export function SearchPage() {
 
   const gridClass = useCardGridClass();
   const threadGridClass =
-    "grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5";
+    "grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4";
   const selectedChannelName =
     channelsData?.channels.find((channel) => channel.id === selectedChannel)
       ?.name || null;
@@ -220,16 +220,16 @@ export function SearchPage() {
     !params.timeTo;
 
   return (
-    <div className="flex min-h-full min-w-0 flex-col">
-      <div className="animate-in fade-in duration-500 flex-1 p-4 sm:p-6 lg:p-8">
+    <div className="flex min-h-full min-w-0 max-w-full flex-col overflow-x-clip">
+      <div className="min-w-0 max-w-full flex-1 overflow-x-clip p-4 animate-in fade-in duration-500 sm:p-6 lg:p-8">
         <FluidDivider label="Search" tone="strong" className="mb-6" />
-        <div className="mb-6 flex flex-col gap-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
-          <div data-tour="search-header" className="flex items-center gap-4">
+        <div className="mb-6 flex min-w-0 max-w-full flex-col gap-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
+          <div data-tour="search-header" className="flex min-w-0 items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--od-surface-soft) text-(--od-accent)">
               <Compass className="h-6 w-6" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-(--od-text-primary) flex items-center flex-wrap gap-x-2 gap-y-1">
+            <div className="min-w-0">
+              <h1 className="flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-2xl font-bold tracking-tight text-(--od-text-primary)">
                 {query ? (
                   <>
                     <span>搜索:</span>
@@ -273,7 +273,7 @@ export function SearchPage() {
                   "探索社区"
                 )}
               </h1>
-              <div className="flex items-center gap-2 text-sm text-(--od-text-secondary)">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-(--od-text-secondary)">
                 <span>
                   找到 {isThreadTab ? totalResults : booklistTotal} 条结果
                 </span>
@@ -299,7 +299,7 @@ export function SearchPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
             <div
               data-tour="search-type-toggle"
               className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1"

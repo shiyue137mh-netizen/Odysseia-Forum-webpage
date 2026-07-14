@@ -129,11 +129,11 @@ export function ThreadPreviewOverlay({
           }
         }}
         aria-labelledby="thread-preview-title"
-        className={`fixed inset-x-3 inset-y-3 z-2000 m-auto flex h-[calc(100vh-1.5rem)] min-h-0 w-[calc(100%-1.5rem)] max-w-2xl flex-col overflow-hidden rounded-[1.6rem] p-0 backdrop:bg-black/60 backdrop:backdrop-blur-xs transition-all duration-300 supports-[height:100dvh]:h-[calc(100dvh-1.5rem)] sm:inset-x-6 sm:inset-y-6 sm:h-[calc(100vh-3rem)] sm:w-[calc(100%-3rem)] sm:supports-[height:100dvh]:h-[calc(100dvh-3rem)] ${isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0 backdrop:bg-black/0 backdrop:backdrop-blur-none"
+        className={`fixed inset-0 z-2000 m-0 flex h-dvh min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden rounded-none p-0 backdrop:bg-black/60 backdrop:backdrop-blur-xs transition-all duration-300 sm:inset-x-6 sm:inset-y-6 sm:m-auto sm:h-[calc(100vh-3rem)] sm:w-[calc(100%-3rem)] sm:max-w-2xl sm:rounded-[1.6rem] sm:supports-[height:100dvh]:h-[calc(100dvh-3rem)] ${isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0 backdrop:bg-black/0 backdrop:backdrop-blur-none"
           } od-floating-panel-solid`}
       >
         {/* Header */}
-        <div className="border-b border-(--od-shell-line) bg-(--od-surface-floating) px-6 py-5">
+        <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex flex-1 items-start gap-3">
               {thread.author?.id ? (
@@ -174,7 +174,7 @@ export function ThreadPreviewOverlay({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2">
               <ThreadStatusBadges
                 isFollowing={thread.collected_flag}
                 hasUpdate={thread.has_update}
@@ -243,7 +243,7 @@ export function ThreadPreviewOverlay({
           {/* Title */}
           <h2
             id="thread-preview-title"
-            className="mt-4 text-xl font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) wrap-break-word"
+            className="mt-4 min-w-0 max-w-full text-xl font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) [overflow-wrap:anywhere]"
           >
             {thread.title}
           </h2>
@@ -252,7 +252,7 @@ export function ThreadPreviewOverlay({
         {/* Scrollable Content */}
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto bg-(--od-surface-floating) scrollbar-thin"
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-(--od-surface-floating) scrollbar-thin"
         >
           {/* Images */}
           {images.length > 0 && (
@@ -266,7 +266,7 @@ export function ThreadPreviewOverlay({
           )}
 
           <div
-            className={`od-floating-glass relative z-10 min-h-full px-6 pb-6 pt-6 backdrop-blur-[var(--od-glass-blur)] backdrop-saturate-125 ${images.length > 0 ? "-mt-12 rounded-t-[1.5rem] shadow-[0_-12px_30px_rgba(0,0,0,0.22)]" : ""}`}
+            className={`od-floating-glass relative z-10 min-h-full min-w-0 max-w-full px-4 pb-6 pt-6 backdrop-blur-[var(--od-glass-blur)] backdrop-saturate-125 sm:px-6 ${images.length > 0 ? "-mt-12 rounded-t-[1.5rem] shadow-[0_-12px_30px_rgba(0,0,0,0.22)]" : ""}`}
           >
             {/* Tags */}
             {thread.tags && thread.tags.length > 0 && (
@@ -305,7 +305,7 @@ export function ThreadPreviewOverlay({
             {/* Content Excerpt (Full) - Flat, no background */}
             {thread.first_message_excerpt && (
               <div
-                className={`mb-6 ${fontSizes.content} text-(--od-text-secondary)`}
+                className={`mb-6 min-w-0 max-w-full [overflow-wrap:anywhere] ${fontSizes.content} text-(--od-text-secondary)`}
               >
                 <MarkdownText text={thread.first_message_excerpt} />
               </div>

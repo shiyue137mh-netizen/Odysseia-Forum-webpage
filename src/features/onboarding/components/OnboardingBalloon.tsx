@@ -56,10 +56,11 @@ export function OnboardingBalloon() {
   const imageSrc = MASCOT_IMAGES[step.emotion || 'hi'] || MASCOT_IMAGES.hi;
 
   const isMobile = windowSize.width < 640;
+  const isCompactViewport = isMobile || windowSize.height < 640;
   
   // 计算实际方位
   let effectivePlacement = step.placement;
-  if (isMobile) {
+  if (isCompactViewport) {
     effectivePlacement = 'bottom'; // 移动端固定逻辑
   } else if (coords) {
     // 桌面端智能避障：如果顶部空间不足则翻转到下方，反之亦然
@@ -76,9 +77,9 @@ export function OnboardingBalloon() {
     const balloonWidth = isMobile ? Math.min(windowSize.width - 48, 300) : Math.min(windowSize.width - 32, 340);
     
     // 移动端：固定在中上方
-    if (isMobile) {
+    if (isCompactViewport) {
       return {
-        top: '80px', // TopBar 下方
+        top: isMobile && windowSize.height >= 640 ? '80px' : '16px',
         left: '50%',
       };
     }
@@ -138,6 +139,10 @@ export function OnboardingBalloon() {
 
   const mascotOnLeft = step.id.includes('filter');
   const isFirstStepOfFirstTutorial = activeTutorial.id === 'initial_setup' && stepIndex === 0;
+  const panelMaxHeightClass =
+    isMobile && windowSize.height >= 640
+      ? 'max-h-[calc(100dvh-6rem)]'
+      : 'max-h-[calc(100dvh-2rem)]';
 
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none">
@@ -161,17 +166,17 @@ export function OnboardingBalloon() {
       {/* 引导内容容器 */}
       <motion.div
         key={step.id}
-        initial={{ opacity: 0, scale: 0.95, y: 15, x: (isMobile || isCenter) ? '-50%' : '0%' }}
+        initial={{ opacity: 0, scale: 0.95, y: 15, x: (isCompactViewport || isCenter) ? '-50%' : '0%' }}
         animate={{ 
           opacity: 1, 
           scale: 1, 
-          y: isMobile ? 0 : (effectivePlacement === 'top' ? '-100%' : (effectivePlacement === 'left' || effectivePlacement === 'right' ? '-50%' : 0)), 
-          x: (isMobile || isCenter) ? '-50%' : '0%',
-          transformOrigin: isMobile ? 'center top' : (effectivePlacement === 'top' ? 'center bottom' : (effectivePlacement === 'bottom' ? 'center top' : 'center center'))
+          y: isCompactViewport ? 0 : (isCenter ? '-50%' : (effectivePlacement === 'top' ? '-100%' : (effectivePlacement === 'left' || effectivePlacement === 'right' ? '-50%' : 0))), 
+          x: (isCompactViewport || isCenter) ? '-50%' : '0%',
+          transformOrigin: isCompactViewport ? 'center top' : (isCenter ? 'center center' : (effectivePlacement === 'top' ? 'center bottom' : (effectivePlacement === 'bottom' ? 'center top' : 'center center')))
         }}
-        exit={{ opacity: 0, scale: 0.95, y: 15, x: (isMobile || isCenter) ? '-50%' : '0%' }}
+        exit={{ opacity: 0, scale: 0.95, y: 15, x: (isCompactViewport || isCenter) ? '-50%' : '0%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 500, mass: 0.8 }}
-        className={`absolute pointer-events-auto flex ${isMobile ? 'flex-col' : 'flex-col-reverse'} items-center w-[calc(100vw-2rem)] max-w-[340px] sm:max-w-[340px] ${isMobile ? 'max-w-[300px]' : ''}`}
+        className={`absolute pointer-events-auto flex min-h-0 ${isCompactViewport ? 'flex-col' : 'flex-col-reverse'} items-center w-[calc(100vw-2rem)] max-w-[340px] sm:max-w-[340px] ${isMobile ? 'max-w-[300px]' : ''}`}
         style={{
           ...balloonStyle,
           viewTransitionName: 'onboarding-balloon'
@@ -189,7 +194,7 @@ export function OnboardingBalloon() {
             animate={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
             transition={{ duration: 0.15, delay: 0.05 }}
             className={`absolute ${
-              isMobile 
+              isCompactViewport 
                 ? 'left-1/2 -translate-x-1/2 -bottom-16 w-20 h-20' 
                 : (mascotOnLeft ? '-left-12 sm:-left-40' : '-right-12 sm:-right-40') + ' top-1/2 -translate-y-1/2 w-24 h-24 sm:w-48 sm:h-48'
             } pointer-events-none z-20`}
@@ -197,26 +202,28 @@ export function OnboardingBalloon() {
             <img
               src={imageSrc}
               alt="Mascot"
-              className={`w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${isMobile ? '' : 'animate-bounce-slow'}`}
+              className={`w-full h-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.3)] ${isCompactViewport ? '' : 'animate-bounce-slow'}`}
             />
           </motion.div>
 
           {/* 气泡对话框 */}
-          <div className={`od-floating-panel-solid relative w-full rounded-3xl ${isMobile ? 'p-4' : 'p-5 sm:p-6'} border border-white/20 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] z-10 bg-(--od-bg-secondary)`}>
-            <div className="flex items-center gap-2 mb-3">
+          <div className={`od-floating-panel-solid relative z-10 flex min-h-0 w-full flex-col overflow-hidden rounded-3xl ${isMobile ? 'p-4' : 'p-5 sm:p-6'} ${panelMaxHeightClass} border border-white/20 bg-(--od-bg-secondary) shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]`}>
+            <div className="mb-3 flex shrink-0 items-center gap-2">
                <span className="px-2 py-0.5 rounded-full bg-(--od-accent)/20 text-(--od-accent) text-[10px] font-bold uppercase tracking-wider">
                  {isFirstStepOfFirstTutorial ? '欢迎' : `Step ${stepIndex + 1}/${activeTutorial.steps.length}`}
                </span>
                <h3 className={`text-(--od-text-primary) font-bold ${isMobile ? 'text-sm' : 'text-base sm:text-lg'}`}>{step.title}</h3>
             </div>
 
-            <p className={`text-(--od-text-secondary) ${isMobile ? 'text-[11px]' : 'text-xs sm:text-sm'} leading-relaxed mb-6 sm:mb-8`}>
-              {step.content}
-            </p>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+              <p className={`text-(--od-text-secondary) ${isMobile ? 'text-[11px]' : 'text-xs sm:text-sm'} mb-4 leading-relaxed sm:mb-5`}>
+                {step.content}
+              </p>
 
-            <PreferenceOnboardingControls stepId={step.id} />
+              <PreferenceOnboardingControls stepId={step.id} />
+            </div>
 
-            <div className="flex items-center justify-between gap-4 sm:gap-6">
+            <div className="mt-4 flex shrink-0 items-center justify-between gap-4 border-t border-white/10 pt-4 sm:gap-6">
               {isFirstStepOfFirstTutorial ? (
                 <button
                   onClick={skipAllTutorials}
@@ -242,7 +249,7 @@ export function OnboardingBalloon() {
           </div>
 
           {/* 气泡小尖角 (仅桌面端显示) */}
-          {!isCenter && !isMobile && (
+          {!isCenter && !isCompactViewport && (
             <div 
               className="absolute w-4 h-4 sm:w-5 sm:h-5 bg-(--od-bg-secondary) rotate-45 z-10 border border-white/15" 
               style={{

@@ -291,13 +291,13 @@ export function PlazaPage() {
           </div>
 
           {railsQuery.isLoading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+            <div className="grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {Array.from({ length: 8 }).map((_, index) => (
                 <CompactThreadCardSkeleton key={index} />
               ))}
             </div>
           ) : latestThreads.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+            <div className="grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
               {latestThreads.slice(0, 8).map((thread) => (
                 <CompactThreadCard
                   key={thread.thread_id}

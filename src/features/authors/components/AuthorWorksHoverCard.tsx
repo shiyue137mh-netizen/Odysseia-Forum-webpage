@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText, MessageCircle, ThumbsUp } from "lucide-react";
+import {
+  FileText,
+  MessageCircle,
+  ThumbsUp,
+  UserRoundX,
+} from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -10,12 +15,15 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import type { Author, Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
 import { authorsApi } from "@/features/authors/api/authorsApi";
+import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { searchApi } from "@/features/search/api/searchApi";
 import { usePreviewStore } from "@/features/search/store/previewStore";
+import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { LazyImage } from "@/shared/ui/LazyImage";
 
 const OPEN_DELAY = 300;
@@ -44,9 +52,15 @@ export function AuthorWorksHoverCard({
   const openTimerRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
+  const { user, preferences, savePreferences, isSaving } = useUserPreferences({
+    guildId: GUILD_ID,
+  });
 
   const authorName = author.display_name || author.global_name || author.name;
+  const excludedAuthorIds = (preferences?.exclude_authors || []).map(String);
+  const isAuthorBlocked = excludedAuthorIds.includes(String(author.id));
 
   const clearOpenTimer = useCallback(() => {
     if (openTimerRef.current !== null) {
@@ -185,6 +199,15 @@ export function AuthorWorksHoverCard({
     };
   }, [close, isOpen, updatePosition]);
 
+  useEffect(() => {
+    if (!confirmBlockOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setConfirmBlockOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [confirmBlockOpen]);
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [
       "search",
@@ -223,6 +246,32 @@ export function AuthorWorksHoverCard({
     navigate(`/u/${author.id}`);
   };
 
+  const toggleAuthorBlock = async () => {
+    if (!user?.id || isSaving) return;
+    const authorId = String(author.id);
+    const nextExcludedAuthorIds = isAuthorBlocked
+      ? excludedAuthorIds.filter((id) => id !== authorId)
+      : Array.from(new Set([...excludedAuthorIds, authorId]));
+    const includedAuthorIds = (preferences?.include_authors || []).map(String);
+
+    try {
+      await savePreferences({
+        preferred_channels: preferences?.preferred_channels || [],
+        exclude_authors: nextExcludedAuthorIds,
+        include_authors: isAuthorBlocked
+          ? includedAuthorIds
+          : includedAuthorIds.filter((id) => id !== authorId),
+      });
+      toast.success(
+        isAuthorBlocked
+          ? `已取消屏蔽 ${authorName}`
+          : `已将 ${authorName} 加入屏蔽`,
+      );
+    } catch {
+      toast.error("偏好保存失败，请稍后再试");
+    }
+  };
+
   const panel = isOpen ? (
     <div
       ref={panelRef}
@@ -236,44 +285,64 @@ export function AuthorWorksHoverCard({
       onBlur={closeSoon}
       className="od-floating-glass fixed z-[9999] overflow-hidden rounded-2xl border border-(--od-border-strong) shadow-(--od-shadow-floating) animate-in fade-in zoom-in-95 duration-150"
     >
-      <button
-        type="button"
-        onClick={openAuthorPage}
-        className="flex w-full items-center gap-3 border-b border-(--od-shell-line) px-4 py-3 text-left transition-colors hover:bg-(--od-interactive-hover)"
-      >
-        <AuthorAvatar
-          author={author}
-          className="h-9 w-9 ring-1 ring-(--od-border-strong)/35"
-        />
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-semibold text-(--od-text-primary)">
-            {authorName}
-          </span>
-          <span className="block truncate text-[11px] text-(--od-text-tertiary)">
-            @{author.name}
-          </span>
-          <span className="mt-1.5 flex items-center gap-2.5 text-[10px] text-(--od-text-tertiary)">
-            <span>
-              <strong className="font-medium text-(--od-text-secondary)">
-                {profile?.stats.thread_count ?? "—"}
-              </strong>{" "}
-              作品
+      <div className="flex items-start gap-2 border-b border-(--od-shell-line) px-2 py-2">
+        <button
+          type="button"
+          onClick={openAuthorPage}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 text-left transition-colors hover:bg-(--od-interactive-hover)"
+        >
+          <AuthorAvatar
+            author={author}
+            className="h-9 w-9 ring-1 ring-(--od-border-strong)/35"
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold text-(--od-text-primary)">
+              {authorName}
             </span>
-            <span>
-              <strong className="font-medium text-(--od-text-secondary)">
-                {profile?.stats.reaction_count ?? "—"}
-              </strong>{" "}
-              点赞
+            <span className="block truncate text-[11px] text-(--od-text-tertiary)">
+              @{author.name}
             </span>
-            <span>
-              <strong className="font-medium text-(--od-text-secondary)">
-                {profile?.stats.reply_count ?? "—"}
-              </strong>{" "}
-              回复
+            <span className="mt-1.5 flex items-center gap-2.5 text-[10px] text-(--od-text-tertiary)">
+              <span>
+                <strong className="font-medium text-(--od-text-secondary)">
+                  {profile?.stats.thread_count ?? "—"}
+                </strong>{" "}
+                作品
+              </span>
+              <span>
+                <strong className="font-medium text-(--od-text-secondary)">
+                  {profile?.stats.reaction_count ?? "—"}
+                </strong>{" "}
+                点赞
+              </span>
+              <span>
+                <strong className="font-medium text-(--od-text-secondary)">
+                  {profile?.stats.reply_count ?? "—"}
+                </strong>{" "}
+                回复
+              </span>
             </span>
           </span>
-        </span>
-      </button>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (isAuthorBlocked) void toggleAuthorBlock();
+            else setConfirmBlockOpen(true);
+          }}
+          disabled={!user?.id || isSaving}
+          aria-pressed={isAuthorBlocked}
+          aria-label={isAuthorBlocked ? "取消屏蔽作者" : "屏蔽作者"}
+          title={isAuthorBlocked ? "取消屏蔽作者" : "屏蔽作者"}
+          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+            isAuthorBlocked
+              ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/25"
+              : "text-(--od-text-tertiary) hover:bg-(--od-interactive-hover) hover:text-rose-400"
+          }`}
+        >
+          <UserRoundX className="h-4 w-4" />
+        </button>
+      </div>
 
       <div className="p-2">
         {isLoading &&
@@ -361,6 +430,63 @@ export function AuthorWorksHoverCard({
     </div>
   ) : null;
 
+  const confirmationDialog = confirmBlockOpen ? (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="author-block-confirm-title"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/65 p-4 backdrop-blur-xs"
+      onClick={() => setConfirmBlockOpen(false)}
+    >
+      <div
+        className="od-floating-panel-solid w-full max-w-sm rounded-2xl border border-(--od-border-strong) p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
+            <UserRoundX className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <h2
+              id="author-block-confirm-title"
+              className="text-base font-semibold text-(--od-text-primary)"
+            >
+              屏蔽这位作者？
+            </h2>
+            <p className="mt-0.5 truncate text-xs text-(--od-text-tertiary)">
+              {authorName}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-(--od-text-secondary)">
+          屏蔽会永久写入探索偏好。之后广场、搜索和随机发现会尽量排除该作者的作品，你仍可以在偏好设置中取消。
+        </p>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirmBlockOpen(false)}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => {
+              setConfirmBlockOpen(false);
+              void toggleAuthorBlock();
+            }}
+            className="rounded-lg bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:pointer-events-none disabled:opacity-55"
+          >
+            确认屏蔽
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
       <span
@@ -376,6 +502,7 @@ export function AuthorWorksHoverCard({
         {children}
       </span>
       {panel && createPortal(panel, document.body)}
+      {confirmationDialog && createPortal(confirmationDialog, document.body)}
     </>
   );
 }
