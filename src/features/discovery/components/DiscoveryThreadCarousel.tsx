@@ -3,19 +3,28 @@ import {
   Image as ImageIcon,
   MessageCircle,
   Star,
+  TrendingUp,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
 import { getWrappedCarouselIndex } from "@/features/search/lib/discoveryCarousel";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { LazyImage } from "@/shared/ui/LazyImage";
+
+export type DiscoveryRankingMetric =
+  | "reaction"
+  | "discussion"
+  | "collection"
+  | "latest";
 
 interface DiscoveryThreadCarouselProps {
   threads: Thread[];
   loading?: boolean;
   ariaLabel?: string;
   emptyMessage?: string;
+  rankingMetric?: DiscoveryRankingMetric;
   onOpen: (thread: Thread) => void;
   onActiveChange?: (thread: Thread, index: number) => void;
 }
@@ -29,11 +38,19 @@ function getAuthorName(thread: Thread) {
   );
 }
 
+function getRankingValue(thread: Thread, metric: DiscoveryRankingMetric) {
+  if (metric === "reaction") return thread.reaction_count;
+  if (metric === "discussion") return thread.reply_count;
+  if (metric === "collection") return thread.collection_count || 0;
+  return formatRelativeDateTime(thread.created_at);
+}
+
 export function DiscoveryThreadCarousel({
   threads,
   loading = false,
   ariaLabel = "发现轨道，可滚轮或左右滑动",
   emptyMessage = "这条发现轨道暂时没有内容。",
+  rankingMetric,
   onOpen,
   onActiveChange,
 }: DiscoveryThreadCarouselProps) {
@@ -203,8 +220,19 @@ export function DiscoveryThreadCarousel({
                     </span>
                   )}
                 </span>
+                {rankingMetric && (
+                  <span className="mt-2 flex h-5 items-center justify-between gap-3 px-0.5 text-[11px] font-medium text-(--od-text-tertiary)">
+                    <span className="tabular-nums">#{index + 1}</span>
+                    <span className="inline-flex min-w-0 items-center gap-1 tabular-nums">
+                      <TrendingUp className="h-3 w-3 shrink-0" />
+                      <span className="truncate">
+                        {getRankingValue(thread, rankingMetric)}
+                      </span>
+                    </span>
+                  </span>
+                )}
                 <span
-                  className={`mt-4 block text-center transition-opacity duration-500 ${
+                  className={`${rankingMetric ? "mt-1" : "mt-4"} block text-center transition-opacity duration-500 ${
                     isActive ? "opacity-100" : "opacity-75"
                   }`}
                 >
@@ -219,13 +247,14 @@ export function DiscoveryThreadCarousel({
                   </span>
                   <span
                     className={`transition-opacity duration-300 ${
-                      isActive
-                        ? "opacity-100"
-                        : "pointer-events-none opacity-0"
+                      isActive ? "opacity-100" : "pointer-events-none opacity-0"
                     }`}
                   >
                     <span className="mt-2 inline-flex h-6 items-center gap-2 text-xs text-(--od-text-secondary)">
-                      <AuthorAvatar author={thread.author} className="h-6 w-6" />
+                      <AuthorAvatar
+                        author={thread.author}
+                        className="h-6 w-6"
+                      />
                       {getAuthorName(thread)}
                     </span>
                     <span className="mt-2 flex h-5 items-center justify-center gap-4 text-[11px] text-(--od-text-tertiary)">

@@ -1867,6 +1867,20 @@
             "description": "统计时间跨度(天数)"
           },
           {
+            "name": "channel_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "array", "items": { "type": "integer" } },
+                { "type": "null" }
+              ],
+              "description": "频道筛选范围，可重复传入多个频道 ID",
+              "title": "Channel Ids"
+            },
+            "description": "频道筛选范围，可重复传入多个频道 ID"
+          },
+          {
             "name": "apply_preferences",
             "in": "query",
             "required": false,
@@ -2075,6 +2089,20 @@
               "title": "Offset"
             },
             "description": "偏移量，用于分页"
+          },
+          {
+            "name": "channel_ids",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                { "type": "array", "items": { "type": "integer" } },
+                { "type": "null" }
+              ],
+              "description": "频道筛选范围，可重复传入多个频道 ID",
+              "title": "Channel Ids"
+            },
+            "description": "频道筛选范围，可重复传入多个频道 ID"
           },
           {
             "name": "apply_preferences",

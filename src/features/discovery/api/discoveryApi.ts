@@ -24,6 +24,13 @@ function dedupeThreads(threads: Thread[]) {
   return Array.from(map.values());
 }
 
+function normalizeChannelIds(channelIds?: Array<string | number> | null) {
+  return (channelIds || [])
+    .flatMap((id) => String(id).split(","))
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
 export const discoveryApi = {
   getRail: async (
     key: DiscoveryRailKey,
@@ -31,31 +38,43 @@ export const discoveryApi = {
       limit?: number;
       days?: number;
       offset?: number;
+      channel_ids?: Array<string | number> | null;
       apply_preferences?: boolean;
     } = {},
   ): Promise<Thread[]> => {
+    const channelIds = normalizeChannelIds(params.channel_ids);
     const response = await apiClient.get<Thread[]>(`/discovery/rails/${key}`, {
       params: {
         limit: params.limit ?? 12,
         days: params.days ?? 30,
         offset: params.offset ?? 0,
+        channel_ids: channelIds.length ? channelIds : undefined,
         apply_preferences: params.apply_preferences ?? true,
       },
+      paramsSerializer: { indexes: null },
     });
     return dedupeThreads(response.data || []);
   },
 
   getRails: async (
-    params: { limit?: number; days?: number; apply_preferences?: boolean } = {},
+    params: {
+      limit?: number;
+      days?: number;
+      channel_ids?: Array<string | number> | null;
+      apply_preferences?: boolean;
+    } = {},
   ): Promise<DiscoveryRailsResponse> => {
+    const channelIds = normalizeChannelIds(params.channel_ids);
     const response = await apiClient.get<DiscoveryRailsResponse>(
       "/discovery/rails",
       {
         params: {
           limit: params.limit ?? 12,
           days: params.days ?? 30,
+          channel_ids: channelIds.length ? channelIds : undefined,
           apply_preferences: params.apply_preferences ?? true,
         },
+        paramsSerializer: { indexes: null },
       },
     );
     return response.data;
@@ -64,16 +83,13 @@ export const discoveryApi = {
   getRandomThreads: async (
     params: {
       limit?: number;
-      channel_ids?: string[] | null;
+      channel_ids?: Array<string | number> | null;
       include_tags?: string[] | null;
       exclude_tags?: string[] | null;
       tag_logic?: "and" | "or";
     } = {},
   ): Promise<Thread[]> => {
-    const channelIds = (params.channel_ids || [])
-      .flatMap((id) => String(id).split(","))
-      .map((id) => id.trim())
-      .filter(Boolean);
+    const channelIds = normalizeChannelIds(params.channel_ids);
     const response = await apiClient.get<Thread[]>("/discovery/random", {
       params: {
         limit: params.limit ?? 10,

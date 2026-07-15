@@ -5167,6 +5167,8 @@ export interface operations {
                 limit?: number;
                 /** @description 统计时间跨度(天数) */
                 days?: number;
+                /** @description 频道筛选范围，可重复传入多个频道 ID */
+                channel_ids?: number[] | null;
                 /** @description 是否应用当前用户的过滤偏好 */
                 apply_preferences?: boolean;
             };
@@ -5247,6 +5249,8 @@ export interface operations {
                 days?: number;
                 /** @description 偏移量，用于分页 */
                 offset?: number;
+                /** @description 频道筛选范围，可重复传入多个频道 ID */
+                channel_ids?: number[] | null;
                 /** @description 是否应用当前用户的过滤偏好 */
                 apply_preferences?: boolean;
             };
