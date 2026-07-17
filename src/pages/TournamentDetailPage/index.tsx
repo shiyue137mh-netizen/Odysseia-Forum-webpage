@@ -37,7 +37,10 @@ import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
-function toTournamentThread(item: TournamentItem, tournament: Tournament): Thread {
+function toTournamentThread(
+  item: TournamentItem,
+  tournament: Tournament,
+): Thread {
   return {
     thread_id: item.thread_id,
     guild_id: item.guild_id,
@@ -89,19 +92,21 @@ export function TournamentDetailPage() {
   }, [itemsQuery.data]);
   const bannerSlides = useMemo(() => {
     const seen = new Set<string>();
-    return items.flatMap((item) =>
-      (item.thumbnail_urls || [])
-        .filter((url) => {
-          if (!url || seen.has(url)) return false;
-          seen.add(url);
-          return true;
-        })
-        .map((url) => ({
-          url,
-          title: item.title,
-          threadId: item.thread_id,
-        })),
-    ).slice(0, 8);
+    return items
+      .flatMap((item) =>
+        (item.thumbnail_urls || [])
+          .filter((url) => {
+            if (!url || seen.has(url)) return false;
+            seen.add(url);
+            return true;
+          })
+          .map((url) => ({
+            url,
+            title: item.title,
+            threadId: item.thread_id,
+          })),
+      )
+      .slice(0, 8);
   }, [items]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
@@ -171,6 +176,14 @@ export function TournamentDetailPage() {
   const hasDiscordChannel = Boolean(tournament.tournament_channel_id);
   const activeBannerSlide = bannerSlides[activeBannerIndex];
   const isOwner = String(tournament.owner_id ?? "") === String(user?.id ?? "");
+  const showPreviousBanner = () => {
+    setActiveBannerIndex(
+      (index) => (index - 1 + bannerSlides.length) % bannerSlides.length,
+    );
+  };
+  const showNextBanner = () => {
+    setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
+  };
 
   const handleCopyShareText = async () => {
     if (!shareText) return;
@@ -230,6 +243,25 @@ export function TournamentDetailPage() {
                   {activeBannerSlide.title}
                 </h2>
               </div>
+            )}
+
+            {bannerSlides.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onClick={showPreviousBanner}
+                  className="absolute inset-y-0 left-0 z-5 w-1/2 cursor-w-resize"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  onClick={showNextBanner}
+                  className="absolute inset-y-0 right-0 z-5 w-1/2 cursor-e-resize"
+                />
+              </>
             )}
 
             {bannerSlides.length > 1 && (
@@ -343,7 +375,9 @@ export function TournamentDetailPage() {
 
                 <button
                   type="button"
-                  onClick={() => setShareText(buildBooklistShareText(tournament))}
+                  onClick={() =>
+                    setShareText(buildBooklistShareText(tournament))
+                  }
                   className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
                 >
                   <Share2 className="h-3.5 w-3.5" />

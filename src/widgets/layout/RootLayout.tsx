@@ -1,7 +1,13 @@
 import { MascotBar } from '@/features/mascot/components/MascotBar';
+import { showMascotToast } from '@/features/mascot/lib/mascotToast';
 import { EasterEggLayer } from '@/features/mascot/components/EasterEggLayer';
 import { GlobalEasterEggLayer } from '@/features/easter-eggs/components/GlobalEasterEggLayer';
 import { useSettings, useSidebarCollapsedSetting } from '@/shared/hooks/useSettings';
+import {
+  getLastBrowsePosition,
+  saveLastBrowsePosition,
+  shouldTrackBrowsePosition,
+} from '@/shared/lib/lastBrowsePosition';
 import { ScrollToTop } from '@/shared/ui/ScrollToTop';
 import { AppSidebar } from '@/widgets/layout/AppSidebar';
 import { MobileTabBar } from '@/widgets/layout/MobileTabBar';
@@ -10,8 +16,8 @@ import { ResizableSidebar } from '@/widgets/sidebar/ResizableSidebar';
 import { GlobalThreadPreview } from '@/widgets/thread-preview/GlobalThreadPreview';
 import { OnboardingManager } from '@/features/onboarding/components/OnboardingManager';
 import { ImageViewer } from '@/shared/ui/ImageViewer';
-import { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 /**
  * AppShell — 全站布局骨架
@@ -37,6 +43,75 @@ export function RootLayout() {
   const sidebarCollapsed = useSidebarCollapsedSetting();
   const { updateSettings } = useSettings();
   const location = useLocation();
+  const navigate = useNavigate();
+  const hasShownResumePromptRef = useRef(false);
+  const initialPathnameRef = useRef(location.pathname);
+  const currentUrl = `${location.pathname}${location.search}${location.hash}`;
+
+  const restoreScrollPosition = useCallback((scrollTop: number) => {
+    let attempts = 0;
+    const restore = () => {
+      const container = document.getElementById('main-scroll-container');
+      if (!container) return;
+
+      container.scrollTop = scrollTop;
+      attempts += 1;
+      if (container.scrollTop + 2 < scrollTop && attempts < 20) {
+        window.setTimeout(restore, 100);
+      }
+    };
+    window.setTimeout(restore, 100);
+  }, []);
+
+  useEffect(() => {
+    if (hasShownResumePromptRef.current) return;
+    hasShownResumePromptRef.current = true;
+    if (initialPathnameRef.current !== '/') return;
+
+    const position = getLastBrowsePosition();
+    if (!position) return;
+
+    showMascotToast({
+      id: 'resume-last-browse-position',
+      emotion: 'hi',
+      eyebrow: 'Continue Exploring',
+      title: '要接着上次的位置看吗？',
+      message: '我还记得你上次浏览到哪里，点一下就带你回去。',
+      actionLabel: '继续浏览',
+      cancelLabel: '暂时不用',
+      duration: 10000,
+      onAction: () => {
+        navigate(position.url);
+        restoreScrollPosition(position.scrollTop);
+      },
+    });
+  }, [navigate, restoreScrollPosition]);
+
+  useEffect(() => {
+    if (!shouldTrackBrowsePosition(location.pathname)) return;
+
+    const container = document.getElementById('main-scroll-container');
+    if (!container) return;
+    let saveTimer: number | null = null;
+
+    const save = () => saveLastBrowsePosition(currentUrl, container.scrollTop);
+    const handleScroll = () => {
+      if (saveTimer !== null) window.clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+        save();
+      }, 250);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('pagehide', save);
+    return () => {
+      if (saveTimer !== null) window.clearTimeout(saveTimer);
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('pagehide', save);
+      save();
+    };
+  }, [currentUrl, location.pathname]);
 
   useEffect(() => {
     setIsMobileOpen(false);

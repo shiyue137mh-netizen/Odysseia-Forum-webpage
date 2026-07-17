@@ -86,6 +86,14 @@ export function TournamentsPage() {
   const openTournament = (tournament: Tournament) => {
     navigate(`/tournaments/${tournament.id}`);
   };
+  const showPreviousBanner = () => {
+    setActiveBannerIndex(
+      (index) => (index - 1 + bannerSlides.length) % bannerSlides.length,
+    );
+  };
+  const showNextBanner = () => {
+    setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
+  };
   const activeBanner = bannerSlides[activeBannerIndex];
 
   return (
@@ -123,6 +131,25 @@ export function TournamentsPage() {
                 {activeBanner.title}
               </h2>
             </div>
+          )}
+
+          {bannerSlides.length > 1 && (
+            <>
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={showPreviousBanner}
+                className="absolute inset-y-0 left-0 z-5 w-1/2 cursor-w-resize"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-hidden="true"
+                onClick={showNextBanner}
+                className="absolute inset-y-0 right-0 z-5 w-1/2 cursor-e-resize"
+              />
+            </>
           )}
 
           {bannerSlides.length > 1 && (

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpDown, FileText, Filter, Heart, MessageCircle, RefreshCw, Share2, X } from 'lucide-react';
+import { ArrowUpDown, FileText, Filter, Hash, Heart, LayoutGrid, MessageCircle, RefreshCw, Share2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -34,7 +34,6 @@ function parseSortParam(raw: string | null): UISortMethod {
   if (raw && SORT_OPTIONS.some((o) => o.value === raw)) return raw as UISortMethod;
   return DEFAULT_SORT;
 }
-
 function parseChannelsParam(raw: string | null): string[] {
   if (!raw) return [];
   return raw.split(',').map((s) => s.trim()).filter(Boolean);
@@ -201,6 +200,34 @@ export function UserProfilePage() {
     return m;
   }, [channelOptions]);
 
+  const authorContentProfile = useMemo(() => {
+    const tagCounts = new Map<string, number>();
+    const channelCounts = new Map<string, number>();
+
+    threads.forEach((thread) => {
+      new Set((thread.tags || []).map((tag) => tag.trim()).filter(Boolean)).forEach((tag) => {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      });
+
+      const channelId = String(thread.channel_id || '').trim();
+      if (channelId) channelCounts.set(channelId, (channelCounts.get(channelId) || 0) + 1);
+    });
+
+    const byCountThenName = ([nameA, countA]: [string, number], [nameB, countB]: [string, number]) =>
+      countB - countA || nameA.localeCompare(nameB, 'zh-CN');
+
+    return {
+      tags: Array.from(tagCounts.entries()).sort(byCountThenName).slice(0, 3),
+      channels: Array.from(channelCounts.entries())
+        .map(([id, count]) => [channelNameMap.get(id) || id, count] as [string, number])
+        .sort(byCountThenName)
+        .slice(0, 2),
+    };
+  }, [channelNameMap, threads]);
+
+  const hasContentProfile =
+    authorContentProfile.tags.length > 0 || authorContentProfile.channels.length > 0;
+
   return (
     <>
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 p-4 sm:p-6 lg:gap-14 lg:p-8">
@@ -245,6 +272,35 @@ export function UserProfilePage() {
             </div>
 
             <div className="mx-auto h-px w-16 bg-[color-mix(in_srgb,var(--od-text-secondary)_12%,transparent)]" />
+            {hasContentProfile && (
+              <div className="mx-auto flex max-w-3xl flex-col items-center gap-3 text-center">
+                <p className="text-[11px] font-medium text-(--od-text-tertiary)">
+                  基于当前加载的 {threads.length} 篇作品
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {authorContentProfile.tags.map(([tag, count]) => (
+                    <span
+                      key={`tag-${tag}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-(--od-surface-soft) px-3 py-1.5 text-xs text-(--od-text-secondary)"
+                    >
+                      <Hash className="h-3 w-3 text-(--od-accent)" />
+                      <span className="max-w-36 truncate">{tag}</span>
+                      <span className="tabular-nums text-(--od-text-tertiary)">{count}</span>
+                    </span>
+                  ))}
+                  {authorContentProfile.channels.map(([channel, count]) => (
+                    <span
+                      key={`channel-${channel}`}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-(--od-surface-soft) px-3 py-1.5 text-xs text-(--od-text-secondary)"
+                    >
+                      <LayoutGrid className="h-3 w-3 text-(--od-accent)" />
+                      <span className="max-w-36 truncate">{channel}</span>
+                      <span className="tabular-nums text-(--od-text-tertiary)">{count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <div data-tour="user-stats">
               <UserStatsGrid items={stats} />
             </div>

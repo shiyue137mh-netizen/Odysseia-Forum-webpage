@@ -55,6 +55,13 @@ export function ThreadPreviewOverlay({
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isClosingRef = useRef(false);
+  const wheelGestureActiveRef = useRef(false);
+  const wheelGestureStartedAtTopRef = useRef(false);
+  const wheelDismissDeltaRef = useRef(0);
+  const wheelGestureTimerRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchGestureStartedAtTopRef = useRef(false);
 
   useLockBodyScroll(true);
 
@@ -72,12 +79,75 @@ export function ThreadPreviewOverlay({
     }
   }, [thread.thread_id]);
 
+  useEffect(
+    () => () => {
+      if (wheelGestureTimerRef.current !== null) {
+        window.clearTimeout(wheelGestureTimerRef.current);
+      }
+    },
+    [],
+  );
+
   const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
     setIsVisible(false);
     setTimeout(() => {
       dialogRef.current?.close();
       onClose();
     }, 300);
+  };
+
+  const finishWheelGesture = () => {
+    wheelGestureActiveRef.current = false;
+    wheelGestureStartedAtTopRef.current = false;
+    wheelDismissDeltaRef.current = 0;
+    wheelGestureTimerRef.current = null;
+  };
+
+  const handleContentWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (quickAddOpen || isClosingRef.current) return;
+
+    if (!wheelGestureActiveRef.current) {
+      wheelGestureActiveRef.current = true;
+      wheelGestureStartedAtTopRef.current = event.currentTarget.scrollTop <= 1;
+      wheelDismissDeltaRef.current = 0;
+    }
+
+    if (wheelGestureTimerRef.current !== null) {
+      window.clearTimeout(wheelGestureTimerRef.current);
+    }
+    wheelGestureTimerRef.current = window.setTimeout(finishWheelGesture, 180);
+
+    if (!wheelGestureStartedAtTopRef.current || event.deltaY >= 0) return;
+    wheelDismissDeltaRef.current += Math.abs(event.deltaY);
+    if (wheelDismissDeltaRef.current >= 48) handleClose();
+  };
+
+  const handleContentTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (quickAddOpen || isClosingRef.current) return;
+    touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    touchGestureStartedAtTopRef.current = event.currentTarget.scrollTop <= 1;
+  };
+
+  const handleContentTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (
+      !touchGestureStartedAtTopRef.current ||
+      touchStartYRef.current === null ||
+      quickAddOpen ||
+      isClosingRef.current
+    ) {
+      return;
+    }
+    const currentY = event.touches[0]?.clientY;
+    if (currentY !== undefined && currentY - touchStartYRef.current >= 72) {
+      handleClose();
+    }
+  };
+
+  const finishTouchGesture = () => {
+    touchStartYRef.current = null;
+    touchGestureStartedAtTopRef.current = false;
   };
 
   const handleNativeCancel = (e: React.SyntheticEvent) => {
@@ -129,8 +199,11 @@ export function ThreadPreviewOverlay({
           }
         }}
         aria-labelledby="thread-preview-title"
-        className={`fixed inset-0 z-2000 m-0 flex h-dvh min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden rounded-none p-0 backdrop:bg-black/60 backdrop:backdrop-blur-xs transition-all duration-300 sm:inset-x-6 sm:inset-y-6 sm:m-auto sm:h-[calc(100vh-3rem)] sm:w-[calc(100%-3rem)] sm:max-w-2xl sm:rounded-[1.6rem] sm:supports-[height:100dvh]:h-[calc(100dvh-3rem)] ${isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-4 scale-95 opacity-0 backdrop:bg-black/0 backdrop:backdrop-blur-none"
-          } od-floating-panel-solid`}
+        className={`fixed inset-0 z-2000 m-0 flex h-dvh min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden rounded-none p-0 backdrop:bg-black/60 backdrop:backdrop-blur-xs transition-all duration-300 sm:inset-x-6 sm:inset-y-6 sm:m-auto sm:h-[calc(100vh-3rem)] sm:w-[calc(100%-3rem)] sm:max-w-2xl sm:rounded-[1.6rem] sm:supports-[height:100dvh]:h-[calc(100dvh-3rem)] ${
+          isVisible
+            ? "translate-y-0 scale-100 opacity-100"
+            : "translate-y-4 scale-95 opacity-0 backdrop:bg-black/0 backdrop:backdrop-blur-none"
+        } od-floating-panel-solid`}
       >
         {/* Header */}
         <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-4 sm:px-6 sm:py-5">
@@ -252,7 +325,12 @@ export function ThreadPreviewOverlay({
         {/* Scrollable Content */}
         <div
           ref={scrollRef}
-          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-(--od-surface-floating) scrollbar-thin"
+          onWheel={handleContentWheel}
+          onTouchStart={handleContentTouchStart}
+          onTouchMove={handleContentTouchMove}
+          onTouchEnd={finishTouchGesture}
+          onTouchCancel={finishTouchGesture}
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-(--od-surface-floating) [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {/* Images */}
           {images.length > 0 && (
@@ -335,6 +413,6 @@ export function ThreadPreviewOverlay({
         onClose={() => setQuickAddOpen(false)}
       />
     </>,
-    document.body
+    document.body,
   );
 }
