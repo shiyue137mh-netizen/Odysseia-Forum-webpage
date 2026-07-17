@@ -8,13 +8,11 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import type { Thread } from "@/entities/thread/types";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
-import { AuthorWorksHoverCard } from "@/features/authors/components/AuthorWorksHoverCard";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
 import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
@@ -61,17 +59,10 @@ function ThreadCardImpl({
       onPreview?.(thread);
     }
   };
-  const navigate = useNavigate();
   const fontSize = useFontSizeSetting();
   const fontSizes = fontSizeMap[fontSize];
   const cardSize = useCardSizeSetting();
 
-  const authorName =
-    thread.author?.display_name ??
-    thread.author?.global_name ??
-    thread.author?.name ??
-    "未知用户";
-  const authorId = thread.author?.id || "";
   const initialThumbnail = useMemo(
     () => thread.thumbnail_urls?.[0] || "",
     [thread.thumbnail_urls],
@@ -123,16 +114,6 @@ function ThreadCardImpl({
     !!thread.first_message_excerpt &&
     thread.first_message_excerpt.trim() !== "...";
 
-  const handleAuthorClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!authorId) return;
-    if (onAuthorClick) {
-      onAuthorClick({ id: authorId, name: authorName });
-      return;
-    }
-    navigate(`/u/${authorId}`);
-  };
-
   const mediaAspectClass =
     cardSize === "compact"
       ? "aspect-3/4"
@@ -177,37 +158,23 @@ function ThreadCardImpl({
         >
           <div className="flex flex-col gap-2 px-1 pb-3 pt-1 text-(--od-text-primary)">
             <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-              {thread.author?.id ? (
-                <AuthorWorksHoverCard
-                  author={thread.author}
-                  currentThreadId={thread.thread_id}
-                >
-                  <button
-                    type="button"
-                    onClick={handleAuthorClick}
-                    className="rounded-full shrink-0"
-                  >
-                    <AuthorAvatar
-                      author={thread.author}
-                      className="h-6 w-6 md:h-7 md:w-7 ring-1 ring-(--od-border-strong)/25"
-                    />
-                  </button>
-                </AuthorWorksHoverCard>
-              ) : (
-                <AuthorAvatar
-                  author={thread.author}
-                  className="h-6 w-6 md:h-7 md:w-7 ring-1 ring-(--od-border-strong)/25"
-                />
-              )}
+              <AuthorIdentityLink
+                author={thread.author}
+                currentThreadId={thread.thread_id}
+                showName={false}
+                avatarClassName="h-6 w-6 md:h-7 md:w-7"
+                onNavigate={onAuthorClick}
+                className="shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex h-4 min-w-0 items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={handleAuthorClick}
-                    className="block max-w-[140px] truncate text-xs font-medium leading-4 text-(--od-text-secondary) transition-colors duration-200 group-hover:text-(--od-text-primary) hover:text-(--od-text-primary)"
-                  >
-                    {authorName}
-                  </button>
+                  <AuthorIdentityLink
+                    author={thread.author}
+                    currentThreadId={thread.thread_id}
+                    showAvatar={false}
+                    nameClassName="max-w-[140px] text-xs font-medium leading-4 text-(--od-text-secondary)"
+                    onNavigate={onAuthorClick}
+                  />
                   <ThreadTournamentBadges thread={thread} variant="icon" />
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-(--od-text-tertiary)">
@@ -234,7 +201,7 @@ function ThreadCardImpl({
 
             <div className="overflow-hidden">
               <h3
-                className={`whitespace-nowrap ${fontSizes.title} text-(--od-text-primary) transition-colors duration-200 group-hover:text-[color-mix(in_srgb,var(--od-text-primary)_82%,var(--od-accent))]`}
+                className={`whitespace-nowrap ${fontSizes.title} text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
               >
                 <span
                   ref={titleViewportRef}
@@ -255,7 +222,6 @@ function ThreadCardImpl({
                       <HighlightText
                         text={thread.title}
                         highlight={searchQuery}
-                        className="text-(--od-text-primary)"
                       />
                     </span>
                     {titleShift > 0 && (
@@ -267,7 +233,6 @@ function ThreadCardImpl({
                           <HighlightText
                             text={thread.title}
                             highlight={searchQuery}
-                            className="text-(--od-text-primary)"
                           />
                         </span>
                       </>
@@ -281,9 +246,7 @@ function ThreadCardImpl({
           <div
             className={`relative w-full overflow-hidden rounded-[1.45rem] border border-(--od-shell-line) bg-(--od-surface-shell) shadow-(--od-shadow-soft) ${mediaAspectClass}`}
             style={
-              masonry
-                ? { aspectRatio: naturalAspectRatio || 3 / 4 }
-                : undefined
+              masonry ? { aspectRatio: naturalAspectRatio || 3 / 4 } : undefined
             }
           >
             {thumbnailSrc ? (

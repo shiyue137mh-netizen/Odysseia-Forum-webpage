@@ -10,6 +10,7 @@ export const booklistKeys = {
     pageIndex: number;
     pageSize: number;
     isTournament?: boolean;
+    ownerId?: string;
   }) => [...booklistKeys.lists(), params] as const,
   mineLists: () => [...booklistKeys.all, "mine"] as const,
   detail: (booklistId: number | string) =>

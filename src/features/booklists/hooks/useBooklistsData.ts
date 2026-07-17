@@ -30,12 +30,29 @@ export function useBooklistsList(params: {
   pageIndex: number;
   pageSize: number;
   isTournament?: boolean;
+  ownerId?: string;
+  enabled?: boolean;
 }) {
   return useQuery({
-    queryKey: booklistKeys.list(params),
+    queryKey: booklistKeys.list({
+      scope: params.scope,
+      keywords: params.keywords,
+      sortMethod: params.sortMethod,
+      pageIndex: params.pageIndex,
+      pageSize: params.pageSize,
+      isTournament: params.isTournament,
+      ownerId: params.ownerId,
+    }),
     queryFn: async () => {
       if (params.scope === "public") {
-        return booklistsApi.listPublic(params);
+        return booklistsApi.listPublic({
+          keywords: params.keywords,
+          sortMethod: params.sortMethod,
+          pageIndex: params.pageIndex,
+          pageSize: params.pageSize,
+          isTournament: params.isTournament,
+          ownerId: params.ownerId,
+        });
       }
 
       return booklistsApi.listMine({
@@ -50,6 +67,7 @@ export function useBooklistsList(params: {
     },
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
+    enabled: params.enabled ?? true,
   });
 }
 

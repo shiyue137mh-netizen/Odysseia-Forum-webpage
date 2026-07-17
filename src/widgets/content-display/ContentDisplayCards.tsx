@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Booklist } from "@/entities/booklist/types";
 import type { Thread } from "@/entities/thread/types";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { LazyImage } from "@/shared/ui/LazyImage";
 
@@ -85,12 +85,15 @@ export function CompactThreadCard({ thread, onOpen }: CompactThreadCardProps) {
           <span className="line-clamp-2 h-8 text-xs font-semibold leading-4 text-(--od-text-primary) transition-colors group-hover:text-(--od-text-heading)">
             {thread.title}
           </span>
-          <span className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] text-(--od-text-tertiary)">
-            <AuthorAvatar author={thread.author} className="h-4.5 w-4.5" />
-            <span className="truncate">{authorName}</span>
-          </span>
         </span>
       </button>
+      <AuthorIdentityLink
+        author={thread.author}
+        currentThreadId={thread.thread_id}
+        avatarClassName="h-4.5 w-4.5"
+        nameClassName="text-[10px]"
+        className="mt-1.5 max-w-full"
+      />
     </article>
   );
 }
@@ -108,17 +111,21 @@ export function CompactBooklistCard({
   onOpen,
   onToggleCollect,
 }: CompactBooklistCardProps) {
-  const ownerName =
-    booklist.author?.display_name ||
-    booklist.author?.global_name ||
-    booklist.author?.name ||
-    `用户 ${booklist.owner_id}`;
-
   return (
-    <article className="group relative min-w-0 rounded-2xl bg-[color-mix(in_srgb,var(--od-surface-raised)_74%,transparent)] p-3 transition-colors hover:bg-[color-mix(in_srgb,var(--od-surface-raised)_90%,transparent)]">
-      <button
-        type="button"
+    <article className="group relative min-w-0 rounded-2xl bg-[color-mix(in_srgb,var(--od-surface-raised)_74%,transparent)] p-3">
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => onOpen(booklist.id)}
+        onKeyDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            (event.key === "Enter" || event.key === " ")
+          ) {
+            event.preventDefault();
+            onOpen(booklist.id);
+          }
+        }}
         className="grid w-full min-w-0 grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-4 rounded-xl text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) sm:grid-cols-[10rem_minmax(0,1fr)]"
         aria-label={`打开书单：${booklist.title}`}
       >
@@ -137,19 +144,22 @@ export function CompactBooklistCard({
         </span>
 
         <span className="min-w-0 pr-9">
-          <span className="line-clamp-2 text-base font-semibold leading-5 text-(--od-text-primary) transition-colors group-hover:text-(--od-text-heading)">
+          <span className="line-clamp-2 text-base font-semibold leading-5 text-(--od-text-primary) transition-colors group-hover:text-(--od-accent)">
             {booklist.title}
           </span>
-          <span className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] text-(--od-text-tertiary)">
-            <AuthorAvatar author={booklist.author} className="h-5 w-5" />
-            <span className="truncate">{ownerName}</span>
-          </span>
+          <AuthorIdentityLink
+            author={booklist.author}
+            fallbackName={`用户 ${booklist.owner_id}`}
+            avatarClassName="h-5 w-5"
+            nameClassName="text-[11px]"
+            className="mt-2 max-w-full"
+          />
           <span className="mt-2 flex items-center gap-3 text-[10px] text-(--od-text-tertiary)">
             <span>{booklist.item_count} 篇</span>
             <span>{booklist.collection_count} 收藏</span>
           </span>
         </span>
-      </button>
+      </div>
 
       <button
         type="button"

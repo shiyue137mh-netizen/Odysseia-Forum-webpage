@@ -1,6 +1,6 @@
 import type { Booklist } from "@/entities/booklist/types";
 import { BookOpen, Eye, Globe, Lock, Pencil, Star, Trash2 } from "lucide-react";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 interface BooklistCardProps {
@@ -23,12 +23,6 @@ export function BooklistCard({
   collectLoading,
 }: BooklistCardProps) {
   const updatedText = formatRelativeDateTime(booklist.updated_at);
-  const ownerName =
-    booklist.author?.display_name ||
-    booklist.author?.global_name ||
-    booklist.author?.name ||
-    `用户 ${booklist.owner_id}`;
-
   const ariaLabel = `书单：${booklist.title}。${booklist.description || "暂无简介"}。包含 ${booklist.item_count} 个帖子，${booklist.collection_count} 次收藏。更新于 ${updatedText}`;
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -97,16 +91,22 @@ export function BooklistCard({
         </div>
 
         <div className="-mt-6 flex justify-center">
-          <AuthorAvatar
+          <AuthorIdentityLink
             author={booklist.author}
-            className="h-12 w-12 shadow-lg shadow-black/20"
+            fallbackName={`用户 ${booklist.owner_id}`}
+            showName={false}
+            avatarClassName="h-12 w-12 shadow-lg shadow-black/20"
           />
         </div>
 
         <div className="mt-2 flex min-w-0 flex-1 flex-col text-center">
-          <p className="mx-auto max-w-full truncate text-xs text-(--od-text-secondary)">
-            {ownerName}
-          </p>
+          <AuthorIdentityLink
+            author={booklist.author}
+            fallbackName={`用户 ${booklist.owner_id}`}
+            showAvatar={false}
+            nameClassName="max-w-full text-xs text-(--od-text-secondary)"
+            className="mx-auto max-w-full"
+          />
 
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-[11px]">
             <span className="inline-flex items-center gap-1 text-(--od-text-tertiary)">

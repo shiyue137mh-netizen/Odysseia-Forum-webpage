@@ -15,7 +15,7 @@ import { ImageCarousel } from "@/entities/thread/ImageCarousel";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import type { Thread } from "@/entities/thread/types";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { useSearchURLParams } from "@/features/search/hooks/useSearchParams";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
@@ -54,6 +54,7 @@ export function ThreadPreviewOverlay({
   const [isVisible, setIsVisible] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isClosingRef = useRef(false);
   const wheelGestureActiveRef = useRef(false);
@@ -69,6 +70,7 @@ export function ThreadPreviewOverlay({
     setIsVisible(true);
     if (dialogRef.current && !dialogRef.current.open) {
       dialogRef.current.showModal();
+      closeButtonRef.current?.focus({ preventScroll: true });
     }
   }, []);
 
@@ -209,43 +211,17 @@ export function ThreadPreviewOverlay({
         <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex flex-1 items-start gap-3">
-              {thread.author?.id ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleClose();
-                    navigate(`/u/${thread.author!.id}`);
-                  }}
-                  className="shrink-0"
-                  title={`查看作者主页：${authorName}`}
-                >
-                  <AuthorAvatar
-                    author={thread.author}
-                    className="h-10 w-10 transition-opacity hover:opacity-80"
-                  />
-                </button>
-              ) : (
-                <AuthorAvatar author={thread.author} className="h-10 w-10" />
-              )}
-              <div className="min-w-0">
-                {thread.author?.id ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleClose();
-                      navigate(`/u/${thread.author!.id}`);
-                    }}
-                    className="truncate text-left font-bold text-(--od-text-primary) hover:text-(--od-accent) hover:underline"
-                    title={`查看作者主页：${authorName}`}
-                  >
-                    {authorName}
-                  </button>
-                ) : (
-                  <div className="truncate font-bold text-(--od-text-primary)">
-                    {authorName}
-                  </div>
-                )}
-              </div>
+              <AuthorIdentityLink
+                author={thread.author}
+                currentThreadId={thread.thread_id}
+                avatarClassName="h-10 w-10"
+                nameClassName="font-bold text-(--od-text-primary)"
+                className="max-w-full"
+                onNavigate={({ id }) => {
+                  handleClose();
+                  navigate(`/u/${id}`);
+                }}
+              />
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2">
               <ThreadStatusBadges
@@ -272,8 +248,11 @@ export function ThreadPreviewOverlay({
                 />
               )}
               <button
+                ref={closeButtonRef}
+                type="button"
                 onClick={handleClose}
                 className="rounded-full p-2 text-(--od-text-tertiary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+                aria-label="关闭帖子详情"
               >
                 <X className="h-5 w-5" />
               </button>

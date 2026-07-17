@@ -1,6 +1,7 @@
 import { BookOpen, Eye, Globe, Lock, Pencil, Star, Trash2 } from "lucide-react";
 
 import type { Booklist } from "@/entities/booklist/types";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
@@ -60,19 +61,29 @@ export function BooklistListItem({
         <div className="flex min-w-0 flex-1 self-stretch">
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-(--od-text-tertiary)">
-              <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-(--od-bg-tertiary)">
-                <LazyImage
-                  src={
-                    ownerAvatarUrl ||
-                    "https://cdn.discordapp.com/embed/avatars/0.png"
-                  }
-                  alt={ownerFallbackName}
-                  className="h-full w-full object-cover"
+              {booklist.author?.id ? (
+                <AuthorIdentityLink
+                  author={booklist.author}
+                  avatarClassName="h-6 w-6"
+                  nameClassName="max-w-40 text-(--od-text-secondary)"
                 />
-              </span>
-              <span className="max-w-40 truncate text-(--od-text-secondary)">
-                {ownerFallbackName}
-              </span>
+              ) : (
+                <>
+                  <span className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-(--od-bg-tertiary)">
+                    <LazyImage
+                      src={
+                        ownerAvatarUrl ||
+                        "https://cdn.discordapp.com/embed/avatars/0.png"
+                      }
+                      alt={ownerFallbackName}
+                      className="h-full w-full object-cover"
+                    />
+                  </span>
+                  <span className="max-w-40 truncate text-(--od-text-secondary)">
+                    {ownerFallbackName}
+                  </span>
+                </>
+              )}
               <span className="text-(--od-divider-strong)/75">/</span>
               <span className="inline-flex items-center gap-1">
                 {booklist.is_public ? (
@@ -87,7 +98,7 @@ export function BooklistListItem({
             </div>
 
             <div className="mb-3 flex items-start gap-2.5 pr-2">
-              <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-text-heading)">
+              <h3 className="min-w-0 flex-1 text-lg font-semibold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)">
                 {booklist.title}
               </h3>
             </div>

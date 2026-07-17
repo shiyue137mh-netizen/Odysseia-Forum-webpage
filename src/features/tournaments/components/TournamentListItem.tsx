@@ -2,7 +2,7 @@ import { BookOpen, Eye, Medal, Star, Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import type { Tournament } from "@/entities/tournament/types";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { tournamentsApi } from "@/features/tournaments/api/tournamentsApi";
 import { tournamentKeys } from "@/features/tournaments/lib/queryKeys";
 import { LazyImage } from "@/shared/ui/LazyImage";
@@ -37,11 +37,6 @@ export function TournamentListItem({
       ?.flatMap((item) => item.thumbnail_urls || [])
       .find(Boolean) || null;
   const coverImageUrl = tournament.cover_image_url || fallbackCoverUrl;
-  const ownerName =
-    tournament.author?.display_name ||
-    tournament.author?.global_name ||
-    tournament.author?.name ||
-    `用户 ${tournament.owner_id}`;
   const updatedText = formatRelativeDateTime(tournament.updated_at);
 
   return (
@@ -81,9 +76,11 @@ export function TournamentListItem({
 
       <div className="relative border-t border-(--od-border) px-4 pb-6 pt-12 text-center sm:px-8 sm:pb-8 sm:pt-14">
         <div className="absolute left-1/2 top-0 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-          <AuthorAvatar
+          <AuthorIdentityLink
             author={tournament.author}
-            className="h-16 w-16 shadow-lg shadow-black/20"
+            fallbackName={`用户 ${tournament.owner_id}`}
+            showName={false}
+            avatarClassName="h-16 w-16 shadow-lg shadow-black/20"
           />
         </div>
 
@@ -95,9 +92,12 @@ export function TournamentListItem({
                 活动赛事
               </span>
               <span className="text-(--od-divider-strong)/70">/</span>
-              <span className="max-w-40 truncate text-(--od-text-secondary)">
-                {ownerName}
-              </span>
+              <AuthorIdentityLink
+                author={tournament.author}
+                fallbackName={`用户 ${tournament.owner_id}`}
+                showAvatar={false}
+                nameClassName="max-w-40 text-(--od-text-secondary)"
+              />
               <span className="text-(--od-divider-strong)/70">/</span>
               <span>{updatedText}</span>
             </div>

@@ -7,7 +7,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { memo, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { HighlightText } from "@/shared/ui/HighlightText";
@@ -19,13 +18,12 @@ import {
 } from "@/shared/hooks/useSettings";
 import { fontSizeMap } from "@/shared/lib/settings";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import { usePretextClampText } from "@/shared/hooks/usePretextClampText";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
-import { AuthorWorksHoverCard } from "@/features/authors/components/AuthorWorksHoverCard";
 
 interface ThreadListItemProps {
   thread: Thread;
@@ -46,7 +44,6 @@ function ThreadListItemImpl({
   booklistComment,
   index = 0,
 }: ThreadListItemProps) {
-  const navigate = useNavigate();
   const fontSize = useFontSizeSetting();
   const imageMode = useImageModeSetting();
   const fontSizes = fontSizeMap[fontSize];
@@ -60,12 +57,6 @@ function ThreadListItemImpl({
     (tag) => !thread.tags.includes(tag),
   );
 
-  const authorName =
-    thread.author?.display_name ??
-    thread.author?.global_name ??
-    thread.author?.name ??
-    "未知用户";
-  const authorId = thread.author?.id || "";
   const hasExcerpt =
     !!thread.first_message_excerpt &&
     thread.first_message_excerpt.trim() !== "...";
@@ -79,16 +70,6 @@ function ThreadListItemImpl({
 
   const { measureRef: titleMeasureRef, clampedText: clampedTitle } =
     usePretextClampText<HTMLHeadingElement>(thread.title, { maxLines: 2 });
-
-  const handleAuthorClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!authorId) return;
-    if (onAuthorClick) {
-      onAuthorClick({ id: authorId, name: authorName });
-      return;
-    }
-    navigate(`/u/${authorId}`);
-  };
 
   return (
     <article
@@ -234,35 +215,13 @@ function ThreadListItemImpl({
           <div
             className={`mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 ${fontSizes.meta} text-(--od-text-tertiary)`}
           >
-            {thread.author?.id ? (
-              <AuthorWorksHoverCard
-                author={thread.author}
-                currentThreadId={thread.thread_id}
-              >
-                <button
-                  type="button"
-                  onClick={handleAuthorClick}
-                  className="shrink-0 rounded-full"
-                >
-                  <AuthorAvatar
-                    author={thread.author}
-                    className="h-6 w-6 md:h-7 md:w-7"
-                  />
-                </button>
-              </AuthorWorksHoverCard>
-            ) : (
-              <AuthorAvatar
-                author={thread.author}
-                className="h-6 w-6 md:h-7 md:w-7"
-              />
-            )}
-            <button
-              type="button"
-              onClick={handleAuthorClick}
-              className="max-w-36 truncate font-medium text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary)"
-            >
-              {authorName}
-            </button>
+            <AuthorIdentityLink
+              author={thread.author}
+              currentThreadId={thread.thread_id}
+              avatarClassName="h-6 w-6 md:h-7 md:w-7"
+              nameClassName="max-w-36 font-medium text-(--od-text-secondary)"
+              onNavigate={onAuthorClick}
+            />
             <span className="text-(--od-divider-strong)/75">/</span>
             <span className="whitespace-nowrap">{createdTime}</span>
             {lastActiveTime && (
@@ -277,7 +236,7 @@ function ThreadListItemImpl({
           <div className="mb-3 flex items-start gap-2.5">
             <h3
               ref={titleMeasureRef}
-              className={`min-w-0 flex-1 font-semibold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-text-heading) ${fontSizes.title}`}
+              className={`min-w-0 flex-1 font-semibold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent) ${fontSizes.title}`}
             >
               <HighlightText text={clampedTitle} highlight={searchQuery} />
             </h3>

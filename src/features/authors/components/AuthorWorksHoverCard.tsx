@@ -1,10 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  FileText,
-  MessageCircle,
-  ThumbsUp,
-  UserRoundX,
-} from "lucide-react";
+import { FileText, MessageCircle, ThumbsUp, UserRoundX } from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -98,6 +93,12 @@ export function AuthorWorksHoverCard({
     setIsOpen(true);
   }, [clearCloseTimer, clearOpenTimer]);
 
+  const openFromFocus = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      if (triggerRef.current?.contains(document.activeElement)) openNow();
+    });
+  }, [openNow]);
+
   const keepOpen = useCallback(() => {
     clearCloseTimer();
   }, [clearCloseTimer]);
@@ -144,17 +145,21 @@ export function AuthorWorksHoverCard({
       top = rect.bottom - height;
     }
 
-    setPanelStyle({
-      left: Math.max(
-        VIEWPORT_PADDING,
-        Math.min(left, window.innerWidth - width - VIEWPORT_PADDING),
-      ),
-      top: Math.max(
-        VIEWPORT_PADDING,
-        Math.min(top, window.innerHeight - height - VIEWPORT_PADDING),
-      ),
-      width,
-    });
+    const nextLeft = Math.max(
+      VIEWPORT_PADDING,
+      Math.min(left, window.innerWidth - width - VIEWPORT_PADDING),
+    );
+    const nextTop = Math.max(
+      VIEWPORT_PADDING,
+      Math.min(top, window.innerHeight - height - VIEWPORT_PADDING),
+    );
+    setPanelStyle({ left: nextLeft, top: nextTop, width });
+    const panel = panelRef.current;
+    if (panel) {
+      panel.style.left = `${nextLeft}px`;
+      panel.style.top = `${nextTop}px`;
+      panel.style.width = `${width}px`;
+    }
   }, [close]);
 
   useEffect(() => {
@@ -168,6 +173,12 @@ export function AuthorWorksHoverCard({
     if (!isOpen) return;
 
     updatePosition();
+    const panel = panelRef.current;
+    try {
+      if (panel && !panel.matches(":popover-open")) panel.showPopover();
+    } catch {
+      // 不支持 Popover API 时保留原有 fixed Portal 展示。
+    }
     window.addEventListener("scroll", updatePosition, true);
     window.addEventListener("resize", updatePosition);
 
@@ -192,6 +203,11 @@ export function AuthorWorksHoverCard({
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("pointerdown", handlePointerDown);
     return () => {
+      try {
+        if (panel?.matches(":popover-open")) panel.hidePopover();
+      } catch {
+        // 面板卸载时浏览器会自动清理 Top Layer。
+      }
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
       document.removeEventListener("keydown", handleKeyDown);
@@ -275,6 +291,7 @@ export function AuthorWorksHoverCard({
   const panel = isOpen ? (
     <div
       ref={panelRef}
+      popover="manual"
       role="dialog"
       aria-label={`${authorName} 的其他作品`}
       style={panelStyle}
@@ -283,20 +300,20 @@ export function AuthorWorksHoverCard({
       onPointerLeave={closeSoon}
       onFocus={keepOpen}
       onBlur={closeSoon}
-      className="od-floating-glass fixed z-[9999] overflow-hidden rounded-2xl border border-(--od-border-strong) shadow-(--od-shadow-floating) animate-in fade-in zoom-in-95 duration-150"
+      className="od-floating-glass fixed inset-auto z-[9999] m-0 overflow-hidden rounded-2xl border border-(--od-border-strong) p-0 shadow-(--od-shadow-floating) animate-in fade-in zoom-in-95 duration-150"
     >
       <div className="flex items-start gap-2 border-b border-(--od-shell-line) px-2 py-2">
         <button
           type="button"
           onClick={openAuthorPage}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-1 text-left transition-colors hover:bg-(--od-interactive-hover)"
+          className="group/author-header flex min-w-0 flex-1 items-center gap-3 px-2 py-1 text-left"
         >
           <AuthorAvatar
             author={author}
-            className="h-9 w-9 ring-1 ring-(--od-border-strong)/35"
+            className="h-9 w-9 ring-1 ring-(--od-border-strong)/35 transition-[box-shadow] group-hover/author-header:ring-(--od-accent)"
           />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-(--od-text-primary)">
+            <span className="block truncate text-sm font-semibold text-(--od-text-primary) transition-colors group-hover/author-header:text-(--od-accent)">
               {authorName}
             </span>
             <span className="block truncate text-[11px] text-(--od-text-tertiary)">
@@ -387,7 +404,7 @@ export function AuthorWorksHoverCard({
                 key={thread.thread_id}
                 type="button"
                 onClick={() => openThread(thread.thread_id)}
-                className="group flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-(--od-interactive-hover) focus-visible:outline-2 focus-visible:outline-(--od-accent)"
+                className="group flex w-full items-center gap-3 rounded-xl p-2 text-left focus-visible:outline-2 focus-visible:outline-(--od-accent)"
               >
                 <span className="flex h-13 w-13 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-(--od-bg-tertiary)">
                   {thumbnail ? (
@@ -401,10 +418,10 @@ export function AuthorWorksHoverCard({
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="line-clamp-2 text-xs font-medium leading-4 text-(--od-text-primary)">
+                  <span className="line-clamp-2 text-xs font-medium leading-4 text-(--od-text-primary) transition-colors group-hover:text-(--od-accent)">
                     {thread.title}
                   </span>
-                  <span className="mt-1.5 flex items-center gap-3 text-[10px] text-(--od-text-tertiary)">
+                  <span className="mt-1.5 flex items-center gap-3 text-[10px] text-(--od-text-tertiary) transition-colors group-hover:text-(--od-text-secondary)">
                     <span className="inline-flex items-center gap-1">
                       <ThumbsUp className="h-3 w-3" />
                       {thread.reaction_count}
@@ -423,7 +440,7 @@ export function AuthorWorksHoverCard({
       <button
         type="button"
         onClick={openAuthorPage}
-        className="w-full border-t border-(--od-shell-line) px-4 py-2.5 text-center text-xs font-medium text-(--od-accent) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-accent-hover)"
+        className="w-full border-t border-(--od-shell-line) px-4 py-2.5 text-center text-xs font-medium text-(--od-accent) transition-colors hover:text-(--od-accent-hover)"
       >
         查看全部作品
       </button>
@@ -496,7 +513,7 @@ export function AuthorWorksHoverCard({
           if (event.pointerType === "mouse") openSoon();
         }}
         onPointerLeave={closeSoon}
-        onFocus={openNow}
+        onFocus={openFromFocus}
         onBlur={closeSoon}
       >
         {children}

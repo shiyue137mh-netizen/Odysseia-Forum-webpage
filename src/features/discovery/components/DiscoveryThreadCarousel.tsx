@@ -8,7 +8,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Thread } from "@/entities/thread/types";
-import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
+import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { getWrappedCarouselIndex } from "@/features/search/lib/discoveryCarousel";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { LazyImage } from "@/shared/ui/LazyImage";
@@ -27,15 +27,6 @@ interface DiscoveryThreadCarouselProps {
   rankingMetric?: DiscoveryRankingMetric;
   onOpen: (thread: Thread) => void;
   onActiveChange?: (thread: Thread, index: number) => void;
-}
-
-function getAuthorName(thread: Thread) {
-  return (
-    thread.author?.display_name ||
-    thread.author?.global_name ||
-    thread.author?.name ||
-    "未知作者"
-  );
 }
 
 function getRankingValue(thread: Thread, metric: DiscoveryRankingMetric) {
@@ -245,35 +236,35 @@ export function DiscoveryThreadCarousel({
                   >
                     {thread.title}
                   </span>
-                  <span
-                    className={`transition-opacity duration-300 ${
-                      isActive ? "opacity-100" : "pointer-events-none opacity-0"
-                    }`}
-                  >
-                    <span className="mt-2 inline-flex h-6 items-center gap-2 text-xs text-(--od-text-secondary)">
-                      <AuthorAvatar
-                        author={thread.author}
-                        className="h-6 w-6"
-                      />
-                      {getAuthorName(thread)}
-                    </span>
-                    <span className="mt-2 flex h-5 items-center justify-center gap-4 text-[11px] text-(--od-text-tertiary)">
-                      <span className="inline-flex items-center gap-1">
-                        <Heart className="h-3.5 w-3.5" />
-                        {thread.reaction_count}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <MessageCircle className="h-3.5 w-3.5" />
-                        {thread.reply_count}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Star className="h-3.5 w-3.5" />
-                        {thread.collection_count || 0}
-                      </span>
-                    </span>
-                  </span>
                 </span>
               </button>
+              <span
+                className={`block text-center transition-opacity duration-300 ${
+                  isActive ? "opacity-100" : "pointer-events-none opacity-0"
+                }`}
+              >
+                <AuthorIdentityLink
+                  author={thread.author}
+                  currentThreadId={thread.thread_id}
+                  avatarClassName="h-6 w-6"
+                  nameClassName="text-xs text-(--od-text-secondary)"
+                  className="mt-2 h-6 max-w-full"
+                />
+                <span className="mt-2 flex h-5 items-center justify-center gap-4 text-[11px] text-(--od-text-tertiary)">
+                  <span className="inline-flex items-center gap-1">
+                    <Heart className="h-3.5 w-3.5" />
+                    {thread.reaction_count}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    {thread.reply_count}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5" />
+                    {thread.collection_count || 0}
+                  </span>
+                </span>
+              </span>
             </article>
           );
         })}
