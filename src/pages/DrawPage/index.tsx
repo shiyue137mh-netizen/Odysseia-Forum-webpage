@@ -4,12 +4,13 @@ import {
     Dices,
     Eye,
     Layers3,
+    RotateCcw,
     Sparkles,
+    Tags,
     Wand2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Select } from "@/shared/ui/Select";
 
 import type { Thread } from "@/entities/thread/types";
 import { DrawRevealOverlay } from "@/features/draw/components/DrawRevealOverlay";
@@ -19,15 +20,110 @@ import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferen
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
-import { useChannels } from "@/shared/hooks/useChannels";
+import { useChannels, type ApiChannel } from "@/shared/hooks/useChannels";
 import { OmicronIcon } from "@/shared/ui/icons/OmicronIcon";
 import { OmicronLoader } from "@/shared/ui/loaders/OmicronLoader";
 
-type DrawScopeMode = "preferences" | "channel";
+type DrawScopeMode = "all" | "preferences" | "custom";
 type DrawOverlayPhase = "charging" | "revealing" | "result" | "error";
+
+interface DrawRecipe {
+  scopeMode: DrawScopeMode;
+  channelIds: string[];
+  includeTags: string[];
+  excludeTags: string[];
+  tagLogic: "and" | "or";
+}
+
+interface DrawTagGroup {
+  id: string;
+  name: string;
+  tags: string[];
+}
 
 const DRAW_HISTORY_KEY = "odysseia_draw_history";
 const DRAW_REVEAL_ENABLED_KEY = "odysseia_draw_reveal_enabled";
+const DRAW_RECIPE_KEY = "odysseia_draw_recipe";
+const DEFAULT_DRAW_RECIPE: DrawRecipe = {
+  scopeMode: "preferences",
+  channelIds: [],
+  includeTags: [],
+  excludeTags: [],
+  tagLogic: "and",
+};
+
+function normalizeStrings(values: unknown[]) {
+  return Array.from(new Set(
+    values
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean),
+  ));
+}
+
+function loadDrawRecipe(): DrawRecipe | null {
+  try {
+    const raw = localStorage.getItem(DRAW_RECIPE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<DrawRecipe>;
+    if (!['all', 'preferences', 'custom'].includes(parsed.scopeMode || '')) return null;
+    return {
+      scopeMode: parsed.scopeMode as DrawScopeMode,
+      channelIds: normalizeStrings(Array.isArray(parsed.channelIds) ? parsed.channelIds : []),
+      includeTags: normalizeStrings(Array.isArray(parsed.includeTags) ? parsed.includeTags : []),
+      excludeTags: normalizeStrings(Array.isArray(parsed.excludeTags) ? parsed.excludeTags : []),
+      tagLogic: parsed.tagLogic === 'or' ? 'or' : 'and',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveDrawRecipe(recipe: DrawRecipe) {
+  try {
+    localStorage.setItem(DRAW_RECIPE_KEY, JSON.stringify(recipe));
+  } catch {
+    // ignore
+  }
+}
+
+function getChannelTags(channel: ApiChannel) {
+  return normalizeStrings([
+    ...(channel.available_tags || []).map((tag) => tag.name),
+    ...(channel.virtual_tags || []).map((tag) => tag.tag_name),
+    ...(channel.mapped_source_channels || []).flatMap((source) =>
+      (source.available_tags || []).map((tag) => tag.name),
+    ),
+  ]);
+}
+
+export function buildDrawTagGroups(channels: ApiChannel[], activeChannelIds: string[] | null) {
+  const activeSet = activeChannelIds ? new Set(activeChannelIds) : null;
+  const scoped = channels
+    .filter((channel) => !activeSet || activeSet.has(channel.channel_id))
+    .map((channel) => ({ id: channel.channel_id, name: channel.name, tags: getChannelTags(channel) }));
+  if (scoped.length <= 1) {
+    return scoped.filter((channel) => channel.tags.length > 0);
+  }
+
+  const counts = new Map<string, number>();
+  for (const channel of scoped) {
+    for (const tag of channel.tags) counts.set(tag, (counts.get(tag) || 0) + 1);
+  }
+
+  return [
+    {
+      id: 'shared',
+      name: '共有标签',
+      tags: Array.from(counts).filter(([, count]) => count > 1).map(([tag]) => tag),
+    },
+    ...scoped.map((channel) => ({
+      id: `channel-${channel.id}`,
+      name: `${channel.name} · 特色`,
+      tags: channel.tags.filter((tag) => counts.get(tag) === 1),
+    })),
+  ].filter((group) => group.tags.length > 0);
+}
 
 /** 从 localStorage 恢复上次的抽卡结果 */
 function loadDrawHistory(): Thread[] {
@@ -72,8 +168,9 @@ export function DrawPage() {
     return channelsData?.channels || [];
   }, [channelsData?.channels]);
 
-  const [scopeMode, setScopeMode] = useState<DrawScopeMode>("preferences");
-  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [storedRecipe] = useState<DrawRecipe | null>(() => loadDrawRecipe());
+  const recipeInitializedRef = useRef(Boolean(storedRecipe));
+  const [recipe, setRecipe] = useState<DrawRecipe>(storedRecipe || DEFAULT_DRAW_RECIPE);
   const [_drawResults, setDrawResults] = useState<Thread[]>([]);
   const [overlayResults, setOverlayResults] = useState<Thread[]>([]);
   const [lastDrawCount, setLastDrawCount] = useState<number>(1);
@@ -102,31 +199,20 @@ export function DrawPage() {
     }
   }, [revealEnabled]);
 
-  const preferredChannelIds = preferenceContext?.preferredChannelIds || [];
-  const availableScopeChannels = useMemo(() => {
-    if (preferredChannelIds.length === 0) return allChannels;
-
-    const preferredSet = new Set(preferredChannelIds);
-    return allChannels.filter((channel) => preferredSet.has(channel.id));
-  }, [allChannels, preferredChannelIds]);
-
   useEffect(() => {
-    if (scopeMode !== "channel") return;
+    saveDrawRecipe(recipe);
+  }, [recipe]);
 
-    if (!selectedChannelId) {
-      const fallback = availableScopeChannels[0]?.id || "";
-      if (fallback) setSelectedChannelId(fallback);
-      return;
-    }
-
-    if (
-      !availableScopeChannels.some(
-        (channel) => channel.id === selectedChannelId,
-      )
-    ) {
-      setSelectedChannelId(availableScopeChannels[0]?.id || "");
-    }
-  }, [availableScopeChannels, scopeMode, selectedChannelId]);
+  const preferredChannelIds = preferenceContext?.preferredChannelIds || [];
+  useEffect(() => {
+    if (recipeInitializedRef.current || !preferences) return;
+    recipeInitializedRef.current = true;
+    setRecipe({
+      ...DEFAULT_DRAW_RECIPE,
+      includeTags: preferenceContext?.includeTags || [],
+      excludeTags: preferenceContext?.excludeTags || [],
+    });
+  }, [preferenceContext?.excludeTags, preferenceContext?.includeTags, preferences]);
 
   useEffect(() => {
     if (overlayPhase !== "revealing" || overlayResults.length === 0) return;
@@ -136,15 +222,67 @@ export function DrawPage() {
   }, [overlayPhase, overlayResults]);
 
   const effectiveChannelIds = useMemo(() => {
-    if (scopeMode === "channel" && selectedChannelId)
-      return [selectedChannelId];
-    return preferenceContext?.preferredChannelIds.length
-      ? preferenceContext.preferredChannelIds
-      : null;
-  }, [preferenceContext?.preferredChannelIds, scopeMode, selectedChannelId]);
+    if (recipe.scopeMode === "all") return null;
+    if (recipe.scopeMode === "custom") return recipe.channelIds.length ? recipe.channelIds : null;
+    return preferredChannelIds.length ? preferredChannelIds : null;
+  }, [preferredChannelIds, recipe.channelIds, recipe.scopeMode]);
 
-  const includeTags = preferenceContext?.includeTags || null;
-  const excludeTags = preferenceContext?.excludeTags || null;
+  const tagGroups = useMemo<DrawTagGroup[]>(() => {
+    const visibleChannelIds = new Set(allChannels.map((channel) => channel.id));
+    const apiChannels = (channelsData?.apiData || []).filter((channel) =>
+      visibleChannelIds.has(channel.channel_id),
+    );
+    const tagPoolChannelIds = recipe.scopeMode === 'custom' ? recipe.channelIds : effectiveChannelIds;
+    const groups = buildDrawTagGroups(apiChannels, tagPoolChannelIds);
+    const catalogTags = new Set(groups.flatMap((group) => group.tags));
+    const selectedOutsidePool = normalizeStrings([
+      ...recipe.includeTags,
+      ...recipe.excludeTags,
+    ]).filter((tag) => !catalogTags.has(tag));
+    return selectedOutsidePool.length
+      ? [{ id: 'current-selection', name: '当前配方', tags: selectedOutsidePool }, ...groups]
+      : groups;
+  }, [allChannels, channelsData?.apiData, effectiveChannelIds, recipe.channelIds, recipe.excludeTags, recipe.includeTags, recipe.scopeMode]);
+
+  const toggleRecipeChannel = useCallback((channelId: string) => {
+    setRecipe((current) => ({
+      ...current,
+      channelIds: current.channelIds.includes(channelId)
+        ? current.channelIds.filter((id) => id !== channelId)
+        : [...current.channelIds, channelId],
+    }));
+  }, []);
+
+  const toggleRecipeTag = useCallback((tag: string) => {
+    setRecipe((current) => {
+      if (current.includeTags.includes(tag)) {
+        return {
+          ...current,
+          includeTags: current.includeTags.filter((item) => item !== tag),
+          excludeTags: [...current.excludeTags, tag],
+        };
+      }
+      if (current.excludeTags.includes(tag)) {
+        return {
+          ...current,
+          excludeTags: current.excludeTags.filter((item) => item !== tag),
+        };
+      }
+      return { ...current, includeTags: [...current.includeTags, tag] };
+    });
+  }, []);
+
+  const restorePreferenceRecipe = useCallback(() => {
+    setRecipe({
+      scopeMode: "preferences",
+      channelIds: [],
+      includeTags: preferenceContext?.includeTags || [],
+      excludeTags: preferenceContext?.excludeTags || [],
+      tagLogic: "and",
+    });
+  }, [preferenceContext?.excludeTags, preferenceContext?.includeTags]);
+
+  const canDraw = recipe.scopeMode !== "custom" || recipe.channelIds.length > 0;
 
   const handleDraw = useCallback(async (count: number) => {
     const sequenceId = drawSequenceRef.current + 1;
@@ -168,8 +306,9 @@ export function DrawPage() {
       const results = await discoveryApi.getRandomThreads({
         limit: count,
         channel_ids: effectiveChannelIds,
-        include_tags: includeTags,
-        exclude_tags: excludeTags,
+        include_tags: recipe.includeTags,
+        exclude_tags: recipe.excludeTags,
+        tag_logic: recipe.tagLogic,
       });
 
       if (drawSequenceRef.current !== sequenceId) return;
@@ -220,7 +359,7 @@ export function DrawPage() {
     } finally {
       setIsDrawing(false);
     }
-  }, [effectiveChannelIds, includeTags, excludeTags, revealEnabled]);
+  }, [effectiveChannelIds, recipe.excludeTags, recipe.includeTags, recipe.tagLogic, revealEnabled]);
 
   const handleSkipOverlay = () => {
     skipRevealRef.current = true;
@@ -233,10 +372,13 @@ export function DrawPage() {
   };
 
   const activeScopeLabel =
-    scopeMode === "channel" && selectedChannelId
-      ? availableScopeChannels.find((c) => c.id === selectedChannelId)?.name ||
-        "未找到频道"
-      : "我的偏好池";
+    recipe.scopeMode === "all"
+      ? "全社区池"
+      : recipe.scopeMode === "preferences"
+        ? preferredChannelIds.length > 0 ? "我的偏好频道" : "全社区池"
+        : recipe.channelIds.length > 0
+          ? `自选 ${recipe.channelIds.length} 个频道`
+          : "请选择频道";
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-0 p-4 sm:p-6 lg:p-8">
@@ -270,9 +412,9 @@ export function DrawPage() {
         >
           <span className="inline-flex items-center gap-1 rounded-full border border-(--od-border) bg-(--od-surface-input) px-3 py-1.5">
             <BadgeCheck className="h-3.5 w-3.5 text-(--od-accent)" />
-            {preferenceContext
-              ? "偏好过滤已生效"
-              : "全社区池"}
+            {recipe.includeTags.length || recipe.excludeTags.length
+              ? `包含 ${recipe.includeTags.length} · 排除 ${recipe.excludeTags.length}`
+              : "未限制标签"}
           </span>
           <span className="inline-flex items-center gap-1 rounded-full border border-(--od-border) bg-(--od-surface-input) px-3 py-1.5">
             <Layers3 className="h-3.5 w-3.5 text-(--od-accent)" />
@@ -289,7 +431,7 @@ export function DrawPage() {
         >
           <button
             type="button"
-            disabled={isDrawing}
+            disabled={isDrawing || !canDraw}
             onClick={() => handleDraw(1)}
             className="group relative flex items-center gap-3 rounded-2xl border border-(--od-accent)/40 bg-linear-to-br from-(--od-accent)/16 to-(--od-accent)/6 px-8 py-4 text-base font-bold text-(--od-accent) shadow-lg transition-all hover:scale-[1.03] hover:shadow-xl hover:border-(--od-accent)/60 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed sm:px-10 sm:py-5 sm:text-lg"
           >
@@ -302,7 +444,7 @@ export function DrawPage() {
           </button>
           <button
             type="button"
-            disabled={isDrawing}
+            disabled={isDrawing || !canDraw}
             onClick={() => handleDraw(10)}
             className="group relative flex items-center gap-3 rounded-2xl border border-(--od-border) bg-(--od-surface-input) px-8 py-4 text-base font-semibold text-(--od-text-primary) shadow-md transition-all hover:scale-[1.03] hover:shadow-lg hover:border-(--od-accent)/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed sm:px-10 sm:py-5 sm:text-lg"
           >
@@ -340,62 +482,130 @@ export function DrawPage() {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.35, ease: "easeInOut" }}
-              className="w-full max-w-lg mt-4 overflow-hidden"
+              className="mt-4 w-full max-w-2xl overflow-hidden"
             >
               <div className="space-y-4 py-4">
                 {/* 抽卡范围 */}
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
-                    抽卡范围
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
+                      基础卡池
+                    </p>
                     <button
                       type="button"
-                      onClick={() => setScopeMode("preferences")}
-                      className={`rounded-2xl border px-4 py-3 text-left text-sm transition-colors ${
-                        scopeMode === "preferences"
-                          ? "border-(--od-accent) bg-(--od-surface-input) text-(--od-accent) shadow-xs"
-                          : "border-(--od-border) bg-(--od-surface-input) text-(--od-text-secondary) hover:border-(--od-accent)/50"
-                      }`}
+                      onClick={restorePreferenceRecipe}
+                      className="inline-flex items-center gap-1 text-xs text-(--od-text-tertiary) transition-colors hover:text-(--od-accent)"
                     >
-                      按我的偏好抽
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      恢复我的偏好
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setScopeMode("channel")}
-                      className={`rounded-2xl border px-4 py-3 text-left text-sm transition-colors ${
-                        scopeMode === "channel"
-                          ? "border-(--od-accent) bg-(--od-surface-input) text-(--od-accent) shadow-xs"
-                          : "border-(--od-border) bg-(--od-surface-input) text-(--od-text-secondary) hover:border-(--od-accent)/50"
-                      }`}
-                    >
-                      指定频道抽
-                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      ["all", "全社区"],
+                      ["preferences", "偏好频道"],
+                      ["custom", "自选频道"],
+                    ] as const).map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setRecipe((current) => ({ ...current, scopeMode: mode }))}
+                        className={`rounded-2xl border px-3 py-3 text-sm transition-colors ${
+                          recipe.scopeMode === mode
+                            ? "border-(--od-accent) text-(--od-accent) shadow-xs"
+                            : "border-(--od-border) text-(--od-text-secondary) hover:border-(--od-accent)/50 hover:text-(--od-accent)"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* 频道选择 */}
+                {recipe.scopeMode === "custom" && (
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
+                      自选频道
+                    </p>
+                    <div className="od-chrome-surface flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-2xl p-3">
+                      {allChannels.map((channel) => {
+                        const active = recipe.channelIds.includes(channel.id);
+                        return (
+                          <button
+                            key={channel.id}
+                            type="button"
+                            onClick={() => toggleRecipeChannel(channel.id)}
+                            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                              active
+                                ? "border-(--od-accent)/50 text-(--od-accent)"
+                                : "border-white/8 text-(--od-text-secondary) hover:border-(--od-accent)/30 hover:text-(--od-accent)"
+                            }`}
+                          >
+                            {channel.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
-                    频道选择
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
+                      <Tags className="h-3.5 w-3.5" />
+                      Tag 配方
+                    </p>
+                    <div className="flex items-center gap-1 text-xs">
+                      {([['or', '任一'], ['and', '全部']] as const).map(([logic, label]) => (
+                        <button
+                          key={logic}
+                          type="button"
+                          onClick={() => setRecipe((current) => ({ ...current, tagLogic: logic }))}
+                          className={`rounded-lg px-2 py-1 transition-colors ${
+                            recipe.tagLogic === logic
+                              ? 'text-(--od-accent)'
+                              : 'text-(--od-text-tertiary) hover:text-(--od-accent)'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mb-2 text-[11px] text-(--od-text-tertiary)">
+                    点击切换：包含 → 排除 → 不限
                   </p>
-                  <Select
-                    value={scopeMode === "channel" ? selectedChannelId : ""}
-                    options={
-                      availableScopeChannels.length === 0
-                        ? [{ value: '', label: '当前没有可抽取频道' }]
-                        : availableScopeChannels.map((channel) => ({
-                            value: channel.id,
-                            label: channel.name,
-                          }))
-                    }
-                    onChange={(v) => setSelectedChannelId(v)}
-                    disabled={
-                      scopeMode !== "channel" ||
-                      availableScopeChannels.length === 0
-                    }
-                    className="w-full"
-                  />
+                  <div className="od-chrome-surface max-h-64 space-y-4 overflow-y-auto rounded-2xl p-3">
+                    {tagGroups.length > 0 ? tagGroups.map((group) => (
+                      <section key={group.id}>
+                        <h3 className="mb-2 text-[11px] font-semibold text-(--od-text-tertiary)">{group.name}</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {group.tags.map((tag) => {
+                            const included = recipe.includeTags.includes(tag);
+                            const excluded = recipe.excludeTags.includes(tag);
+                            return (
+                              <button
+                                key={`${group.id}-${tag}`}
+                                type="button"
+                                onClick={() => toggleRecipeTag(tag)}
+                                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                                  included
+                                    ? 'border-emerald-500/40 text-emerald-300'
+                                    : excluded
+                                      ? 'border-rose-500/40 text-rose-300'
+                                      : 'border-white/8 text-(--od-text-secondary) hover:border-(--od-accent)/30 hover:text-(--od-accent)'
+                                }`}
+                              >
+                                {included ? '+ ' : excluded ? '− ' : ''}{tag}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    )) : (
+                      <span className="text-xs text-(--od-text-tertiary)">当前卡池暂时没有可用 Tag</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* 揭晓动画开关 */}

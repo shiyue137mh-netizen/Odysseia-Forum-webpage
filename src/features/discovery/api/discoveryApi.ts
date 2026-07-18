@@ -84,16 +84,19 @@ export const discoveryApi = {
     params: {
       limit?: number;
       channel_ids?: Array<string | number> | null;
+      exclude_channel_ids?: Array<string | number> | null;
       include_tags?: string[] | null;
       exclude_tags?: string[] | null;
       tag_logic?: "and" | "or";
     } = {},
   ): Promise<Thread[]> => {
     const channelIds = normalizeChannelIds(params.channel_ids);
+    const excludeChannelIds = normalizeChannelIds(params.exclude_channel_ids);
     const response = await apiClient.get<Thread[]>("/discovery/random", {
       params: {
         limit: params.limit ?? 10,
         channel_ids: channelIds.length ? channelIds : undefined,
+        exclude_channel_ids: excludeChannelIds.length ? excludeChannelIds : undefined,
         include_tags: params.include_tags || undefined,
         exclude_tags: params.exclude_tags || undefined,
         tag_logic: params.tag_logic ?? "and",
