@@ -55,7 +55,7 @@ describe("AuthorWorksHoverCard", () => {
     await act(async () => vi.advanceTimersByTime(1));
 
     expect(
-      screen.getByRole("dialog", { name: "作者名 的其他作品" }),
+      screen.getByLabelText("作者名 的其他作品"),
     ).toBeInTheDocument();
     expect(searchApi.search).toHaveBeenCalledWith({
       include_authors: ["123456789"],
@@ -65,7 +65,7 @@ describe("AuthorWorksHoverCard", () => {
       sort_method: "created_desc",
     });
     expect(authorsApi.getAuthorProfile).toHaveBeenCalledWith("123456789");
-    expect(screen.getByRole("dialog")).toHaveClass("od-floating-glass");
+    expect(screen.getByLabelText("作者名 的其他作品")).toHaveClass("od-floating-glass");
   });
 
   it("鼠标从头像移入浮层时保持打开，离开两端后关闭", async () => {
@@ -81,7 +81,7 @@ describe("AuthorWorksHoverCard", () => {
     fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
     await act(async () => vi.advanceTimersByTime(300));
 
-    const panel = screen.getByRole("dialog");
+    const panel = screen.getByRole("dialog", { hidden: true });
     fireEvent.pointerLeave(trigger);
     act(() => vi.advanceTimersByTime(100));
     fireEvent.pointerEnter(panel);

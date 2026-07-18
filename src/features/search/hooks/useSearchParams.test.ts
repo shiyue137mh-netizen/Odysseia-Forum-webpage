@@ -27,7 +27,8 @@ describe('useSearchParams URL 协议层', () => {
     });
 
     it('应该从 q token 解析日期和互动筛选', () => {
-      const sp = new URLSearchParams('q=$date:2026-07-01..2026-08-01$ $likes:1000+$ $replies:100+$');
+      const sp = new URLSearchParams();
+      sp.set('q', '$date:2026-07-01..2026-08-01$ $likes:1000+$ $replies:100+$');
       const params = parseParams(sp);
       expect(params.timeFrom).toBe('2026-07-01');
       expect(params.timeTo).toBe('2026-08-01');

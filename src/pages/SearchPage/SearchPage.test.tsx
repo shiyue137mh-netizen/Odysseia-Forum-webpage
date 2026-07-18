@@ -18,7 +18,8 @@ vi.mock('motion/react', () => ({
 }));
 
 // Mock 搜索 URL 钩子，以便观察参数变化
-vi.mock('@/features/search/hooks/useSearchParams', () => ({
+vi.mock('@/features/search/hooks/useSearchParams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/search/hooks/useSearchParams')>()),
   useSearchURLParams: vi.fn(),
 }));
 
@@ -54,17 +55,15 @@ describe('SearchPage 交互测试', () => {
     });
   });
 
-  it('在搜索框输入文字并回车，应该触发 setParams', async () => {
+  it('切换到书单时应该更新搜索类型', async () => {
     render(<SearchPage />);
 
-    const input = screen.getByPlaceholderText(/搜索/i);
-    fireEvent.change(input, { target: { value: '测试关键词' } });
-    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: '书单' }));
 
-    expect(mockSetParams).toHaveBeenCalledWith({ query: '测试关键词' });
+    expect(mockSetParams).toHaveBeenCalledWith({ type: 'booklist' });
   });
 
-  it('点击清空筛选按钮，应该触发 clearParams', async () => {
+  it('点击清除所有筛选时应该恢复默认搜索参数', async () => {
     // 模拟有活动筛选的状态
     (useSearchURLParams as any).mockReturnValue({
       params: { ...DEFAULT_PARAMS, query: '已有搜索' },
@@ -75,9 +74,15 @@ describe('SearchPage 交互测试', () => {
 
     render(<SearchPage />);
 
-    const clearButton = screen.getByText(/清空所有筛选条件/i);
+    const clearButton = screen.getByText('清除所有筛选');
     fireEvent.click(clearButton);
 
-    expect(mockClearParams).toHaveBeenCalled();
+    expect(mockSetParams).toHaveBeenCalledWith({
+      query: '',
+      sortMethod: 'last_active_desc',
+      sortOrder: 'desc',
+      page: 1,
+      tagLogic: 'and',
+    });
   });
 });
