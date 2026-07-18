@@ -2,11 +2,12 @@ import type { SearchToken } from '@/shared/lib/searchTokenizer';
 import { Select } from '@/shared/ui/Select';
 
 import { AuthorModePicker } from '@/features/search/components/AuthorModePicker';
+import type { SearchTagGroup } from '@/features/search/hooks/useSearchAutocomplete';
 import type { TagLogic } from '@/features/search/hooks/useSearchParams';
 
 interface SearchFilterPanelProps {
-  availableTags: string[];
   authorTokens: SearchToken[];
+  channelTagGroups: SearchTagGroup[];
   hasPanelFilters: boolean;
   mergedExcludeTags: string[];
   mergedIncludeTags: string[];
@@ -51,8 +52,8 @@ export function getNaturalDateRange(period: 'today' | 'week' | 'month', now = ne
 }
 
 export function SearchFilterPanel({
-  availableTags,
   authorTokens,
+  channelTagGroups,
   hasPanelFilters,
   mergedExcludeTags,
   mergedIncludeTags,
@@ -215,7 +216,7 @@ export function SearchFilterPanel({
             </h4>
             <div className="flex items-center gap-3">
               <span className="text-[11px] text-(--od-text-tertiary) text-right">
-                点击标签切换包含 / 排除 / 取消，不在这里显示删除按钮
+                共有标签与频道特色，筛选语义仍为全局
               </span>
             </div>
           </div>
@@ -234,40 +235,49 @@ export function SearchFilterPanel({
               <span>当前还没有保存偏好标签</span>
             )}
           </div>
-          <div className="od-chrome-surface flex max-h-[180px] flex-wrap gap-2 overflow-y-auto rounded-2xl p-3">
-            {availableTags.length > 0 ? (
-              availableTags.map((tag) => {
-                const isIncluded = mergedIncludeTags.includes(tag);
-                const isExcluded = mergedExcludeTags.includes(tag);
+          <div className="od-chrome-surface max-h-[260px] space-y-4 overflow-y-auto rounded-2xl p-3">
+            {channelTagGroups.length > 0 ? (
+              channelTagGroups.map((group) => (
+                <section key={group.groupId}>
+                  <h5 className="mb-2 text-[11px] font-semibold text-(--od-text-tertiary)">
+                    {group.groupName}
+                  </h5>
+                  <div className="flex flex-wrap gap-2">
+                    {group.tags.map((tag) => {
+                      const isIncluded = mergedIncludeTags.includes(tag);
+                      const isExcluded = mergedExcludeTags.includes(tag);
 
-                return (
-                  <div key={tag} className="od-content-surface flex items-center rounded-full p-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isIncluded) {
-                          onToggleTagToken(tag, 'exclude');
-                          return;
-                        }
-                        if (isExcluded) {
-                          onToggleTagToken(tag, 'exclude');
-                          return;
-                        }
-                        onToggleTagToken(tag, 'include');
-                      }}
-                      className={`rounded-full border px-3 py-1 text-xs transition-all ${
-                        isIncluded
-                          ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
-                          : isExcluded
-                            ? 'border-rose-500/40 bg-rose-500/15 text-rose-300'
-                            : 'border-white/10 text-(--od-text-secondary) hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300'
-                      }`}
-                    >
-                      {isIncluded ? '✓ ' : isExcluded ? '✕ ' : ''}{tag}
-                    </button>
+                      return (
+                        <div key={`${group.groupId}-${tag}`} className="od-content-surface flex items-center rounded-full p-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isIncluded) {
+                                onToggleTagToken(tag, 'exclude');
+                                return;
+                              }
+                              if (isExcluded) {
+                                onToggleTagToken(tag, 'exclude');
+                                return;
+                              }
+                              onToggleTagToken(tag, 'include');
+                            }}
+                            className={`rounded-full border px-3 py-1 text-xs transition-all ${
+                              isIncluded
+                                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                                : isExcluded
+                                  ? 'border-rose-500/40 bg-rose-500/15 text-rose-300'
+                                  : 'border-white/10 text-(--od-text-secondary) hover:border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300'
+                            }`}
+                          >
+                            {isIncluded ? '✓ ' : isExcluded ? '✕ ' : ''}{tag}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })
+                </section>
+              ))
             ) : (
               <span className="text-sm text-(--od-text-tertiary)">当前上下文暂时没有可用标签</span>
             )}

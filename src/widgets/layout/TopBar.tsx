@@ -116,6 +116,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
   const {
     activeVirtualTag,
     availableTags,
+    channelTagGroups,
     suggestionAuthors,
     suggestionTags,
     suggestionThreads,
@@ -381,7 +382,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
 
                 {showFilters ? (
                   <SearchFilterPanel
-                    availableTags={availableTags}
+                    channelTagGroups={channelTagGroups}
                     authorTokens={authorTokens}
                     hasPanelFilters={hasPanelFilters}
                     mergedExcludeTags={params.excludeTags}

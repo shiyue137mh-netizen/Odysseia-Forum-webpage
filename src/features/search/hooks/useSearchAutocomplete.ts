@@ -26,6 +26,12 @@ interface UseSearchAutocompleteOptions {
   showSuggestions: boolean;
 }
 
+export interface SearchTagGroup {
+  groupId: string;
+  groupName: string;
+  tags: string[];
+}
+
 export function useSearchAutocomplete({
   params,
   preferences,
@@ -94,6 +100,54 @@ export function useSearchAutocomplete({
     ]);
   }, [globalAvailableTags, params.includeTags, params.excludeTags]);
 
+  const channelTagGroups = useMemo<SearchTagGroup[]>(() => {
+    const scopedCatalog = params.channel
+      ? channelTagCatalog.filter((channel) => channel.channel_id === params.channel)
+      : channelTagCatalog;
+    const channels = scopedCatalog.map((channel) => ({
+      channelId: channel.channel_id,
+      channelName: channel.channel_name,
+      tags: mergeUnique([...channel.virtual_tags, ...channel.available_tags]),
+    }));
+    const tagChannelCount = new Map<string, number>();
+    for (const channel of channels) {
+      for (const tag of channel.tags) {
+        tagChannelCount.set(tag, (tagChannelCount.get(tag) || 0) + 1);
+      }
+    }
+    const groups: SearchTagGroup[] = params.channel
+      ? channels
+          .filter((channel) => channel.tags.length > 0)
+          .map((channel) => ({
+            groupId: channel.channelId,
+            groupName: channel.channelName,
+            tags: channel.tags,
+          }))
+      : [
+          {
+            groupId: "shared",
+            groupName: "共有标签",
+            tags: Array.from(tagChannelCount)
+              .filter(([, count]) => count > 1)
+              .map(([tag]) => tag),
+          },
+          ...channels.map((channel) => ({
+            groupId: `channel-${channel.channelId}`,
+            groupName: `${channel.channelName} · 特色`,
+            tags: channel.tags.filter((tag) => tagChannelCount.get(tag) === 1),
+          })),
+        ].filter((group) => group.tags.length > 0);
+    const catalogTags = new Set(groups.flatMap((group) => group.tags));
+    const uncataloguedSelectedTags = mergeUnique([
+      ...params.includeTags,
+      ...params.excludeTags,
+    ]).filter((tag) => !catalogTags.has(tag));
+
+    return uncataloguedSelectedTags.length > 0
+      ? [{ groupId: "current-selection", groupName: "当前筛选", tags: uncataloguedSelectedTags }, ...groups]
+      : groups;
+  }, [channelTagCatalog, params.channel, params.excludeTags, params.includeTags]);
+
   const discoveryPreferenceContext = useMemo(
     () => getDiscoveryPreferenceContext(preferences),
     [preferences],
@@ -133,6 +187,7 @@ export function useSearchAutocomplete({
   return {
     activeVirtualTag,
     availableTags,
+    channelTagGroups,
     discoveryPreferenceContext,
     suggestionAuthors,
     suggestionTags,
