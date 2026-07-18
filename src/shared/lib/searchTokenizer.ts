@@ -1,6 +1,6 @@
 // 搜索语法 Token 解析与协议转换工具
 
-export type TokenType = 'tag' | 'author' | 'channel' | 'text';
+export type TokenType = 'tag' | 'author' | 'channel' | 'date' | 'likes' | 'replies' | 'text';
 export type SearchTokenMode = 'include' | 'exclude';
 
 export interface SearchToken {
@@ -19,6 +19,37 @@ export interface TokenizedSearchPayload {
   includeAuthors: string[];
   excludeAuthors: string[];
   channels: string[];
+  dateFrom: string | null;
+  dateTo: string | null;
+  reactionMin: number | null;
+  replyMin: number | null;
+}
+
+const DATE_RANGE_PATTERN = /^(\d{4}-\d{2}-\d{2})?\.\.(\d{4}-\d{2}-\d{2})?$/;
+const MINIMUM_PATTERN = /^(\d+)\+$/;
+
+function isValidDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+}
+
+export function parseDateRangeToken(value: string) {
+  const match = DATE_RANGE_PATTERN.exec(value.trim());
+  if (!match) return null;
+  const from = match[1] || null;
+  const to = match[2] || null;
+  if ((!from && !to) || (from && !isValidDate(from)) || (to && !isValidDate(to))) return null;
+  if (from && to && from >= to) return null;
+  return { from, to };
+}
+
+export function parseMinimumToken(value: string) {
+  const match = MINIMUM_PATTERN.exec(value.trim());
+  if (!match) return null;
+  const minimum = Number(match[1]);
+  return Number.isSafeInteger(minimum) && minimum >= 0 && minimum < 10_000_000 ? minimum : null;
 }
 
 function dedupe(values: string[]) {
@@ -37,7 +68,7 @@ export function parseSearchQuery(query: string): SearchToken[] {
   const tokens: SearchToken[] = [];
 
   // 支持可选负号前缀，例如 -$tag:xxx$
-  const tokenRegex = /(-)?\$(tag|author|channel):([^$]+)\$/g;
+  const tokenRegex = /(-)?\$(tag|author|channel|date|likes|replies):([^$]+)\$/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -150,6 +181,16 @@ export function setTokenMode(
   return addToken(opposite ? removeToken(query, opposite) : query, type, value, mode);
 }
 
+export function setSingletonToken(
+  query: string,
+  type: 'date' | 'likes' | 'replies',
+  value: string | null,
+): string {
+  const retained = parseSearchQuery(query).filter((token) => token.type !== type);
+  const baseQuery = tokensToQuery(retained);
+  return value ? addToken(baseQuery, type, value) : baseQuery;
+}
+
 /**
  * 从查询字符串中移除一个 token
  */
@@ -187,6 +228,18 @@ export function tokenizeSearchPayload(query: string): TokenizedSearchPayload {
   const channels = tokens
     .filter((token) => token.type === 'channel' && token.mode === 'include')
     .map((token) => token.value);
+  const dateRange = tokens
+    .filter((token) => token.type === 'date' && token.mode === 'include')
+    .map((token) => parseDateRangeToken(token.value))
+    .find(Boolean) || null;
+  const reactionMin = tokens
+    .filter((token) => token.type === 'likes' && token.mode === 'include')
+    .map((token) => parseMinimumToken(token.value))
+    .find((value) => value !== null) ?? null;
+  const replyMin = tokens
+    .filter((token) => token.type === 'replies' && token.mode === 'include')
+    .map((token) => parseMinimumToken(token.value))
+    .find((value) => value !== null) ?? null;
   const text = tokens
     .filter((token) => token.type === 'text')
     .map((token) => token.value)
@@ -201,6 +254,10 @@ export function tokenizeSearchPayload(query: string): TokenizedSearchPayload {
     includeAuthors: dedupe(includeAuthors),
     excludeAuthors: dedupe(excludeAuthors),
     channels: dedupe(channels),
+    dateFrom: dateRange?.from || null,
+    dateTo: dateRange?.to || null,
+    reactionMin,
+    replyMin,
   };
 }
 

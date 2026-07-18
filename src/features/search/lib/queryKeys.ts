@@ -23,6 +23,8 @@ export const searchKeys = {
         page: params.page,
         timeFrom: params.timeFrom,
         timeTo: params.timeTo,
+        reactionMin: params.reactionMin,
+        replyMin: params.replyMin,
         resultPagingMode: params.resultPagingMode ?? "pagination",
         applyPreferences: params.applyPreferences ?? false,
         preferenceSignature: params.preferenceSignature ?? "no-preferences",

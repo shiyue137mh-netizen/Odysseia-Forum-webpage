@@ -36,6 +36,8 @@ const DEFAULT_PARAMS = {
   tagLogic: 'and',
   timeFrom: '',
   timeTo: '',
+  reactionMin: null,
+  replyMin: null,
 };
 
 describe('SearchPage 交互测试', () => {

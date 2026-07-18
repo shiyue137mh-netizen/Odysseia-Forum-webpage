@@ -26,6 +26,15 @@ describe('useSearchParams URL 协议层', () => {
       expect(params.excludeTags).toEqual(['Spam']);
     });
 
+    it('应该从 q token 解析日期和互动筛选', () => {
+      const sp = new URLSearchParams('q=$date:2026-07-01..2026-08-01$ $likes:1000+$ $replies:100+$');
+      const params = parseParams(sp);
+      expect(params.timeFrom).toBe('2026-07-01');
+      expect(params.timeTo).toBe('2026-08-01');
+      expect(params.reactionMin).toBe(1000);
+      expect(params.replyMin).toBe(100);
+    });
+
     it('应该能处理非法的排序方式并回退到默认值', () => {
       const sp = new URLSearchParams('sort=invalid_sort');
       const params = parseParams(sp);
@@ -52,6 +61,11 @@ describe('useSearchParams URL 协议层', () => {
 
     it('标签数组不应该脱离 q token 单独序列化', () => {
       const sp = serializeParams({ includeTags: ['A', 'B'] });
+      expect(sp.toString()).toBe('');
+    });
+
+    it('不应该继续序列化旧日期参数', () => {
+      const sp = serializeParams({ timeFrom: '2026-07-01', timeTo: '2026-08-01' });
       expect(sp.toString()).toBe('');
     });
 

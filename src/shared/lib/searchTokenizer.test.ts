@@ -5,6 +5,8 @@ import {
   removeToken,
   migrateLegacySyntax,
   setTokenMode,
+  setSingletonToken,
+  tokenizeSearchPayload,
 } from './searchTokenizer';
 
 describe('searchTokenizer', () => {
@@ -38,6 +40,22 @@ describe('searchTokenizer', () => {
       expect(tokens[0].value).toBe('游戏');
       expect(tokens[1].value).toBe('哥哥');
       expect(tokens[2].value).toBe('关键字');
+    });
+
+    it('应该解析日期和互动筛选 token', () => {
+      const payload = tokenizeSearchPayload('$date:2026-07-14..2026-07-21$ $likes:1000+$ $replies:100+$');
+      expect(payload).toMatchObject({
+        dateFrom: '2026-07-14',
+        dateTo: '2026-07-21',
+        reactionMin: 1000,
+        replyMin: 100,
+      });
+    });
+
+    it('应该忽略非法筛选值', () => {
+      const payload = tokenizeSearchPayload('$date:2026-02-30..2026-03-01$ $likes:nope$');
+      expect(payload.dateFrom).toBeNull();
+      expect(payload.reactionMin).toBeNull();
     });
   });
 
@@ -75,6 +93,12 @@ describe('searchTokenizer', () => {
       expect(setTokenMode('$author:123$', 'author', '123', 'exclude')).toBe(
         '-$author:123$',
       );
+    });
+  });
+
+  describe('setSingletonToken', () => {
+    it('应该替换同类型的旧筛选 token', () => {
+      expect(setSingletonToken('$likes:100+$ hello', 'likes', '1000+')).toBe('$likes:1000+$ hello');
     });
   });
 

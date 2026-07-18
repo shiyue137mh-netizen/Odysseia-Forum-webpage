@@ -25,4 +25,20 @@ describe("searchApi 作者 Token", () => {
       }),
     );
   });
+
+  it("把筛选 token 转换成日期和互动范围", async () => {
+    await searchApi.search({
+      query: "$date:2026-07-01..2026-08-01$ $likes:10000+$ $replies:1000+$",
+    });
+
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/search/",
+      expect.objectContaining({
+        created_after: "2026-07-01",
+        created_before: "2026-08-01",
+        reaction_count_range: "[10000, 10000000)",
+        reply_count_range: "[1000, 10000000)",
+      }),
+    );
+  });
 });

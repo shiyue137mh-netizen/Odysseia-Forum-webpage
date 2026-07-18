@@ -11,6 +11,7 @@ import {
 import {
   parseSearchQuery,
   removeToken,
+  setSingletonToken,
   setTokenMode,
   type SearchToken,
 } from "@/shared/lib/searchTokenizer";
@@ -315,6 +316,13 @@ export function useTopBarSearchController({
     [params.query, updateQuery],
   );
 
+  const setFilterToken = useCallback(
+    (type: "date" | "likes" | "replies", value: string | null) => {
+      updateQuery(setSingletonToken(params.query || "", type, value).trim());
+    },
+    [params.query, updateQuery],
+  );
+
   const clearFilters = useCallback(() => {
     setSearchInput("");
     setPersistedDraftQuery("");
@@ -323,8 +331,6 @@ export function useTopBarSearchController({
       sortMethod: "last_active_desc",
       sortOrder: "desc",
       page: 1,
-      timeFrom: "",
-      timeTo: "",
       tagLogic: getSearchTagLogicPreference(),
     });
   }, [setParams]);
@@ -358,6 +364,7 @@ export function useTopBarSearchController({
     searchInput,
     searchInputRef,
     selectAuthorToken,
+    setFilterToken,
     setShowFilters,
     setShowSuggestions,
     showFilters,

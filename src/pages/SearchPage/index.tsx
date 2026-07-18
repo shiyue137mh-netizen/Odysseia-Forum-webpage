@@ -217,7 +217,9 @@ export function SearchPage() {
     params.includeAuthors.length === 0 &&
     params.excludeAuthors.length === 0 &&
     !params.timeFrom &&
-    !params.timeTo;
+    !params.timeTo &&
+    params.reactionMin === null &&
+    params.replyMin === null;
 
   return (
     <div className="flex min-h-full min-w-0 max-w-full flex-col overflow-x-clip">
@@ -420,8 +422,6 @@ export function SearchPage() {
                     sortMethod: "last_active_desc",
                     sortOrder: "desc",
                     page: 1,
-                    timeFrom: "",
-                    timeTo: "",
                     tagLogic: getSearchTagLogicPreference(),
                   });
                 }}

@@ -99,6 +99,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
     searchInput,
     searchInputRef,
     selectAuthorToken,
+    setFilterToken,
     setShowFilters,
     setShowSuggestions,
     showFilters,
@@ -222,6 +223,8 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
     params.excludeAuthors.length > 0 ||
     !!params.timeFrom ||
     !!params.timeTo ||
+    params.reactionMin !== null ||
+    params.replyMin !== null ||
     (params.tagLogic && params.tagLogic !== getSearchTagLogicPreference());
 
   const hasPanelFilters = hasActiveFilters;
@@ -343,7 +346,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                className={`${backgroundImageEnabled ? 'od-floating-glass' : 'od-floating-panel-solid'} fixed top-17 inset-x-3 z-50 mt-2 overflow-hidden rounded-2xl border border-(--od-border-strong) shadow-2xl mx-auto w-auto max-w-md sm:absolute sm:top-full sm:inset-x-auto sm:left-auto sm:right-0 sm:mx-0 sm:w-[560px] sm:max-w-none`}
+                className={`${backgroundImageEnabled ? 'od-floating-glass' : 'od-floating-panel-solid'} fixed top-17 inset-x-3 z-50 mt-2 max-h-[calc(100dvh-5.5rem)] overflow-x-hidden overflow-y-auto rounded-2xl border border-(--od-border-strong) shadow-2xl mx-auto w-auto max-w-md sm:absolute sm:top-full sm:inset-x-auto sm:left-auto sm:right-0 sm:mx-0 sm:w-[560px] sm:max-w-none`}
               >
                 {needsFilter && (
                   <div className="flex items-center gap-2 border-b border-white/6 p-2">
@@ -386,14 +389,9 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                     onClearFilters={clearFilters}
                     onRemoveAuthorToken={removeAuthorToken}
                     onSelectAuthorToken={selectAuthorToken}
+                    onFilterTokenChange={setFilterToken}
                     onTagLogicChange={(value: TagLogic) =>
                       setParams({ tagLogic: value })
-                    }
-                    onTimeFromChange={(value: string) =>
-                      setParams({ timeFrom: value })
-                    }
-                    onTimeToChange={(value: string) =>
-                      setParams({ timeTo: value })
                     }
                     onToggleTagToken={toggleTagToken}
                     preferenceExcludeTags={discoveryPreferenceContext?.excludeTags || []}
@@ -401,6 +399,8 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                     tagLogic={params.tagLogic}
                     timeFrom={params.timeFrom}
                     timeTo={params.timeTo}
+                    reactionMin={params.reactionMin}
+                    replyMin={params.replyMin}
                   />
                 ) : (
                   <SearchSuggestions

@@ -24,6 +24,8 @@ export interface SearchUIRequest {
   created_before?: string | null;
   active_after?: string | null;
   active_before?: string | null;
+  reaction_min?: number | null;
+  reply_min?: number | null;
   limit?: number;
   offset?: number;
   guild_id?: number;
@@ -209,8 +211,8 @@ function buildSearchRequest(params: SearchUIRequest): ApiSearchParams {
     exclude_keywords: undefined, // Let backend merge from preferences if apply_preferences is true
     search_by_collection: params.search_by_collection || undefined,
     apply_preferences: params.apply_preferences ?? true,
-    created_after: params.created_after || undefined,
-    created_before: params.created_before || undefined,
+    created_after: params.created_after || tokenized.dateFrom || undefined,
+    created_before: params.created_before || tokenized.dateTo || undefined,
     active_after: params.active_after || undefined,
     active_before: params.active_before || undefined,
     sort_method: params.sort_method ? mapSortMethod(params.sort_method) : undefined,
@@ -218,8 +220,12 @@ function buildSearchRequest(params: SearchUIRequest): ApiSearchParams {
     limit: params.limit || 24,
     offset: params.offset || 0,
     exclude_thread_ids: (params.exclude_thread_ids || []) as unknown as number[],
-    reaction_count_range: DEFAULT_NUMERIC_RANGE,
-    reply_count_range: DEFAULT_NUMERIC_RANGE,
+    reaction_count_range: (params.reaction_min ?? tokenized.reactionMin) === null
+      ? DEFAULT_NUMERIC_RANGE
+      : `[${params.reaction_min ?? tokenized.reactionMin}, 10000000)`,
+    reply_count_range: (params.reply_min ?? tokenized.replyMin) === null
+      ? DEFAULT_NUMERIC_RANGE
+      : `[${params.reply_min ?? tokenized.replyMin}, 10000000)`,
     custom_base_sort: 'comprehensive',
   };
 

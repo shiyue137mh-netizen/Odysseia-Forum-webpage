@@ -10,6 +10,7 @@
 
 import {
   migrateLegacySyntax,
+  setSingletonToken,
   tokenizeSearchPayload,
 } from "@/shared/lib/searchTokenizer";
 import { useCallback, useMemo } from "react";
@@ -40,6 +41,8 @@ export interface SearchParams {
   tagLogic: TagLogic;
   timeFrom: string;
   timeTo: string;
+  reactionMin: number | null;
+  replyMin: number | null;
 }
 
 const VALID_SORT_METHODS: Set<string> = new Set([
@@ -82,8 +85,14 @@ function hasTextSearch(query: string) {
 
 export function parseParams(sp: URLSearchParams): SearchParams {
   const rawQuery = normalizeQuery(sp.get("q") || "");
-  const tokenized = tokenizeSearchPayload(rawQuery);
-  const query = stripChannelTokens(rawQuery);
+  const rawTokenized = tokenizeSearchPayload(rawQuery);
+  const strippedQuery = stripChannelTokens(rawQuery);
+  const legacyTimeFrom = sp.get("time_from") || "";
+  const legacyTimeTo = sp.get("time_to") || "";
+  const query = rawTokenized.dateFrom || rawTokenized.dateTo || (!legacyTimeFrom && !legacyTimeTo)
+    ? strippedQuery
+    : setSingletonToken(strippedQuery, "date", `${legacyTimeFrom}..${legacyTimeTo}`);
+  const tokenized = tokenizeSearchPayload(query);
 
   const rawSort = sp.get("sort");
   const sortMethod: SortMethod = VALID_SORT_METHODS.has(rawSort || "")
@@ -104,7 +113,7 @@ export function parseParams(sp: URLSearchParams): SearchParams {
 
   return {
     query,
-    channel: sp.get("channel") || tokenized.channels[0] || null,
+    channel: sp.get("channel") || rawTokenized.channels[0] || null,
     type,
     sortMethod,
     sortOrder,
@@ -114,8 +123,10 @@ export function parseParams(sp: URLSearchParams): SearchParams {
     includeAuthors: tokenizeSearchPayload(query).includeAuthors,
     excludeAuthors: tokenizeSearchPayload(query).excludeAuthors,
     tagLogic,
-    timeFrom: sp.get("time_from") || "",
-    timeTo: sp.get("time_to") || "",
+    timeFrom: tokenized.dateFrom || "",
+    timeTo: tokenized.dateTo || "",
+    reactionMin: tokenized.reactionMin,
+    replyMin: tokenized.replyMin,
   };
 }
 
@@ -139,9 +150,6 @@ export function serializeParams(
   ) {
     sp.set("tag_logic", params.tagLogic);
   }
-  if (params.timeFrom) sp.set("time_from", params.timeFrom);
-  if (params.timeTo) sp.set("time_to", params.timeTo);
-
   return sp;
 }
 
@@ -161,7 +169,9 @@ export function useSearchURLParams() {
           (updates.sortOrder !== undefined && updates.sortOrder !== current.sortOrder) ||
           (updates.tagLogic !== undefined && updates.tagLogic !== current.tagLogic) ||
           (updates.timeFrom !== undefined && updates.timeFrom !== current.timeFrom) ||
-          (updates.timeTo !== undefined && updates.timeTo !== current.timeTo));
+          (updates.timeTo !== undefined && updates.timeTo !== current.timeTo) ||
+          (updates.reactionMin !== undefined && updates.reactionMin !== current.reactionMin) ||
+          (updates.replyMin !== undefined && updates.replyMin !== current.replyMin));
       const nextUpdates = { ...updates };
       if (
         updates.query !== undefined &&
@@ -202,6 +212,8 @@ export function useSearchURLParams() {
       params.excludeAuthors.length > 0 ||
       params.timeFrom ||
       params.timeTo ||
+      params.reactionMin !== null ||
+      params.replyMin !== null ||
       (params.sortMethod && params.sortMethod !== "last_active_desc") ||
       (params.sortOrder && params.sortOrder !== "desc") ||
       params.page > 1 ||

@@ -34,6 +34,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     page,
     timeFrom,
     timeTo,
+    reactionMin,
+    replyMin,
   } = params;
 
   const queryClient = useQueryClient();
@@ -49,6 +51,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     excludeAuthors.length > 0 ||
     !!timeFrom ||
     !!timeTo ||
+    reactionMin !== null ||
+    replyMin !== null ||
     (sortMethod && sortMethod !== 'last_active_desc') ||
     (tagLogic && tagLogic !== getSearchTagLogicPreference());
 
@@ -81,6 +85,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
         offset: (currentPage - 1) * pageSize,
         created_after: timeFrom || undefined,
         created_before: timeTo || undefined,
+        reaction_min: reactionMin,
+        reply_min: replyMin,
       });
     },
     enabled: resultPagingMode === 'pagination',
@@ -112,6 +118,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
         exclude_thread_ids: excludeThreadIds,
         created_after: timeFrom || undefined,
         created_before: timeTo || undefined,
+        reaction_min: reactionMin,
+        reply_min: replyMin,
       });
     },
     initialPageParam: [],

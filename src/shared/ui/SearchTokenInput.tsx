@@ -5,7 +5,7 @@ import {
   tokensToQuery,
 } from "@/shared/lib/searchTokenizer";
 import { LazyImage } from "@/shared/ui/LazyImage";
-import { Tag as TagIcon, User, X } from "lucide-react";
+import { CalendarRange, MessageCircle, Tag as TagIcon, ThumbsUp, User, X } from "lucide-react";
 import {
   ChangeEvent,
   CompositionEvent,
@@ -210,6 +210,12 @@ export function SearchTokenInput({
         return <TagIcon className="h-3 w-3" />;
       case "author":
         return <User className="h-3 w-3" />;
+      case "date":
+        return <CalendarRange className="h-3 w-3" />;
+      case "likes":
+        return <ThumbsUp className="h-3 w-3" />;
+      case "replies":
+        return <MessageCircle className="h-3 w-3" />;
       default:
         return null;
     }
@@ -227,9 +233,22 @@ export function SearchTokenInput({
         return "border-violet-500/40 bg-violet-500/12 text-violet-300";
       case "channel":
         return "border-amber-500/40 bg-amber-500/12 text-amber-300";
+      case "date":
+        return "border-teal-500/40 bg-teal-500/12 text-teal-300";
+      case "likes":
+        return "border-pink-500/40 bg-pink-500/12 text-pink-300";
+      case "replies":
+        return "border-emerald-500/40 bg-emerald-500/12 text-emerald-300";
       default:
         return "border-(--od-shell-line) bg-(--od-surface-soft) text-(--od-text-secondary)";
     }
+  };
+
+  const getTokenLabel = (token: SearchToken) => {
+    if (token.type === "date") return `日期 ${token.value.replace("..", " → ")}`;
+    if (token.type === "likes") return `点赞 ${token.value}`;
+    if (token.type === "replies") return `评论 ${token.value}`;
+    return token.value;
   };
 
   return (
@@ -283,7 +302,7 @@ export function SearchTokenInput({
                 />
               ) : (
                 <span
-                  className="max-w-[72px] truncate cursor-pointer"
+                  className={`${token.type === "date" ? "max-w-[180px]" : "max-w-[72px]"} truncate cursor-pointer`}
                   onClick={(e) => {
                     if (author) return;
                     e.stopPropagation();
@@ -291,7 +310,7 @@ export function SearchTokenInput({
                   }}
                   title={author ? author.displayName : "点击修改"}
                 >
-                  {author?.displayName || token.value || "(空)"}
+                  {author?.displayName || getTokenLabel(token) || "(空)"}
                 </span>
               )}
 
