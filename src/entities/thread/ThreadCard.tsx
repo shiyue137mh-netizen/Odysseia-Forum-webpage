@@ -11,6 +11,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
+import { ThreadAchievementTag } from "@/entities/thread/ThreadAchievementTag";
 import type { Thread } from "@/entities/thread/types";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
@@ -307,8 +308,9 @@ function ThreadCardImpl({
             </div>
 
             <div className="min-h-11 content-start">
-              {(thread.tags.length > 0 || virtualOnlyTags.length > 0) && (
+              {(thread.reaction_count >= 100 || thread.tags.length > 0 || virtualOnlyTags.length > 0) && (
                 <div className="flex flex-wrap gap-1.5">
+                  <ThreadAchievementTag reactionCount={thread.reaction_count} variant="card" />
                   {thread.tags.slice(0, 3).map((tag) => (
                     <button
                       key={tag}

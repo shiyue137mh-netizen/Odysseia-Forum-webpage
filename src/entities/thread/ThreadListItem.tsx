@@ -21,6 +21,7 @@ import { ThreadActions } from "@/features/threads/components/ThreadActions";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
+import { ThreadAchievementTag } from "@/entities/thread/ThreadAchievementTag";
 import { usePretextClampText } from "@/shared/hooks/usePretextClampText";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
@@ -252,6 +253,7 @@ function ThreadListItemImpl({
 
           <div className="mt-auto flex flex-col gap-2.5">
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-(--od-text-tertiary) md:text-xs">
+              <ThreadAchievementTag reactionCount={thread.reaction_count} variant="list" />
               {thread.tags?.slice(0, 4).map((tag) => (
                 <button
                   key={tag}
