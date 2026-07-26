@@ -54,11 +54,15 @@ const VALID_SORT_METHODS: Set<string> = new Set([
 ]);
 const SEARCH_TAG_LOGIC_KEY = "odysseia_search_tag_logic";
 
+// URL 解析与序列化一律以 "and" 为基准。用户偏好只在发起新搜索时作为初值写进 URL，
+// 不参与解析——否则同一条分享链接在不同设备上会解析出不同的标签逻辑，URL 就不再是唯一数据源。
+export const DEFAULT_TAG_LOGIC: TagLogic = "and";
+
 export function getSearchTagLogicPreference(): TagLogic {
-  if (typeof window === "undefined") return "and";
+  if (typeof window === "undefined") return DEFAULT_TAG_LOGIC;
   return window.localStorage.getItem(SEARCH_TAG_LOGIC_KEY) === "or"
     ? "or"
-    : "and";
+    : DEFAULT_TAG_LOGIC;
 }
 
 export function setSearchTagLogicPreference(value: TagLogic) {
@@ -101,9 +105,7 @@ export function parseParams(sp: URLSearchParams): SearchParams {
 
   const rawTagLogic = sp.get("tag_logic");
   const tagLogic: TagLogic =
-    rawTagLogic === "or" || rawTagLogic === "and"
-      ? rawTagLogic
-      : getSearchTagLogicPreference();
+    rawTagLogic === "or" || rawTagLogic === "and" ? rawTagLogic : DEFAULT_TAG_LOGIC;
 
   const rawType = sp.get("type");
   const type: SearchTargetType = rawType === "booklist" ? "booklist" : "thread";
@@ -143,11 +145,7 @@ export function serializeParams(
   }
   if (params.sortOrder && params.sortOrder !== "desc") sp.set("order", params.sortOrder);
   if (params.page && params.page > 1) sp.set("page", String(params.page));
-  if (
-    params.tagLogic &&
-    (params.tagLogic === "or" ||
-      params.tagLogic !== getSearchTagLogicPreference())
-  ) {
+  if (params.tagLogic && params.tagLogic !== DEFAULT_TAG_LOGIC) {
     sp.set("tag_logic", params.tagLogic);
   }
   return sp;
@@ -181,6 +179,12 @@ export function useSearchURLParams() {
         nextUpdates.sortMethod = hasTextSearch(updates.query)
           ? "relevance"
           : "last_active_desc";
+      }
+
+      // URL 上没写过 tag_logic 时，用用户偏好作为初值显式写进 URL，
+      // 这样链接自带完整语义，换个设备打开结果也一致。
+      if (nextUpdates.tagLogic === undefined && !searchParams.has("tag_logic")) {
+        nextUpdates.tagLogic = getSearchTagLogicPreference();
       }
 
       const merged = { ...current, ...nextUpdates, page: shouldResetPage ? 1 : (updates.page ?? current.page) };
@@ -217,7 +221,7 @@ export function useSearchURLParams() {
       (params.sortMethod && params.sortMethod !== "last_active_desc") ||
       (params.sortOrder && params.sortOrder !== "desc") ||
       params.page > 1 ||
-      (params.tagLogic && params.tagLogic !== getSearchTagLogicPreference())
+      (params.tagLogic && params.tagLogic !== DEFAULT_TAG_LOGIC)
     );
   }, [params]);
 

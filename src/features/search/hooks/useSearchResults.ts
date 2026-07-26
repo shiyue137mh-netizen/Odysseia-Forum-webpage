@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import { useInfiniteQuery, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, type InfiniteData } from '@tanstack/react-query';
 
 import type { SearchResponse, Thread } from '@/entities/thread/types';
 import { searchApi } from '@/features/search/api/searchApi';
@@ -9,7 +9,7 @@ import {
 } from '@/features/preferences/lib/discoveryPreferences';
 import type { UserPreferencesResponse } from '@/features/preferences/api/preferencesApi';
 import {
-  getSearchTagLogicPreference,
+  DEFAULT_TAG_LOGIC,
   type SearchParams,
 } from '@/features/search/hooks/useSearchParams';
 import { searchKeys } from '@/features/search/lib/queryKeys';
@@ -18,6 +18,45 @@ import { useResultPagingModeSetting } from '@/shared/hooks/useSettings';
 interface UseSearchResultsOptions {
   params: SearchParams;
   preferences: UserPreferencesResponse | null | undefined;
+}
+
+const PAGE_SIZE = 24;
+
+// 搜索是全站最重的接口。此前是 staleTime: 0 且每次挂载都 resetQueries，
+// 等于每次进入页面、每次返回都要全量重拉一遍。
+const RESULTS_STALE_TIME = 60 * 1000;
+
+const collectThreadIds = (pages: (SearchResponse | undefined)[]) =>
+  new Set(
+    pages.flatMap((pageData) =>
+      ((pageData?.results || []) as Thread[]).map((thread) => String(thread.thread_id)),
+    ),
+  );
+
+/**
+ * 无限滚动的下一页参数：已加载的全部 thread_id，作为 exclude_thread_ids 传给后端。
+ * 返回 undefined 表示没有下一页。
+ */
+export function computeNextExcludeIds(
+  allPages: (SearchResponse | undefined)[],
+): string[] | undefined {
+  if (allPages.length === 0) return undefined;
+
+  const loadedThreadIds = collectThreadIds(allPages);
+  const lastTotal = Number(allPages[allPages.length - 1]?.total || 0);
+
+  if (loadedThreadIds.size === 0 || loadedThreadIds.size >= lastTotal) {
+    return undefined;
+  }
+
+  // 分页靠累积 exclude_thread_ids 推进。若最后一页没有带来任何新帖子
+  // （返回空页，或返回的都是已加载过的），下一次的 pageParam 会和上一次完全相同，
+  // 触发同一个请求被无限重复。此时必须停下，哪怕 total 还没对上。
+  if (loadedThreadIds.size === collectThreadIds(allPages.slice(0, -1)).size) {
+    return undefined;
+  }
+
+  return Array.from(loadedThreadIds);
 }
 
 export function useSearchResults({ params, preferences }: UseSearchResultsOptions) {
@@ -38,10 +77,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     replyMin,
   } = params;
 
-  const queryClient = useQueryClient();
   const [ignoreDiscoveryPreferences, setIgnoreDiscoveryPreferences] = useState(false);
   const resultPagingMode = useResultPagingModeSetting();
-  const pageSize = 24;
   const currentPage = Math.max(1, page || 1);
 
   const hasExplicitFilters =
@@ -54,7 +91,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     reactionMin !== null ||
     replyMin !== null ||
     (sortMethod && sortMethod !== 'last_active_desc') ||
-    (tagLogic && tagLogic !== getSearchTagLogicPreference());
+    (tagLogic && tagLogic !== DEFAULT_TAG_LOGIC);
 
   const discoveryPreferenceContext = useMemo(
     () => getDiscoveryPreferenceContext(preferences),
@@ -81,8 +118,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
         sort_method: sortMethod,
         sort_order: sortOrder,
         apply_preferences: applyPreferences,
-        limit: pageSize,
-        offset: (currentPage - 1) * pageSize,
+        limit: PAGE_SIZE,
+        offset: (currentPage - 1) * PAGE_SIZE,
         created_after: timeFrom || undefined,
         created_before: timeTo || undefined,
         reaction_min: reactionMin,
@@ -91,7 +128,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     },
     enabled: resultPagingMode === 'pagination',
     placeholderData: (prev) => prev,
-    staleTime: 0,
+    staleTime: RESULTS_STALE_TIME,
   });
 
   const infiniteQueryState = useInfiniteQuery<SearchResponse, Error, InfiniteData<SearchResponse>, ReturnType<typeof searchKeys.results>, string[]>({
@@ -113,7 +150,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
         sort_method: sortMethod,
         sort_order: sortOrder,
         apply_preferences: applyPreferences,
-        limit: pageSize,
+        limit: PAGE_SIZE,
         offset: 0,
         exclude_thread_ids: excludeThreadIds,
         created_after: timeFrom || undefined,
@@ -123,29 +160,10 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
       });
     },
     initialPageParam: [],
-    getNextPageParam: (_lastPage, allPages = []) => {
-      if (allPages.length === 0) return undefined;
-
-      const loadedThreadIds = allPages.flatMap((pageData) =>
-        ((pageData?.results || []) as Thread[]).map((thread) => String(thread.thread_id)),
-      );
-      const lastTotal = Number(allPages[allPages.length - 1]?.total || 0);
-
-      if (loadedThreadIds.length === 0 || loadedThreadIds.length >= lastTotal) {
-        return undefined;
-      }
-
-      return Array.from(new Set(loadedThreadIds));
-    },
+    getNextPageParam: (_lastPage, allPages = []) => computeNextExcludeIds(allPages),
     enabled: resultPagingMode === 'infinite',
-    staleTime: 0,
+    staleTime: RESULTS_STALE_TIME,
   });
-
-  useEffect(() => {
-    // 显式重置所有搜索结果。这会清除缓存并强制重新请求第一页。
-    // 解决切换“偏好开关”时 UI 不刷新的问题。
-    queryClient.resetQueries({ queryKey: searchKeys.all });
-  }, [applyPreferences, queryClient]);
 
   const results = useMemo<Thread[]>(() => {
     if (resultPagingMode === 'infinite') {
@@ -174,7 +192,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     infiniteQueryState,
     isPreferenceActive,
     showPreferenceBanner,
-    pageSize,
+    pageSize: PAGE_SIZE,
     queryState: resultPagingMode === 'infinite' ? infiniteQueryState : queryState,
     results,
     resultPagingMode,
