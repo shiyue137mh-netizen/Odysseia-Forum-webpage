@@ -10,7 +10,6 @@ import {
   booklistKeys,
   type BooklistScope,
 } from "@/features/booklists/lib/queryKeys";
-import { tournamentKeys } from "@/features/tournaments/lib/queryKeys";
 import type {
   BooklistFormInput,
   BooklistItemAddInput,
@@ -166,19 +165,12 @@ function useInvalidateBooklists() {
 
   return (booklistId?: number | string) => {
     queryClient.invalidateQueries({ queryKey: booklistKeys.all });
-    queryClient.invalidateQueries({ queryKey: tournamentKeys.all });
     if (booklistId !== undefined && /^\d+$/.test(String(booklistId))) {
       queryClient.invalidateQueries({
         queryKey: booklistKeys.detail(booklistId),
       });
       queryClient.invalidateQueries({
         queryKey: booklistKeys.items(booklistId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: tournamentKeys.detail(booklistId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: tournamentKeys.items(booklistId),
       });
     }
   };

@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 
 import type { Tournament } from "@/entities/tournament/types";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
-import { tournamentsApi } from "@/features/tournaments/api/tournamentsApi";
-import { tournamentKeys } from "@/features/tournaments/lib/queryKeys";
+import { booklistsApi } from "@/features/booklists/api/booklistsApi";
+import { booklistKeys } from "@/features/booklists/lib/queryKeys";
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
@@ -22,9 +22,9 @@ export function TournamentListItem({
   collectLoading,
 }: TournamentListItemProps) {
   const fallbackCoverQuery = useQuery({
-    queryKey: tournamentKeys.coverItems(tournament.id),
+    queryKey: booklistKeys.coverItems(tournament.id),
     queryFn: () =>
-      tournamentsApi.listItems(tournament.id, {
+      booklistsApi.listItems(tournament.id, {
         limit: 6,
         offset: 0,
       }),

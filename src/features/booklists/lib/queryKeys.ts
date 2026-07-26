@@ -17,4 +17,7 @@ export const booklistKeys = {
     [...booklistKeys.all, "detail", String(booklistId)] as const,
   items: (booklistId: number | string) =>
     [...booklistKeys.all, "items", String(booklistId)] as const,
+  /** 列表项缺少封面时，用前几个条目的缩略图兜底 */
+  coverItems: (booklistId: number | string) =>
+    [...booklistKeys.all, "cover-items", String(booklistId)] as const,
 };
