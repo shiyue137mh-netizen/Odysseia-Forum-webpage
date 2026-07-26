@@ -76,6 +76,7 @@ function ThreadCardImpl({
   const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
     () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
   );
+  const articleRef = useRef<HTMLElement>(null);
   const titleViewportRef = useRef<HTMLSpanElement>(null);
   const titleTrackRef = useRef<HTMLSpanElement>(null);
   const [titleShift, setTitleShift] = useState(0);
@@ -105,7 +106,14 @@ function ThreadCardImpl({
 
     updateTitleShift();
     window.addEventListener("resize", updateTitleShift);
-    return () => window.removeEventListener("resize", updateTitleShift);
+    // 卡片带 content-visibility:auto，屏外首挂时 layout 被跳过、scrollWidth
+    // 读到 0；等浏览器把它渲染出来时（进入视口）借这个事件补一次测量。
+    const article = articleRef.current;
+    article?.addEventListener("contentvisibilityautostatechange", updateTitleShift);
+    return () => {
+      window.removeEventListener("resize", updateTitleShift);
+      article?.removeEventListener("contentvisibilityautostatechange", updateTitleShift);
+    };
   }, [thread.title, fontSize, searchQuery]);
 
   const mediaAspectClass =
@@ -118,11 +126,12 @@ function ThreadCardImpl({
   return (
     <>
       <article
+        ref={articleRef}
         role="button"
         aria-label={ariaLabel}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
+        className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] [content-visibility:auto] [contain-intrinsic-size:auto_560px] animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
           animationDelay,
           WebkitTapHighlightColor: "transparent",

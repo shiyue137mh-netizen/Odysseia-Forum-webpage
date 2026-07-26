@@ -60,7 +60,7 @@ function ThreadListItemImpl({
 
   return (
     <article
-      className="group relative w-full cursor-pointer py-3 text-(--od-text-primary) transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
+      className="group relative w-full cursor-pointer py-3 text-(--od-text-primary) [content-visibility:auto] [contain-intrinsic-size:auto_200px] transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
       style={{ animationDelay }}
       onClick={() => onPreview?.(thread)}
     >
