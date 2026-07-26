@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpDown,
   BookOpen,
@@ -21,14 +20,17 @@ import { ThreadResultsCollection } from "@/entities/thread/ThreadResultsCollecti
 import type { Thread } from "@/entities/thread/types";
 import { UserHeaderCard } from "@/entities/user/UserHeaderCard";
 import { UserStatsGrid } from "@/entities/user/UserStatsGrid";
-import { authorsApi } from "@/features/authors/api/authorsApi";
+import {
+  useAuthorProfile,
+  useAuthorThreads,
+} from "@/features/authors/hooks/useAuthorsData";
 import {
   useBooklistsList,
   useToggleBooklistCollection,
 } from "@/features/booklists/hooks/useBooklistsData";
 import { resolveAuthorKeywordTrigger } from "@/features/mascot/lib/messageResolver";
 import { useMascotStore } from "@/features/mascot/store/mascotStore";
-import { searchApi, type UISortMethod } from "@/features/search/api/searchApi";
+import { type UISortMethod } from "@/features/search/api/searchApi";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import { useChannels } from "@/shared/hooks/useChannels";
 import {
@@ -178,33 +180,12 @@ export function UserProfilePage() {
   }, [setSearchParams]);
 
   // ─── 数据请求 ────────────────────────────────────────────
-  const threadsQuery = useQuery({
-    queryKey: [
-      "user-profile",
-      userId,
-      "threads",
-      sortMethod,
-      selectedChannelIds,
-    ],
-    enabled: Boolean(userId),
-    queryFn: () =>
-      searchApi.search({
-        include_authors: userId ? [userId] : [],
-        author_name: userId || undefined,
-        sort_method: sortMethod,
-        channel_ids:
-          selectedChannelIds.length > 0 ? selectedChannelIds : undefined,
-        limit: 48,
-      }),
-    staleTime: 60 * 1000,
+  const threadsQuery = useAuthorThreads(userId, {
+    sortMethod,
+    channelIds: selectedChannelIds,
   });
 
-  const profileQuery = useQuery({
-    queryKey: ["author-profile", userId],
-    enabled: Boolean(userId),
-    queryFn: () => authorsApi.getAuthorProfile(userId!),
-    staleTime: 5 * 60 * 1000,
-  });
+  const profileQuery = useAuthorProfile(userId);
 
   const booklistsQuery = useBooklistsList({
     scope: "public",

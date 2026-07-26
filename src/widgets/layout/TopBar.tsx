@@ -7,7 +7,7 @@ import {
   type SearchSuggestionAction,
 } from "@/features/search/components/SearchSuggestions";
 import { useSearchAutocomplete } from "@/features/search/hooks/useSearchAutocomplete";
-import { useAuthorProfiles } from "@/features/search/hooks/useAuthorProfiles";
+import { useAuthorProfiles } from "@/features/authors/hooks/useAuthorProfiles";
 import type {
   TagLogic,
 } from "@/features/search/hooks/useSearchParams";

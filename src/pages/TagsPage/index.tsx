@@ -1,5 +1,4 @@
 import { useMemo, useState, type MouseEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Search, Tag as TagIcon, TrendingUp, Hash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,8 +6,7 @@ import { addToken } from "@/shared/lib/searchTokenizer";
 import { useSidebarCollapsedSetting } from "@/shared/hooks/useSettings";
 import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
-import { tagsApi } from "@/features/tags/api/tagsApi";
-import { tagKeys } from "@/features/tags/lib/queryKeys";
+import { useTagStats } from "@/features/tags/hooks/useTagStats";
 import { useChannels } from "@/shared/hooks/useChannels";
 
 interface AggregatedChannelSlice {
@@ -64,20 +62,9 @@ export function TagsPage() {
     );
   }, [channelOptions, selectedChannelId]);
 
-  const { data: statsData, isLoading: isStatsLoading } = useQuery({
-    queryKey: tagKeys.stats({
-      channel_ids:
-        selectedChannelId === ALL_CHANNELS_VALUE ? null : [selectedChannelId],
-      include_virtual: true,
-    }),
-    queryFn: () =>
-      tagsApi.getStats({
-        channel_ids:
-          selectedChannelId === ALL_CHANNELS_VALUE ? null : [selectedChannelId],
-        include_virtual: true,
-      }),
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: statsData, isLoading: isStatsLoading } = useTagStats(
+    selectedChannelId === ALL_CHANNELS_VALUE ? null : [selectedChannelId],
+  );
 
   const aggregatedTags = useMemo<AggregatedTagCard[]>(() => {
     if (!statsData) return [];
