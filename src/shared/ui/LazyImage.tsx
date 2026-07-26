@@ -3,6 +3,10 @@ import { useImageModeSetting } from '@/shared/hooks/useSettings';
 import { reportBrokenThreadThumbnail, subscribeThreadThumbnailRepair } from '@/features/threads/lib/thumbnailRepairQueue';
 import { optimizeDiscordImageUrl } from '@/shared/lib/imageOptimization';
 
+// 会话内已完整显示过的图片 URL。路由切换会重建组件、重置 isLoaded，
+// 浏览器 HTTP 缓存挡不住浮现动画重播；看过的图片重挂时凭这份记忆直出成品。
+const sessionLoadedImages = new Set<string>();
+
 interface LazyImageProps {
   src: string;
   alt?: string;
@@ -30,14 +34,17 @@ export function LazyImage({
   imageIndex = 0,
   onNaturalSize,
 }: LazyImageProps) {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(false);
-  const [currentSrc, setCurrentSrc] = useState(src);
+  const [currentSrc, setCurrentSrc] = useState(() => optimizeDiscordImageUrl(src, 800));
+  // 会话内看过的图片直接以成品呈现：跳过懒加载门槛，不再播浮现动画
+  const [isLoaded, setIsLoaded] = useState(() => sessionLoadedImages.has(currentSrc));
+  const [isInView, setIsInView] = useState(isLoaded);
   const imgRef = useRef<HTMLDivElement>(null);
   const imageMode = useImageModeSetting();
   const isImageDisabled = imageMode === 'off';
 
   useEffect(() => {
+    if (isInView) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -55,7 +62,7 @@ export function LazyImage({
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [isInView]);
 
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -63,7 +70,7 @@ export function LazyImage({
     // 对 Discord 图片源应用高清优化（主打 WebP 无损转换）
     const optimized = optimizeDiscordImageUrl(src, 800);
     setCurrentSrc(optimized);
-    setIsLoaded(false);
+    setIsLoaded(sessionLoadedImages.has(optimized));
   }, [src]);
 
   useEffect(() => {
@@ -124,6 +131,7 @@ export function LazyImage({
                 transitionDelay: isLoaded ? `${(index % 24) * 60}ms` : '0ms',
               }}
               onLoad={() => {
+                sessionLoadedImages.add(currentSrc);
                 if (imageRef.current) {
                   onNaturalSize?.(
                     imageRef.current.naturalWidth,
