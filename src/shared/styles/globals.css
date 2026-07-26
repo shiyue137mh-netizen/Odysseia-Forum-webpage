@@ -1,3 +1,7 @@
+/* Tailwind 必须最先导入：它负责声明 @layer theme, base, components, utilities 的顺序。
+   若排在项目样式之后，components 层会被挤到 utilities 之后，导致层级优先级颠倒。 */
+@import 'tailwindcss';
+
 @import './tokens.css';
 @import './base.css';
 @import './typography.css';
@@ -9,8 +13,6 @@
 @import './feedback.css';
 @import './utilities.css';
 @import './utilities.utilities.css';
-
-@import 'tailwindcss';
 
 @theme {
   /* Colors */

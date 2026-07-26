@@ -18,7 +18,7 @@
   }
 
   &::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in_oklab,
+    background: color-mix(in oklab,
         var(--od-border-strong) 80%,
         var(--od-bg) 20%);
   }
@@ -153,7 +153,7 @@
   }
 
   body::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in_oklab, var(--od-border-strong) 80%, var(--od-bg) 20%);
+    background: color-mix(in oklab, var(--od-border-strong) 80%, var(--od-bg) 20%);
   }
 
   *::-webkit-scrollbar {
@@ -171,7 +171,7 @@
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in_oklab, var(--od-text-tertiary) 60%, transparent 40%);
+    background: color-mix(in oklab, var(--od-text-tertiary) 60%, transparent 40%);
   }
 
   * {
