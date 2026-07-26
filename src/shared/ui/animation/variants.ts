@@ -25,13 +25,3 @@ export const scaleVariants: Variants = {
 };
 
 // 列表容器变体（用于子元素交错动画）
-export const staggerContainer: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05,
-            delayChildren: 0.1,
-        },
-    },
-};

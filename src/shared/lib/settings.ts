@@ -117,13 +117,6 @@ export function saveUserSettings(settings: UserSettings): void {
   }
 }
 
-// 更新部分设置
-export function updateUserSettings(updates: Partial<UserSettings>): void {
-  const current = getUserSettings();
-  const updated = { ...current, ...updates };
-  saveUserSettings(updated);
-}
-
 // 重置设置
 export function resetUserSettings(): void {
   saveUserSettings(defaultSettings);
@@ -151,27 +144,3 @@ export const fontSizeMap = {
   },
 };
 
-// 卡片大小映射
-export const cardSizeMap = {
-  compact: {
-    padding: 'p-2',
-    gap: 'gap-2',
-    imageHeight: 'aspect-square md:aspect-4/5',
-    titleLines: 'line-clamp-1',
-    contentLines: 'line-clamp-2',
-  },
-  normal: {
-    padding: 'p-3',
-    gap: 'gap-3',
-    imageHeight: 'aspect-3/5 md:aspect-3/4',
-    titleLines: 'line-clamp-2',
-    contentLines: 'line-clamp-3',
-  },
-  large: {
-    padding: 'p-4',
-    gap: 'gap-4',
-    imageHeight: 'aspect-1/2 md:aspect-2/3',
-    titleLines: 'line-clamp-3',
-    contentLines: 'line-clamp-4',
-  },
-};

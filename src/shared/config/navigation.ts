@@ -35,5 +35,3 @@ export const VIRTUAL_TAG_CATEGORIES: VirtualTagCategory[] = [
 ];
 
 export const ALL_VIRTUAL_TAGS = VIRTUAL_TAG_CATEGORIES.flatMap((cat) => cat.tags);
-
-export const findVirtualTagByName = (name: string) => ALL_VIRTUAL_TAGS.find((tag) => tag.name === name);

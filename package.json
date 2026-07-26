@@ -8,7 +8,7 @@
     "build:analyze": "ANALYZE_BUNDLE=true vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 99",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 96",
     "lint:ox": "oxlint . --deny-warnings",
     "lint:styles": "stylelint \"src/**/*.{css,tsx}\" --allow-empty-input",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
