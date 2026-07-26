@@ -32,14 +32,12 @@ import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 import { AnimatedPagination } from "@/shared/ui/AnimatedPagination";
 import { scrollPageToTop } from "@/shared/lib/pageScroll";
+import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import {
   ArrowUpDown,
   Compass,
   MoveDown,
   MoveUp,
-  LayoutGrid,
-  Columns3,
-  Rows3,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -348,53 +346,13 @@ export function SearchPage() {
               </div>
             )}
 
-            <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
-              {isThreadTab && (
-                <button
-                  type="button"
-                  onClick={() => setLayoutMode("masonry")}
-                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    layoutMode === "masonry"
-                      ? "bg-(--od-accent) text-white"
-                      : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                  }`}
-                  aria-label="切换到实验性瀑布流展示"
-                  title="瀑布流展示（实验性）"
-                >
-                  <Columns3 className="h-3.5 w-3.5" />
-                  瀑布
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setLayoutMode("list")}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "list"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                }`}
-                aria-label="切换到列表展示"
-                title="列表展示"
-              >
-                <Rows3 className="h-3.5 w-3.5" />
-                列表
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayoutMode("grid")}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "grid" ||
-                  (!isThreadTab && layoutMode === "masonry")
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                }`}
-                aria-label="切换到网格展示"
-                title="网格展示"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                网格
-              </button>
-            </div>
+            <LayoutModeToggle
+              value={
+                !isThreadTab && layoutMode === "masonry" ? "grid" : layoutMode
+              }
+              onChange={setLayoutMode}
+              showMasonry={isThreadTab}
+            />
 
             {isThreadTab && hasSearchFilters && (
               <button

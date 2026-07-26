@@ -5,10 +5,8 @@ import {
   ArrowLeft,
   Edit3,
   ExternalLink,
-  LayoutGrid,
   Medal,
   RefreshCw,
-  Rows3,
   Share2,
   Star,
   Trophy,
@@ -16,6 +14,7 @@ import {
 import { toast } from "sonner";
 
 import type { Tournament, TournamentItem } from "@/entities/tournament/types";
+import { threadFromBooklistItem } from "@/entities/booklist/lib/threadFromBooklistItem";
 import type { Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
 import { ThreadCard } from "@/entities/thread/ThreadCard";
@@ -36,29 +35,14 @@ import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { ShareTextDialog } from "@/shared/ui/ShareTextDialog";
 import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 function toTournamentThread(
   item: TournamentItem,
   tournament: Tournament,
 ): Thread {
-  return {
-    thread_id: item.thread_id,
-    guild_id: item.guild_id,
-    channel_id: item.channel_id,
-    title: item.title,
-    author: item.author,
-    created_at: item.created_at,
-    last_active_at: item.last_active_at || item.created_at,
-    reaction_count: item.reaction_count,
-    reply_count: item.reply_count,
-    display_count: item.display_count || 0,
-    first_message_excerpt: item.first_message_excerpt || null,
-    tags: item.tags || [],
-    virtual_tags: item.virtual_tags || [],
-    thumbnail_urls: item.thumbnail_urls || [],
-    collected_flag: item.collected_flag,
-    collection_count: item.collection_count || 0,
+  return threadFromBooklistItem(item, {
     is_tournament: true,
     tournament_info_list: [
       {
@@ -66,7 +50,7 @@ function toTournamentThread(
         booklist_name: tournament.title,
       },
     ],
-  };
+  });
 }
 
 export function TournamentDetailPage() {
@@ -295,36 +279,7 @@ export function TournamentDetailPage() {
               </div>
 
               <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-                <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setLayoutMode("list")}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      layoutMode === "list"
-                        ? "bg-(--od-accent) text-white"
-                        : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                    }`}
-                    aria-label="切换到列表展示"
-                    title="列表展示"
-                  >
-                    <Rows3 className="h-3.5 w-3.5" />
-                    列表
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLayoutMode("grid")}
-                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      layoutMode === "grid"
-                        ? "bg-(--od-accent) text-white"
-                        : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                    }`}
-                    aria-label="切换到网格展示"
-                    title="网格展示"
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                    网格
-                  </button>
-                </div>
+                <LayoutModeToggle value={layoutMode} onChange={setLayoutMode} />
 
                 <a
                   href={discordUrl}
