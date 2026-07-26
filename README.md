@@ -54,7 +54,7 @@
 - **React 18** 加上 **Vite**：页面加载速度超快，就像我吹喇叭一样一呼百应！<img align="center" height="24" src="src/assets/images/mascot/blow_the_trumpet.png" alt="吹喇叭" />
 - **Tailwind CSS**：可以随时给界面切掉换上好看的皮肤！深浅色主题随心切换，怎么打扮都好看！
 - **Zustand** & **React Query**：帮我把宝宝们写的所有帖子和状态都打理得整整齐齐，就算是路过找东西也绝不会乱哦！<img align="center" height="24" src="src/assets/images/mascot/searching.png" alt="搜索" />
-- **虚拟长列表**：不管屯了多少卡片，找起来怎么滑都不会卡啦！<img align="center" height="24" src="src/assets/images/mascot/success.png" alt="赞" />
+- **路由懒加载 + 无限滚动**：每个页面都是单独的小包裹，进哪个房间才拆哪个，翻卡片也能一直往下滑！<img align="center" height="24" src="src/assets/images/mascot/success.png" alt="赞" />
 
 ## 想在你的电脑上部署这个项目吗？
 
