@@ -20,6 +20,7 @@ import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnail
 import {
   useCardSizeSetting,
   useFontSizeSetting,
+  useImageModeSetting,
 } from "@/shared/hooks/useSettings";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { fontSizeMap } from "@/shared/lib/settings";
@@ -63,10 +64,12 @@ function ThreadCardImpl({
   const fontSize = useFontSizeSetting();
   const fontSizes = fontSizeMap[fontSize];
   const cardSize = useCardSizeSetting();
+  const imageMode = useImageModeSetting();
 
+  // 与 ThreadListItem 保持一致：设置里关掉图片后，网格视图同样不应加载缩略图。
   const initialThumbnail = useMemo(
-    () => thread.thumbnail_urls?.[0] || "",
-    [thread.thumbnail_urls],
+    () => (imageMode === "off" ? "" : thread.thumbnail_urls?.[0] || ""),
+    [thread.thumbnail_urls, imageMode],
   );
   const [thumbnailSrc, setThumbnailSrc] = useState(initialThumbnail);
   const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
@@ -87,10 +90,11 @@ function ThreadCardImpl({
   }, [initialThumbnail, thread.thread_id]);
 
   useEffect(() => {
+    if (imageMode === "off") return;
     return subscribeThreadThumbnailRepair(thread.thread_id, (urls) => {
       if (urls.length > 0) setThumbnailSrc(urls[0]);
     });
-  }, [thread.thread_id]);
+  }, [thread.thread_id, imageMode]);
 
   useEffect(() => {
     const updateTitleShift = () => {
