@@ -33,6 +33,7 @@ import { useMascotStore } from "@/features/mascot/store/mascotStore";
 import { type UISortMethod } from "@/features/search/api/searchApi";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import { useChannels } from "@/shared/hooks/useChannels";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import {
   buildAuthorShareText,
   copyTextToClipboard,
@@ -184,6 +185,7 @@ export function UserProfilePage() {
     sortMethod,
     channelIds: selectedChannelIds,
   });
+  const animateIn = useListEntranceAnimation(threadsQuery.isLoading);
 
   const profileQuery = useAuthorProfile(userId);
 
@@ -566,6 +568,7 @@ export function UserProfilePage() {
               <ThreadResultsCollection
                 threads={threads}
                 onPreview={openPreview}
+                animateIn={animateIn}
               />
             )}
           </section>

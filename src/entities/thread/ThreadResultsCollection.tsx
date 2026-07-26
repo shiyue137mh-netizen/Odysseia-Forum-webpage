@@ -14,6 +14,7 @@ interface ThreadResultsCollectionProps {
   gridClassName?: string;
   listClassName?: string;
   layoutMode?: LayoutMode;
+  animateIn?: boolean;
 }
 
 const DEFAULT_GRID_CLASS = 'grid auto-rows-fr grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
@@ -59,6 +60,7 @@ function ThreadResultsCollectionImpl({
   gridClassName = DEFAULT_GRID_CLASS,
   listClassName = DEFAULT_LIST_CLASS,
   layoutMode: controlledLayoutMode,
+  animateIn,
 }: ThreadResultsCollectionProps) {
   const fallbackLayoutMode = useLayoutMode();
   const layoutMode = controlledLayoutMode ?? fallbackLayoutMode;
@@ -140,6 +142,7 @@ function ThreadResultsCollectionImpl({
                   searchQuery={searchQuery}
                   onAuthorClick={onAuthorClick}
                   onPreview={onPreview}
+                  animateIn={animateIn}
                   hideBottomDivider
                   masonry
                 />
@@ -163,6 +166,7 @@ function ThreadResultsCollectionImpl({
             searchQuery={searchQuery}
             onAuthorClick={onAuthorClick}
             onPreview={onPreview}
+            animateIn={animateIn}
           />
         ) : (
           <ThreadCard
@@ -173,6 +177,7 @@ function ThreadResultsCollectionImpl({
             searchQuery={searchQuery}
             onAuthorClick={onAuthorClick}
             onPreview={onPreview}
+            animateIn={animateIn}
           />
         ),
       )}

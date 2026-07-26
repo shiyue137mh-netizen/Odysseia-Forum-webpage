@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -59,6 +60,9 @@ export function TournamentManagePage() {
   const detailQuery = useBooklistDetail(normalizedBooklistId);
   const itemsQuery = useBooklistItems(normalizedBooklistId);
   const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
+  const animateIn = useListEntranceAnimation(
+    detailQuery.isLoading || itemsQuery.isLoading,
+  );
   const tournament = detailQuery.data;
   const items = useMemo(() => {
     return itemsQuery.data?.pages.flatMap((page) => page.results || []) ?? [];
@@ -207,12 +211,14 @@ export function TournamentManagePage() {
                       thread={toTournamentThread(item)}
                       onPreview={openPreview}
                       booklistComment={item.comment || ""}
+                      animateIn={animateIn}
                     />
                   ) : (
                     <ThreadCard
                       thread={toTournamentThread(item)}
                       onPreview={openPreview}
                       booklistComment={item.comment || ""}
+                      animateIn={animateIn}
                     />
                   )}
                   <div className="mt-2 flex flex-wrap items-center justify-end gap-1 text-xs">

@@ -30,6 +30,7 @@ interface ThreadCardProps {
   index?: number;
   hideBottomDivider?: boolean;
   masonry?: boolean;
+  animateIn?: boolean;
 }
 
 const thumbnailAspectRatioCache = new Map<string, number>();
@@ -44,6 +45,7 @@ function ThreadCardImpl({
   index = 0,
   hideBottomDivider = false,
   masonry = false,
+  animateIn = true,
 }: ThreadCardProps) {
   const ariaLabel = `帖子：${thread.title}。作者：${thread.author?.display_name || thread.author?.name || "未知"}。${thread.reply_count}条回复，${thread.reaction_count}个点赞。标签：${thread.tags.join(", ")}`;
 
@@ -76,6 +78,7 @@ function ThreadCardImpl({
   const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
     () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
   );
+  const articleRef = useRef<HTMLElement>(null);
   const titleViewportRef = useRef<HTMLSpanElement>(null);
   const titleTrackRef = useRef<HTMLSpanElement>(null);
   const [titleShift, setTitleShift] = useState(0);
@@ -105,7 +108,14 @@ function ThreadCardImpl({
 
     updateTitleShift();
     window.addEventListener("resize", updateTitleShift);
-    return () => window.removeEventListener("resize", updateTitleShift);
+    // 卡片带 content-visibility:auto，屏外首挂时 layout 被跳过、scrollWidth
+    // 读到 0；等浏览器把它渲染出来时（进入视口）借这个事件补一次测量。
+    const article = articleRef.current;
+    article?.addEventListener("contentvisibilityautostatechange", updateTitleShift);
+    return () => {
+      window.removeEventListener("resize", updateTitleShift);
+      article?.removeEventListener("contentvisibilityautostatechange", updateTitleShift);
+    };
   }, [thread.title, fontSize, searchQuery]);
 
   const mediaAspectClass =
@@ -115,16 +125,22 @@ function ThreadCardImpl({
         ? "aspect-5/7"
         : "aspect-3/4";
 
+  // 缓存命中直出的页面传 animateIn=false：内容用户已看过，不再重播浮现动画。
+  const entranceClass = animateIn
+    ? " animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
+    : "";
+
   return (
     <>
       <article
+        ref={articleRef}
         role="button"
         aria-label={ariaLabel}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
+        className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
-          animationDelay,
+          animationDelay: animateIn ? animationDelay : undefined,
           WebkitTapHighlightColor: "transparent",
         }}
         onMouseDown={(e) => {

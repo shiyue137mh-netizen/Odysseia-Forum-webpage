@@ -2,6 +2,7 @@ import { BellOff, Bookmark, CheckCircle2, RefreshCw } from 'lucide-react';
 
 import { ThreadListItem } from '@/entities/thread/ThreadListItem';
 import type { Thread } from '@/entities/thread/types';
+import { useListEntranceAnimation } from '@/shared/hooks/useListEntranceAnimation';
 import { FluidDivider } from '@/shared/ui/FluidDivider';
 
 type FollowStatusFilter = 'current' | 'past' | 'all';
@@ -44,6 +45,8 @@ export function MeFollowsSection({
   onUnfollow,
   unfollowPendingThreadId,
 }: MeFollowsSectionProps) {
+  const animateIn = useListEntranceAnimation(isLoading);
+
   const emptyMessage = selectedChannel
     ? '这个频道里暂时没有符合筛选的关注内容。'
     : followStatus === 'past'
@@ -137,7 +140,12 @@ export function MeFollowsSection({
 
             return (
               <div key={thread.thread_id} className="relative md:pr-36">
-                <ThreadListItem thread={thread} index={index} onPreview={onPreview} />
+                <ThreadListItem
+                  thread={thread}
+                  index={index}
+                  onPreview={onPreview}
+                  animateIn={animateIn}
+                />
                 <div className="mt-2 flex justify-end md:absolute md:right-0 md:top-3 md:mt-0">
                   {isCurrentFollow ? (
                     <button

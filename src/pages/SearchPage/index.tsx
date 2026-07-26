@@ -22,6 +22,7 @@ import {
   useSettings,
 } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useMascotStore } from "@/features/mascot/store/mascotStore";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
@@ -41,7 +42,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const searchSortOptions = [
@@ -85,6 +86,8 @@ export function SearchPage() {
     setIgnoreDiscoveryPreferences,
     totalResults,
   } = useSearchResults({ params, preferences });
+
+  const animateIn = useListEntranceAnimation(isLoading);
 
   const booklistQuery = useBooklistsList({
     scope: "public",
@@ -130,10 +133,22 @@ export function SearchPage() {
     };
   }, [location.pathname, location.search]);
 
-  const handleTagClick = (tagName: string) => {
-    const nextQuery = addToken(query || "", "tag", tagName, "include");
-    setParams({ query: nextQuery });
-  };
+  // 这些回调会传给 memo 化的 ThreadResultsCollection / ThreadCard，
+  // 必须保持引用稳定，否则任何一次页面重渲染都会击穿整个列表的 memo。
+  const handleTagClick = useCallback(
+    (tagName: string) => {
+      const nextQuery = addToken(query || "", "tag", tagName, "include");
+      setParams({ query: nextQuery });
+    },
+    [query, setParams],
+  );
+
+  const handleAuthorClick = useCallback(
+    (author: { id: string; name: string }) => {
+      navigate(`/u/${author.id}`);
+    },
+    [navigate],
+  );
 
   const gridClass = useCardGridClass();
   const threadGridClass =
@@ -163,9 +178,12 @@ export function SearchPage() {
     hasTriggeredSearchCueRef.current = cueKey;
   }, [isError, isLoading, query, reactToSearch, totalResults]);
 
+  // 标题栏与偏好同步共用的解析结果，按 query 缓存
+  const queryTokens = useMemo(() => parseSearchQuery(query), [query]);
+
   // 同步用户偏好排序
   useEffect(() => {
-    const hasTextSearch = parseSearchQuery(query).some(
+    const hasTextSearch = queryTokens.some(
       (token) => token.type === "text" && token.value.trim(),
     );
     if (
@@ -185,7 +203,7 @@ export function SearchPage() {
         setParams({ sortMethod: preferredSort });
       }
     }
-  }, [preferences, params.sortMethod, query, setParams]);
+  }, [preferences, params.sortMethod, queryTokens, setParams]);
 
 
   const isThreadTab = params.type === "thread";
@@ -215,7 +233,7 @@ export function SearchPage() {
                 {query ? (
                   <>
                     <span>搜索:</span>
-                    {parseSearchQuery(query).map((token, i) => {
+                    {queryTokens.map((token, i) => {
                       if (token.type === "text") {
                         return (
                           <span
@@ -440,11 +458,12 @@ export function SearchPage() {
                 threads={results}
                 onTagClick={handleTagClick}
                 searchQuery={query}
-                onAuthorClick={(author) => navigate(`/u/${author.id}`)}
+                onAuthorClick={handleAuthorClick}
                 onPreview={openPreview}
                 gridClassName={threadGridClass}
                 listClassName="flex flex-col space-y-od-list-gap pb-4"
                 layoutMode={layoutMode}
+                animateIn={animateIn}
               />
 
               {isInfiniteMode ? (
