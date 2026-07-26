@@ -1,4 +1,5 @@
 import { ThreadCardSkeleton } from "@/entities/thread/ThreadCardSkeleton";
+import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { ThreadListItemSkeleton } from "@/entities/thread/ThreadListItemSkeleton";
 import { ThreadResultsCollection } from "@/entities/thread/ThreadResultsCollection";
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
@@ -72,7 +73,6 @@ export function SearchPage() {
   );
   const resultPagingMode = useResultPagingModeSetting();
   const hasTriggeredSearchCueRef = useRef<string | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const lastSearchLocationRef = useRef<string | null>(null);
 
   const {
@@ -100,6 +100,10 @@ export function SearchPage() {
   const booklistTotal = booklistQuery.data?.total ?? 0;
   const searchTotalPages = Math.max(1, Math.ceil(totalResults / pageSize));
   const isInfiniteMode = resultPagingMode === "infinite";
+  const loadMoreRef = useInfiniteScrollTrigger(infiniteQueryState, {
+    rootMargin: "360px",
+    enabled: isInfiniteMode,
+  });
   useSearchWhisper(query);
 
   useEffect(() => {
@@ -185,28 +189,6 @@ export function SearchPage() {
     }
   }, [preferences, params.sortMethod, query, setParams]);
 
-  useEffect(() => {
-    if (!isInfiniteMode) return;
-
-    const target = loadMoreRef.current;
-    if (!target || !infiniteQueryState.hasNextPage) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (
-          entry.isIntersecting &&
-          infiniteQueryState.hasNextPage &&
-          !infiniteQueryState.isFetchingNextPage
-        ) {
-          infiniteQueryState.fetchNextPage();
-        }
-      },
-      { rootMargin: "360px" },
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [infiniteQueryState, isInfiniteMode]);
 
   const isThreadTab = params.type === "thread";
   const showDiscoveryHub =

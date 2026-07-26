@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -71,10 +72,10 @@ export function TournamentManagePage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editingItem, setEditingItem] = useState<BooklistItem | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const detailQuery = useBooklistDetail(normalizedBooklistId);
   const itemsQuery = useBooklistItems(normalizedBooklistId);
+  const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
   const tournament = detailQuery.data;
   const items = useMemo(() => {
     return itemsQuery.data?.pages.flatMap((page) => page.results || []) ?? [];
@@ -95,31 +96,6 @@ export function TournamentManagePage() {
   const updateItemMutation = useUpdateBooklistItem(normalizedBooklistId, () =>
     setEditingItem(null),
   );
-
-  useEffect(() => {
-    const target = loadMoreRef.current;
-    if (!target || !itemsQuery.hasNextPage) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (
-          entry.isIntersecting &&
-          itemsQuery.hasNextPage &&
-          !itemsQuery.isFetchingNextPage
-        ) {
-          itemsQuery.fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [
-    itemsQuery.hasNextPage,
-    itemsQuery.isFetchingNextPage,
-    itemsQuery.fetchNextPage,
-  ]);
 
   if (!normalizedBooklistId) {
     return <div className="p-8 text-sm text-(--od-error)">无效赛事 ID</div>;

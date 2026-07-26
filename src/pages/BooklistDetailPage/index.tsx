@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -149,31 +150,7 @@ export function BooklistDetailPage() {
 
   // ─── 无限滚动触发器 ──────────────────────────────────────
   // 必须放在提前返回之前，遵循 Hooks 规则
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const target = loadMoreRef.current;
-    if (!target || !itemsQuery.hasNextPage) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (
-          entry.isIntersecting &&
-          itemsQuery.hasNextPage &&
-          !itemsQuery.isFetchingNextPage
-        ) {
-          itemsQuery.fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [
-    itemsQuery.hasNextPage,
-    itemsQuery.isFetchingNextPage,
-    itemsQuery.fetchNextPage,
-  ]);
+  const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
 
   if (!booklistId) {
     return <div className="p-8 text-sm text-(--od-error)">无效书单 ID</div>;

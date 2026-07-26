@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -79,11 +80,11 @@ export function TournamentDetailPage() {
   );
   const gridClass = useCardGridClass();
   const [shareText, setShareText] = useState<string | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedBooklistId = String(booklistId || "").trim();
   const detailQuery = useTournamentDetail(normalizedBooklistId);
   const itemsQuery = useTournamentItems(normalizedBooklistId);
+  const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
   const collectMutation = useToggleBooklistCollection();
 
   const tournament = detailQuery.data;
@@ -123,31 +124,6 @@ export function TournamentDetailPage() {
 
     return () => window.clearInterval(timer);
   }, [bannerSlides.length]);
-
-  useEffect(() => {
-    const target = loadMoreRef.current;
-    if (!target || !itemsQuery.hasNextPage) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (
-          entry.isIntersecting &&
-          itemsQuery.hasNextPage &&
-          !itemsQuery.isFetchingNextPage
-        ) {
-          itemsQuery.fetchNextPage();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [
-    itemsQuery.hasNextPage,
-    itemsQuery.isFetchingNextPage,
-    itemsQuery.fetchNextPage,
-  ]);
 
   if (!normalizedBooklistId) {
     return <div className="p-8 text-sm text-(--od-error)">无效赛事 ID</div>;
