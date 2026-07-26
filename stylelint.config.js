@@ -18,6 +18,10 @@ export default {
     'font-family-name-quotes': null,
     'value-keyword-case': null,
     'at-rule-empty-line-before': null,
+    // Tailwind v4 的 `@utility x { & .y {} }` 是合法写法，stylelint 不识别该 at-rule，
+    // 会把块内的 `&` 与声明误判为越位。这两条属误报，整体关闭。
+    'nesting-selector-no-missing-scoping-root': null,
+    'no-invalid-position-declaration': null,
     'order/order': [
       'custom-properties',
       'dollar-variables',

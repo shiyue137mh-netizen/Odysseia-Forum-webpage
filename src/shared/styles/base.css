@@ -1,4 +1,8 @@
 @utility scrollbar-thin {
+
+  scrollbar-width: thin;
+  scrollbar-color: var(--od-border-strong) transparent;
+
   &::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -18,19 +22,19 @@
         var(--od-border-strong) 80%,
         var(--od-bg) 20%);
   }
-
-  scrollbar-width: thin;
-  scrollbar-color: var(--od-border-strong) transparent;
 }
 
 @utility scrollbar-invisible {
+
+  -ms-overflow-style: none;
+
+  /* IE and Edge */
+  scrollbar-width: none;
+
   &::-webkit-scrollbar {
     display: none;
   }
 
-  -ms-overflow-style: none;
-  /* IE and Edge */
-  scrollbar-width: none;
   /* Firefox */
 }
 
@@ -134,7 +138,6 @@
 }
 
 @layer utilities {
-
   body::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -210,9 +213,11 @@
   animation-duration: inherit;
   animation-timing-function: inherit;
   mix-blend-mode: normal;
+
   /* 优化性能，减少卡顿 */
   will-change: clip-path, opacity;
   isolation: isolate;
+
   /* 允许点击穿透，防止动画期间页面“由于正在播放动画”而无法交互 */
   pointer-events: none;
 }
@@ -236,7 +241,7 @@ html[data-od-view-transition='onboarding']::view-transition-group(onboarding-bal
 
 @keyframes circle-in {
   0% {
-    clip-path: circle(0px at var(--click-x, 50%) var(--click-y, 50%));
+    clip-path: circle(0 at var(--click-x, 50%) var(--click-y, 50%));
   }
 
   100% {

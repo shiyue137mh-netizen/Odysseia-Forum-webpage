@@ -19,7 +19,6 @@
   --color-ring: hsl(var(--ring));
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
-
   --color-od-bg: var(--od-bg);
   --color-od-shell: var(--od-surface-shell);
   --color-od-content: var(--od-surface-content);
@@ -35,7 +34,6 @@
   --color-od-text-tertiary: var(--od-text-tertiary);
   --color-od-border: var(--od-border);
   --color-od-border-strong: var(--od-border-strong);
-
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-secondary: hsl(var(--secondary));
