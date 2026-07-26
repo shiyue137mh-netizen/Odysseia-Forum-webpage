@@ -6,16 +6,11 @@ import { SettingsPageSection } from './SettingsPageSection';
 
 export function VersionSettingsSection() {
   return (
-    <SettingsPageSection dividerLabel="Version" kicker="Release Notes" title="版本与更新" icon={Info}>
-      <p className="text-sm text-(--od-text-secondary)">
-        当前前端版本：
-        <span className="ml-1 font-mono text-(--od-text-emphasis)">{APP_VERSION}</span>
-      </p>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-(--od-text-tertiary)">
-        <li>新增帖子预览浮层与 Markdown 展示体验</li>
-        <li>改进搜索筛选与列表/网格视图切换</li>
-        <li>优化登出、Mock 环境与错误提示的健壮性</li>
-      </ul>
+    <SettingsPageSection kicker="Build" title="版本" icon={Info}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[color-mix(in_srgb,var(--od-surface-input)_58%,transparent)] px-4 py-3">
+        <p className="text-sm text-(--od-text-secondary)">当前前端版本</p>
+        <span className="font-mono text-sm font-semibold text-(--od-text-emphasis)">{APP_VERSION}</span>
+      </div>
     </SettingsPageSection>
   );
 }

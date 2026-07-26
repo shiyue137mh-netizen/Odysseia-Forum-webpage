@@ -38,7 +38,7 @@ export function MascotBar() {
         >
             {/* Mascot Image */}
             <div
-                className="pointer-events-auto relative z-10 h-24 w-24 sm:h-28 sm:w-28 cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                className={`${isVisible ? 'pointer-events-auto' : 'pointer-events-none'} relative z-10 h-24 w-24 sm:h-28 sm:w-28 cursor-pointer transition-transform hover:scale-110 active:scale-95`}
                 onClick={handleMascotClick}
             >
                 {!imageLoaded && (
@@ -63,7 +63,7 @@ export function MascotBar() {
             </div>
 
             {/* Dialogue Box */}
-            <div className="pointer-events-auto relative max-w-[300px] lg:max-w-md">
+            <div className={`${isVisible ? 'pointer-events-auto' : 'pointer-events-none'} relative max-w-[300px] lg:max-w-md`}>
                 <div className="group relative overflow-hidden rounded-[1.35rem] border border-[color-mix(in_srgb,var(--od-border)_75%,transparent)] bg-[color-mix(in_srgb,var(--od-surface-floating)_88%,transparent)] px-4 py-3 shadow-(--od-shadow-floating) backdrop-blur-md lg:px-5">
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--od-accent)_10%,transparent),transparent_48%,color-mix(in_srgb,var(--od-text-primary)_5%,transparent))]" />
                     <p className="text-sm font-medium text-(--od-text-primary)">

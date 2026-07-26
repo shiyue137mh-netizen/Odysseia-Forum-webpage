@@ -1,5 +1,8 @@
+import { createElement, type ReactNode } from 'react';
+import { act, renderHook } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
-import { parseParams, serializeParams } from './useSearchParams';
+import { parseParams, serializeParams, useSearchURLParams } from './useSearchParams';
 
 describe('useSearchParams URL 协议层', () => {
   describe('parseParams', () => {
@@ -81,6 +84,45 @@ describe('useSearchParams URL 协议层', () => {
       expect(sp.get('channel')).toBe('news');
       expect(sp.get('sort')).toBe('relevance');
       expect(sp.get('tag_logic')).toBe('or');
+    });
+  });
+
+  describe('setParams', () => {
+    it('翻页时应该保留显式选择的最近活跃排序', () => {
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(
+          MemoryRouter,
+          { initialEntries: ['/search?sort=last_active_desc'] },
+          children,
+        );
+      const { result } = renderHook(
+        () => ({ search: useSearchURLParams(), location: useLocation() }),
+        { wrapper },
+      );
+
+      act(() => result.current.search.setParams({ page: 2 }));
+
+      const nextParams = new URLSearchParams(result.current.location.search);
+      expect(nextParams.get('sort')).toBe('last_active_desc');
+      expect(nextParams.get('page')).toBe('2');
+    });
+
+    it('输入普通文本时不应该错误保留最近活跃排序', () => {
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(
+          MemoryRouter,
+          { initialEntries: ['/search?sort=last_active_desc'] },
+          children,
+        );
+      const { result } = renderHook(
+        () => ({ search: useSearchURLParams(), location: useLocation() }),
+        { wrapper },
+      );
+
+      act(() => result.current.search.setParams({ query: 'hello' }));
+
+      const nextParams = new URLSearchParams(result.current.location.search);
+      expect(nextParams.get('sort')).toBe('relevance');
     });
   });
 });

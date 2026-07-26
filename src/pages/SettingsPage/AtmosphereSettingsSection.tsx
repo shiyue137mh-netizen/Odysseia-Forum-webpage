@@ -47,7 +47,7 @@ export function AtmosphereSettingsSection({
   const glassEnabled = settings.glassMode !== 'off';
 
   return (
-    <SettingsPageSection dividerLabel="Atmosphere" kicker="Backdrop Mood" title="背景与毛玻璃" icon={Sparkles}>
+    <SettingsPageSection kicker="Backdrop Mood" title="背景与毛玻璃" icon={Sparkles}>
       <div className="space-y-6">
         <div className="od-setting-subsection space-y-4">
           <div className="flex items-start justify-between gap-4">
@@ -68,7 +68,7 @@ export function AtmosphereSettingsSection({
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-start">
             <div className="space-y-4">
               <div className="od-setting-panel-soft">
                 <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">Presets</p>
@@ -257,17 +257,6 @@ export function AtmosphereSettingsSection({
           </div>
         </div>
 
-        <div className="od-setting-row">
-          <div>
-            <p className="od-choice-title text-base font-semibold text-(--od-text-primary)">紧凑模式</p>
-            <p className="mt-1 text-[0.82rem] leading-[1.55] text-(--od-text-secondary)">收紧界面间距，列表和卡片会更贴近，适合偏高密度的信息浏览。</p>
-          </div>
-          <SettingsToggle
-            checked={settings.compactMode}
-            onToggle={() => updateSettings({ compactMode: !settings.compactMode })}
-            ariaLabel="切换紧凑模式"
-          />
-        </div>
       </div>
     </SettingsPageSection>
   );

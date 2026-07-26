@@ -189,7 +189,11 @@ export function useSearchURLParams() {
 
       const merged = { ...current, ...nextUpdates, page: shouldResetPage ? 1 : (updates.page ?? current.page) };
       const newSP = serializeParams(merged);
-      if (updates.sortMethod === "last_active_desc") {
+      const preservesExplicitLastActive =
+        merged.sortMethod === "last_active_desc" &&
+        (updates.sortMethod === "last_active_desc" ||
+          searchParams.get("sort") === "last_active_desc");
+      if (preservesExplicitLastActive) {
         newSP.set("sort", "last_active_desc");
       }
       if (updates.tagLogic) {

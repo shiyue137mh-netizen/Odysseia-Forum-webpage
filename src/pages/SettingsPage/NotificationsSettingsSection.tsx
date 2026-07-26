@@ -12,7 +12,7 @@ type NotificationsSettingsSectionProps = {
 
 export function NotificationsSettingsSection({ settings, updateSettings }: NotificationsSettingsSectionProps) {
   return (
-    <SettingsPageSection dividerLabel="Notifications" kicker="Signals" title="通知" icon={Bell}>
+    <SettingsPageSection kicker="Signals" title="通知" icon={Bell}>
       <div className="space-y-3">
         <div className="od-setting-row">
           <div>

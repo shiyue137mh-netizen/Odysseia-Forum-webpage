@@ -10,7 +10,7 @@ type AdvancedSettingsSectionProps = {
 
 export function AdvancedSettingsSection({ onResetSettings }: AdvancedSettingsSectionProps) {
   return (
-    <SettingsPageSection dividerLabel="Advanced" kicker="Safety" title="高级" icon={SlidersHorizontal}>
+    <SettingsPageSection kicker="Safety" title="高级" icon={SlidersHorizontal}>
       <div className="space-y-3">
         <DangerousThemeUnlockButton />
         <button

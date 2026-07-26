@@ -1,20 +1,25 @@
 import { Settings } from 'lucide-react';
 
+import { FluidDivider } from '@/shared/ui/FluidDivider';
+
 export function SettingsPageHeader() {
   return (
-    <div className="px-1 py-3">
-      <div className="flex items-center gap-4">
-        <Settings className="h-6 w-6 shrink-0 text-(--od-accent)" />
-        <div>
-          <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
+    <section>
+      <FluidDivider label="Settings" tone="strong" className="mb-8 lg:mb-10" />
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--od-surface-soft) text-(--od-accent)">
+          <Settings className="h-6 w-6" />
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--od-text-tertiary)">
             Personal Workspace
           </p>
           <h1 className="od-section-title">设置</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-            这里是你的专属调色板，我帮你把显示、氛围和提醒都重新分了类。调完立刻生效，阅读节奏会清楚很多。
+          <p className="max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
+            调整阅读、布局和背景氛围。所有改动都会立即生效，并保存在当前浏览器里。
           </p>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

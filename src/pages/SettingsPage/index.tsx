@@ -7,7 +7,6 @@ import { notifyError, notifySuccess } from '@/shared/lib/notify';
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { AtmosphereSettingsSection } from './AtmosphereSettingsSection';
 import { DisplaySettingsSection } from './DisplaySettingsSection';
-import { NotificationsSettingsSection } from './NotificationsSettingsSection';
 import { SettingsPageHeader } from './SettingsPageHeader';
 import { VersionSettingsSection } from './VersionSettingsSection';
 
@@ -87,10 +86,9 @@ export function SettingsPage() {
   const commitBlur = () => updateSettings({ glassBlur: blurDraft });
 
   return (
-    <div className="px-4 py-4 text-(--od-text-primary) sm:px-6 lg:px-8">
-      <SettingsPageHeader />
-
-      <div className="mt-4 space-y-10 px-1">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 text-(--od-text-primary) sm:p-6 lg:p-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 lg:gap-14">
+        <SettingsPageHeader />
         <DisplaySettingsSection settings={settings} updateSettings={updateSettings} />
 
         <AtmosphereSettingsSection
@@ -106,11 +104,10 @@ export function SettingsPage() {
           updateSettings={updateSettings}
         />
 
-        <NotificationsSettingsSection settings={settings} updateSettings={updateSettings} />
         <AdvancedSettingsSection onResetSettings={handleResetSettings} />
         <VersionSettingsSection />
 
-        <div className="rounded-[1.3rem] bg-[color-mix(in_oklab,var(--od-accent)_8%,transparent)] p-4">
+        <div className="rounded-2xl bg-[color-mix(in_oklab,var(--od-accent)_8%,transparent)] p-4">
           <p className="text-sm text-(--od-text-secondary)">
             💡 <span className="font-medium text-(--od-text-primary)">小提醒：</span>
             你的设置都保存在本地浏览器里。清除浏览器数据的话，这些设置也会一起消失。
