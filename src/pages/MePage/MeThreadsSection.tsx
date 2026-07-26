@@ -2,6 +2,7 @@ import { FileText, RefreshCw } from 'lucide-react';
 
 import { ThreadResultsCollection } from '@/entities/thread/ThreadResultsCollection';
 import type { Thread } from '@/entities/thread/types';
+import { useListEntranceAnimation } from '@/shared/hooks/useListEntranceAnimation';
 import { FluidDivider } from '@/shared/ui/FluidDivider';
 
 interface MeThreadsSectionProps {
@@ -23,6 +24,8 @@ export function MeThreadsSection({
   onPreview,
   onRefresh,
 }: MeThreadsSectionProps) {
+  const animateIn = useListEntranceAnimation(isLoading);
+
   return (
     <section className="px-1">
       <FluidDivider label="Threads" className="mb-8" />
@@ -73,7 +76,11 @@ export function MeThreadsSection({
       ) : threads.length === 0 ? (
         <p className="od-text-body">还没有找到你创建的内容，可能还没被索引到。</p>
       ) : (
-        <ThreadResultsCollection threads={threads} onPreview={onPreview} />
+        <ThreadResultsCollection
+          threads={threads}
+          onPreview={onPreview}
+          animateIn={animateIn}
+        />
       )}
     </section>
   );

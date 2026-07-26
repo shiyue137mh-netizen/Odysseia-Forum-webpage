@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -70,6 +71,9 @@ export function TournamentDetailPage() {
   const detailQuery = useTournamentDetail(normalizedBooklistId);
   const itemsQuery = useTournamentItems(normalizedBooklistId);
   const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
+  const animateIn = useListEntranceAnimation(
+    detailQuery.isLoading || itemsQuery.isLoading,
+  );
   const collectMutation = useToggleBooklistCollection();
 
   const tournament = detailQuery.data;
@@ -378,12 +382,14 @@ export function TournamentDetailPage() {
                         thread={toTournamentThread(item, tournament)}
                         onPreview={openPreview}
                         booklistComment={item.comment || ""}
+                        animateIn={animateIn}
                       />
                     ) : (
                       <ThreadCard
                         thread={toTournamentThread(item, tournament)}
                         onPreview={openPreview}
                         booklistComment={item.comment || ""}
+                        animateIn={animateIn}
                       />
                     )}
                   </div>

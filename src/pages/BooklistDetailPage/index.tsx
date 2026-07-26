@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -130,6 +131,9 @@ export function BooklistDetailPage() {
   // ─── 无限滚动触发器 ──────────────────────────────────────
   // 必须放在提前返回之前，遵循 Hooks 规则
   const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
+  const animateIn = useListEntranceAnimation(
+    detailQuery.isLoading || itemsQuery.isLoading,
+  );
 
   if (!booklistId) {
     return <PageStatusMessage tone="error">无效书单 ID</PageStatusMessage>;
@@ -474,12 +478,14 @@ export function BooklistDetailPage() {
                       thread={threadFromBooklistItem(item)}
                       onPreview={openPreview}
                       booklistComment={item.comment || ""}
+                      animateIn={animateIn}
                     />
                   ) : (
                     <ThreadCard
                       thread={threadFromBooklistItem(item)}
                       onPreview={openPreview}
                       booklistComment={item.comment || ""}
+                      animateIn={animateIn}
                     />
                   )}
                   {isOwner && (

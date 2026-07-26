@@ -25,6 +25,7 @@ interface ThreadListItemProps {
   onPreview?: (thread: Thread) => void;
   booklistComment?: string | null;
   index?: number;
+  animateIn?: boolean;
 }
 
 function ThreadListItemImpl({
@@ -35,6 +36,7 @@ function ThreadListItemImpl({
   onPreview,
   booklistComment,
   index = 0,
+  animateIn = true,
 }: ThreadListItemProps) {
   const {
     fontSizes,
@@ -58,10 +60,15 @@ function ThreadListItemImpl({
   const { measureRef: titleMeasureRef, clampedText: clampedTitle } =
     usePretextClampText<HTMLHeadingElement>(thread.title, { maxLines: 2 });
 
+  // 缓存命中直出的页面传 animateIn=false：内容用户已看过，不再重播浮现动画。
+  const entranceClass = animateIn
+    ? " animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
+    : "";
+
   return (
     <article
-      className="group relative w-full cursor-pointer py-3 text-(--od-text-primary) [content-visibility:auto] [contain-intrinsic-size:auto_200px] transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
-      style={{ animationDelay }}
+      className={`group relative w-full cursor-pointer py-3 text-(--od-text-primary) [content-visibility:auto] [contain-intrinsic-size:auto_200px] transition-colors duration-200${entranceClass}`}
+      style={animateIn ? { animationDelay } : undefined}
       onClick={() => onPreview?.(thread)}
     >
       <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-divider-strong)_60%,transparent),transparent)]" />

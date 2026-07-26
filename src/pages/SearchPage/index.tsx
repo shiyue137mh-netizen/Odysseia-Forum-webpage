@@ -22,6 +22,7 @@ import {
   useSettings,
 } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useMascotStore } from "@/features/mascot/store/mascotStore";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
@@ -85,6 +86,8 @@ export function SearchPage() {
     setIgnoreDiscoveryPreferences,
     totalResults,
   } = useSearchResults({ params, preferences });
+
+  const animateIn = useListEntranceAnimation(isLoading);
 
   const booklistQuery = useBooklistsList({
     scope: "public",
@@ -460,6 +463,7 @@ export function SearchPage() {
                 gridClassName={threadGridClass}
                 listClassName="flex flex-col space-y-od-list-gap pb-4"
                 layoutMode={layoutMode}
+                animateIn={animateIn}
               />
 
               {isInfiniteMode ? (
