@@ -1,14 +1,16 @@
 import { Bell, X, AlertCircle, Trash2, Megaphone, Wrench, Rocket } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { followsApi } from '@/features/follows/api/followsApi';
+import { useFollowsFeed, useMarkAllFollowsViewed } from '@/features/follows/hooks/useFollowsData';
+import { useAuth } from '@/features/auth/hooks/useAuth';
 import type { Thread } from '@/entities/thread/types';
 import { APP_VERSION } from '@/shared/config/appInfo';
 import { resolveStaticNotifications, type NotificationKind } from '@/features/notifications/notificationsConfig';
 import { usePreviewStore } from '@/features/search/store/previewStore';
 import { useThemeSettings } from '@/shared/hooks/useSettings';
 import { formatRelativeDateTime } from '@/shared/lib/dateTime';
+import { extractErrorMessage, notifyError } from '@/shared/lib/notify';
 import { LazyImage } from '@/shared/ui/LazyImage';
 
 // ── LocalStorage 工具 ──────────────────────────────────
@@ -78,6 +80,8 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
   const navigate = useNavigate();
   const { backgroundImageEnabled } = useThemeSettings();
   const setPreviewThread = usePreviewStore((state) => state.setPreviewThread);
+  const { isAuthenticated } = useAuth();
+  const markAllViewed = useMarkAllFollowsViewed();
 
   // 已读时间戳
   const [lastOpenedAt, setLastOpenedAtState] = useState<string | null>(() => getLastOpenedAt());
@@ -95,13 +99,13 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
 
   // ── 数据拉取 ──
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['follows'],
-    queryFn: () => followsApi.getFollows(),
-    staleTime: 60 * 1000,
-    refetchInterval: 30 * 1000,
-    refetchOnWindowFocus: true,
-  });
+  // 本组件由 TopBar 常驻挂载，而 `if (!open) return null` 在 hook 之后，
+  // 所以此前不论面板是否展开、用户是否登录，全站每 30 秒都会打一次 /follows/。
+  // 走 feature 自己的 hook：未登录完全不拉；完整列表只在面板展开时拉，未读数常驻（红点依赖它）。
+  const { data, isLoading, isError } = useFollowsFeed(
+    {},
+    { enabled: isAuthenticated, listEnabled: open },
+  );
 
   const {
     data: staticDefs = [],
@@ -221,8 +225,6 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
     setDismissedIdsState((prev) => (prev.includes(id) ? prev : [...prev, id]));
   };
 
-  const queryClient = useQueryClient();
-
   const handleClearAllNotifications = async () => {
     // 静态通知：更新 last_opened_at 即可标记全部已读
     const latestCreatedAt = staticNotifications.reduce((latest, item) => {
@@ -249,10 +251,11 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
     });
 
     try {
-      await followsApi.markAllViewed();
-      queryClient.invalidateQueries({ queryKey: ['follows'] });
+      // useMarkAllFollowsViewed 内部会失效 followsKeys.all
+      await markAllViewed.mutateAsync();
     } catch (error) {
-      console.error('Failed to mark notifications as viewed:', error);
+      // 本地已经乐观清空，接口失败必须让用户知道，否则会以为真的清干净了
+      notifyError(extractErrorMessage(error, '标记已读失败，请稍后再试'));
     }
   };
 

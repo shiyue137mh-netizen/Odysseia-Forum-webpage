@@ -350,7 +350,6 @@
 }
 
 @utility od-draw-stage {
-  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -710,7 +709,7 @@
   color: #fff;
   text-transform: uppercase;
   letter-spacing: -0.03em;
-  word-break: break-word;
+  overflow-wrap: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;

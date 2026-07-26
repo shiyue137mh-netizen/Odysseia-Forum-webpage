@@ -34,38 +34,36 @@
 
 ### 3.1 定义规范
 
+以 `src/features/search/store/previewStore.ts` 为例：
+
 ```typescript
 import { create } from "zustand";
+import type { Thread } from "@/entities/thread/types";
 
 // 1. 定义状态和动作的接口
-interface SearchUIState {
-  // Banner UI 状态
-  isMainBannerVisible: boolean;
-  activeBannerId: string | null;
+interface PreviewState {
+  previewThread: Thread | null;
+  previewThreadId: string | null;
 
   // Actions
-  setMainBannerVisible: (visible: boolean) => void;
-  setActiveBannerId: (bannerId: string | null) => void;
+  setPreviewThread: (thread: Thread | null) => void;
+  setPreviewThreadId: (id: string | null) => void;
 }
 
 // 2. 创建 store
-export const useSearchStore = create<SearchUIState>()((set, get) => ({
-  isMainBannerVisible: true,
-  activeBannerId: null,
+export const usePreviewStore = create<PreviewState>()((set) => ({
+  previewThread: null,
+  previewThreadId: null,
 
-  setMainBannerVisible: (visible) => {
-    if (get().isMainBannerVisible === visible) return;
-    set({ isMainBannerVisible: visible });
-  },
+  setPreviewThread: (thread) =>
+    set({ previewThread: thread, previewThreadId: null }),
 
-  setActiveBannerId: (bannerId) => {
-    if (get().activeBannerId === bannerId) return;
-    set({ activeBannerId: bannerId });
-  },
+  setPreviewThreadId: (id) =>
+    set({ previewThreadId: id, previewThread: null }),
 }));
 ```
 
-_(注：V2 重构后，原先在此 Store 中的“帖子预览”等复杂业务逻辑已通过 `previewStore.ts` 彻底解耦，而查询条件等状态则由 URL 参数系统全面接管。)_
+_(注：搜索的查询条件已由 URL 参数系统全面接管；原先承载 Banner 等 UI 状态的 `searchStore` 在 2026-07 的代码审查中确认已无人使用，已删除。)_
 
 ### 3.2 使用规范 (防重渲染)
 
@@ -93,7 +91,9 @@ const store = useSearchStore();
 对于诸如搜索参数（搜索词、筛选渠道、标签、作者等）的场景，**强制使用 URL 参数 (`URLSearchParams`) 代替 Zustand 作为数据源**。
 
 - 好处: 状态可分享、支持浏览器前进后退、解耦 UI Store 与请求逻辑。
-- 示例: 在 `src/features/search/hooks/useSearchParams.ts` 中，通过暴露 `useSearchURLParams` 钩子解析并维护 `query`, `channel`, `sortMethod` 等查询参数。所有筛选组件（如 `SearchFilterPanel`）将受控于由 URL 驱动的派生状态。独立的业务逻辑（如 `src/features/search/store/previewStore.ts` 帖子预览，管理 `previewThread`、`previewThreadId`、`previewOptions`）**已强制从通用 UI Store 中抽离解耦**，只保留最核心的纯 UI 控制逻辑（如 `isMainBannerVisible` 和 `activeBannerId`）在 `searchStore` 中，全面剥离 URL 参数和查询逻辑。
+- 示例: 在 `src/features/search/hooks/useSearchParams.ts` 中，通过暴露 `useSearchURLParams` 钩子解析并维护 `query`, `channel`, `sortMethod` 等查询参数。所有筛选组件（如 `SearchFilterPanel`）将受控于由 URL 驱动的派生状态。帖子预览这类独立业务状态放在 `src/features/search/store/previewStore.ts`，与查询条件完全解耦。
+
+> ⚠️ **不要反向写回 URL。** localStorage / sessionStorage 只能作为「输入框回填」或「新建搜索时的初值」，绝不能参与 URL 解析，也不能在 effect 里把本地值 `setParams` 回 URL。2026-07 的审查在这里抓到过两个真实缺陷：草稿把刚被清空的搜索词写了回去（用户以为「清除筛选」按钮坏了），以及 `tagLogic` 缺省值取自 localStorage 导致同一条分享链接在不同设备上结果不同。标签逻辑的基准值现由 `DEFAULT_TAG_LOGIC` 常量固定。
 
 ### 3.4 状态的局部化
 

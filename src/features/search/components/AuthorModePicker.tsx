@@ -6,7 +6,7 @@ import {
   searchApi,
   type SearchSuggestionAuthor,
 } from "@/features/search/api/searchApi";
-import { useAuthorProfiles } from "@/features/search/hooks/useAuthorProfiles";
+import { useAuthorProfiles } from "@/features/authors/hooks/useAuthorProfiles";
 import type { SearchTokenMode } from "@/shared/lib/searchTokenizer";
 import { LazyImage } from "@/shared/ui/LazyImage";
 

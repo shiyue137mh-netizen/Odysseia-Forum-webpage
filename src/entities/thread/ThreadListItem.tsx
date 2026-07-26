@@ -1,30 +1,21 @@
-import {
-  MessageCircle,
-  ThumbsUp,
-  Eye,
-  Clock3,
-  Images,
-  BookOpen,
-} from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { Clock3, Images, BookOpen } from "lucide-react";
+import { memo, useMemo } from "react";
 
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { MarkdownText } from "@/shared/ui/MarkdownText";
 import type { Thread } from "@/entities/thread/types";
-import {
-  useFontSizeSetting,
-  useImageModeSetting,
-} from "@/shared/hooks/useSettings";
-import { fontSizeMap } from "@/shared/lib/settings";
+import { useImageModeSetting } from "@/shared/hooks/useSettings";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
+import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
+import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
+import { ThreadTagList } from "@/entities/thread/ThreadTagList";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
-import { ThreadAchievementTag } from "@/entities/thread/ThreadAchievementTag";
+import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
 import { usePretextClampText } from "@/shared/hooks/usePretextClampText";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
-import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 
 interface ThreadListItemProps {
   thread: Thread;
@@ -45,22 +36,17 @@ function ThreadListItemImpl({
   booklistComment,
   index = 0,
 }: ThreadListItemProps) {
-  const fontSize = useFontSizeSetting();
+  const {
+    fontSizes,
+    quickAddOpen,
+    setQuickAddOpen,
+    createdTime,
+    lastActiveTime,
+    virtualOnlyTags,
+    hasExcerpt,
+    animationDelay,
+  } = useThreadCardModel(thread, index);
   const imageMode = useImageModeSetting();
-  const fontSizes = fontSizeMap[fontSize];
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
-
-  const createdTime = formatRelativeDateTime(thread.created_at);
-  const lastActiveTime = thread.last_active_at
-    ? formatRelativeDateTime(thread.last_active_at)
-    : null;
-  const virtualOnlyTags = (thread.virtual_tags || []).filter(
-    (tag) => !thread.tags.includes(tag),
-  );
-
-  const hasExcerpt =
-    !!thread.first_message_excerpt &&
-    thread.first_message_excerpt.trim() !== "...";
 
   // 获取有效的去重缩略图列表，最多 4 张
   const thumbnails = useMemo(() => {
@@ -75,9 +61,7 @@ function ThreadListItemImpl({
   return (
     <article
       className="group relative w-full cursor-pointer py-3 text-(--od-text-primary) transition-colors duration-200 animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
-      style={{
-        animationDelay: `${(index % 24) * 40}ms`,
-      }}
+      style={{ animationDelay }}
       onClick={() => onPreview?.(thread)}
     >
       <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-divider-strong)_60%,transparent),transparent)]" />
@@ -252,61 +236,17 @@ function ThreadListItemImpl({
           )}
 
           <div className="mt-auto flex flex-col gap-2.5">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-(--od-text-tertiary) md:text-xs">
-              <ThreadAchievementTag reactionCount={thread.reaction_count} variant="list" />
-              {thread.tags?.slice(0, 4).map((tag) => (
-                <button
-                  key={tag}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onTagClick?.(tag);
-                  }}
-                  className="truncate transition-colors hover:text-(--od-text-primary)"
-                >
-                  #{tag}
-                </button>
-              ))}
-              {thread.tags && thread.tags.length > 4 && (
-                <span>+{thread.tags.length - 4}</span>
-              )}
-              {virtualOnlyTags.slice(0, 2).map((tag) => (
-                <span key={`vt-${tag}`} className="text-(--od-text-emphasis)">
-                  ~{tag}
-                </span>
-              ))}
-            </div>
+            <ThreadTagList
+              thread={thread}
+              virtualOnlyTags={virtualOnlyTags}
+              onTagClick={onTagClick}
+              variant="list"
+            />
 
-            {booklistComment !== undefined && (
-              <p className="text-xs leading-6 text-(--od-text-secondary)">
-                {booklistComment ? (
-                  <>
-                    <span className="font-medium text-(--od-accent)">
-                      推荐语
-                    </span>
-                    <span className="mx-1 text-(--od-text-tertiary)">/</span>
-                    {booklistComment}
-                  </>
-                ) : (
-                  "\u00a0"
-                )}
-              </p>
-            )}
+            <ThreadBooklistComment comment={booklistComment} variant="list" />
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3 text-[11px] text-(--od-text-tertiary) md:text-xs">
-                <span className="inline-flex items-center gap-1 transition-colors group-hover:text-(--od-text-secondary)">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  <span className="tabular-nums">{thread.reply_count}</span>
-                </span>
-                <span className="inline-flex items-center gap-1 transition-colors group-hover:text-(--od-text-secondary)">
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                  <span className="tabular-nums">{thread.reaction_count}</span>
-                </span>
-                <span className="inline-flex items-center gap-1 transition-colors group-hover:text-(--od-text-secondary)">
-                  <Eye className="h-3.5 w-3.5" />
-                  <span className="tabular-nums">{thread.display_count}</span>
-                </span>
-              </div>
+              <ThreadStatsRow thread={thread} variant="list" />
 
               <div className="ml-auto flex items-center gap-2 text-(--od-text-tertiary) transition-colors group-hover:text-(--od-text-primary) md:hidden">
                 <button

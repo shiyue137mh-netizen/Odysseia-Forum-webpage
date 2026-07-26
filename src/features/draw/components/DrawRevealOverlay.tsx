@@ -108,7 +108,9 @@ export function DrawRevealOverlay({
   phase,
   results,
   drawCount: _drawCount,
+  error,
   onClose,
+  onRetry,
   onPreview,
   onDrawAgain,
 }: DrawRevealOverlayProps) {
@@ -206,6 +208,23 @@ export function DrawRevealOverlay({
                   <OmicronLoader className="h-12 w-12 text-white/50" />
                   <p className="text-sm font-bold tracking-[0.4em] text-white uppercase">Loading Ritual...</p>
                 </motion.div>
+              </div>
+            )}
+
+            {phase === "error" && (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-5 bg-black px-8 text-center">
+                <p className="text-lg font-bold text-white">这次抽卡没有成功</p>
+                <p className="max-w-md text-sm text-white/70">
+                  {error || "出了点小状况，稍后再试一次吧。"}
+                </p>
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="flex items-center gap-2 rounded-full border border-white/20 bg-black/20 px-5 py-2.5 text-xs font-bold text-white backdrop-blur-md transition-all hover:bg-white hover:text-black"
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                  再试一次
+                </button>
               </div>
             )}
 

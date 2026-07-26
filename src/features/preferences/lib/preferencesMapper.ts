@@ -1,4 +1,3 @@
-import { addToken, parseSearchQuery, removeToken } from '@/shared/lib/searchTokenizer';
 import type {
   UserPreferencesResponse,
   UserPreferencesUpdateRequest,
@@ -97,30 +96,3 @@ export function toPreferencesUpdatePayload(
   };
 }
 
-export function applyPreferencesToSearchQuery(
-  sourceQuery: string,
-  value: PreferencesFormValue,
-): string {
-  let next = sourceQuery || '';
-  const existingTokens = parseSearchQuery(next);
-
-  for (const token of existingTokens) {
-    if (token.type === 'tag') {
-      next = removeToken(next, token);
-    }
-  }
-
-  for (const tag of parseCommaSeparatedText(value.includeTagsText)) {
-    next = addToken(next, 'tag', tag, 'include');
-  }
-  for (const tag of parseCommaSeparatedText(value.excludeTagsText)) {
-    next = addToken(next, 'tag', tag, 'exclude');
-  }
-
-  const includeKeywords = value.includeKeywordsText.trim();
-  if (!includeKeywords) {
-    return next.trim();
-  }
-
-  return `${next} ${includeKeywords}`.trim();
-}

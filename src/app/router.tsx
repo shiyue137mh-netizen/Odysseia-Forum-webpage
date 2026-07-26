@@ -1,85 +1,113 @@
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
-import { LoginPage } from '@/pages/AuthPage/LoginPage';
-import { CallbackPage } from '@/pages/AuthPage/CallbackPage';
-import { SearchPage } from '@/pages/SearchPage';
-import { PlazaPage } from '@/pages/PlazaPage';
-import { DrawPage } from '@/pages/DrawPage';
-import { TagsPage } from '@/pages/TagsPage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { AboutPage } from '@/pages/AboutPage';
-import { MePage } from '@/pages/MePage';
-import { UserProfilePage } from '@/pages/UserProfilePage';
-import { TestPage } from '@/pages/TestPage';
-import { BooklistsPage } from '@/pages/BooklistsPage';
-import { BooklistDetailPage } from '@/pages/BooklistDetailPage';
-import { TournamentDetailPage } from '@/pages/TournamentDetailPage';
-import { TournamentManagePage } from '@/pages/TournamentManagePage';
-import { TournamentsPage } from '@/pages/TournamentsPage';
-import { MyTournamentsPage } from '@/pages/MyTournamentsPage';
 import { ProtectedRoute } from '@/app/providers/ProtectedRoute';
 import { RootLayout } from '@/widgets/layout/RootLayout';
-import { NotFoundPage } from '@/pages/NotFoundPage';
+import { OmicronLoader } from '@/shared/ui/loaders/OmicronLoader';
+
+// 页面全部按需加载，避免把全站打进首屏 chunk。
+// 页面用的是命名导出，这里统一转成 lazy 需要的 default 形态。
+const lazyPage = <K extends string>(
+  loader: () => Promise<Record<K, ComponentType>>,
+  name: K,
+) => lazy(() => loader().then((module) => ({ default: module[name] })));
+
+const LoginPage = lazyPage(() => import('@/pages/AuthPage/LoginPage'), 'LoginPage');
+const CallbackPage = lazyPage(() => import('@/pages/AuthPage/CallbackPage'), 'CallbackPage');
+const SearchPage = lazyPage(() => import('@/pages/SearchPage'), 'SearchPage');
+const PlazaPage = lazyPage(() => import('@/pages/PlazaPage'), 'PlazaPage');
+const DrawPage = lazyPage(() => import('@/pages/DrawPage'), 'DrawPage');
+const TagsPage = lazyPage(() => import('@/pages/TagsPage'), 'TagsPage');
+const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPage');
+const AboutPage = lazyPage(() => import('@/pages/AboutPage'), 'AboutPage');
+const MePage = lazyPage(() => import('@/pages/MePage'), 'MePage');
+const UserProfilePage = lazyPage(() => import('@/pages/UserProfilePage'), 'UserProfilePage');
+const BooklistsPage = lazyPage(() => import('@/pages/BooklistsPage'), 'BooklistsPage');
+const BooklistDetailPage = lazyPage(
+  () => import('@/pages/BooklistDetailPage'),
+  'BooklistDetailPage',
+);
+const TournamentsPage = lazyPage(() => import('@/pages/TournamentsPage'), 'TournamentsPage');
+const MyTournamentsPage = lazyPage(() => import('@/pages/MyTournamentsPage'), 'MyTournamentsPage');
+const TournamentDetailPage = lazyPage(
+  () => import('@/pages/TournamentDetailPage'),
+  'TournamentDetailPage',
+);
+const TournamentManagePage = lazyPage(
+  () => import('@/pages/TournamentManagePage'),
+  'TournamentManagePage',
+);
+const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage');
+// 调试页只在 DEV / mock 模式下注册路由；作为独立 chunk 存在，生产环境永远不会被下载
+const TestPage = lazyPage(() => import('@/pages/TestPage'), 'TestPage');
 
 const isDevToolsEnabled = import.meta.env.DEV || import.meta.env.VITE_API_MOCKING === 'true';
+
+const PageFallback = () => (
+  <div className="flex min-h-[60vh] w-full items-center justify-center">
+    <OmicronLoader />
+  </div>
+);
+
+const withSuspense = (node: ReactNode) => <Suspense fallback={<PageFallback />}>{node}</Suspense>;
 
 const appChildren = [
   {
     index: true,
-    element: <PlazaPage />,
+    element: withSuspense(<PlazaPage />),
   },
   {
     path: 'search',
-    element: <SearchPage />,
+    element: withSuspense(<SearchPage />),
   },
   {
     path: 'tournaments',
-    element: <TournamentsPage />,
+    element: withSuspense(<TournamentsPage />),
   },
   {
     path: 'tournaments/mine',
-    element: <MyTournamentsPage />,
+    element: withSuspense(<MyTournamentsPage />),
   },
   {
     path: 'tournaments/manage/:booklistId',
-    element: <TournamentManagePage />,
+    element: withSuspense(<TournamentManagePage />),
   },
   {
     path: 'tournaments/:booklistId',
-    element: <TournamentDetailPage />,
+    element: withSuspense(<TournamentDetailPage />),
   },
   {
     path: 'draw',
-    element: <DrawPage />,
+    element: withSuspense(<DrawPage />),
   },
   {
     path: 'tags',
-    element: <TagsPage />,
+    element: withSuspense(<TagsPage />),
   },
   {
     path: 'booklists',
-    element: <BooklistsPage />,
+    element: withSuspense(<BooklistsPage />),
   },
   {
     path: 'booklists/:id',
-    element: <BooklistDetailPage />,
+    element: withSuspense(<BooklistDetailPage />),
   },
   {
     path: 'settings',
-    element: <SettingsPage />,
+    element: withSuspense(<SettingsPage />),
   },
   {
     path: 'me',
-    element: <MePage />,
+    element: withSuspense(<MePage />),
   },
   {
     path: 'u/:userId',
-    element: <UserProfilePage />,
+    element: withSuspense(<UserProfilePage />),
   },
   ...(isDevToolsEnabled
     ? [
       {
         path: 'test',
-        element: <TestPage />,
+        element: withSuspense(<TestPage />),
       },
     ]
     : []),
@@ -88,15 +116,15 @@ const appChildren = [
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <LoginPage />,
+    element: withSuspense(<LoginPage />),
   },
   {
     path: '/about',
-    element: <AboutPage />,
+    element: withSuspense(<AboutPage />),
   },
   {
     path: '/auth/callback',
-    element: <CallbackPage />,
+    element: withSuspense(<CallbackPage />),
   },
   {
     path: '/',
@@ -108,7 +136,7 @@ export const router = createBrowserRouter([
           ...appChildren,
           {
             path: '*',
-            element: <NotFoundPage />,
+            element: withSuspense(<NotFoundPage />),
           },
         ],
       },

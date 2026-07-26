@@ -51,6 +51,21 @@ export default defineConfig(({ mode }) => {
     build: {
       cssTarget: 'chrome100',
       target: 'esnext',
+      rollupOptions: {
+        output: {
+          // Rolldown 只接受函数形式；用最终路径段匹配，兼容 pnpm 的嵌套目录结构
+          manualChunks: (id: string) => {
+            if (!id.includes('node_modules')) return;
+            if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) {
+              return 'vendor-react';
+            }
+            if (id.includes('node_modules/@tanstack/')) return 'vendor-query';
+            if (/node_modules\/(motion|motion-dom|motion-utils|framer-motion)\//.test(id)) {
+              return 'vendor-motion';
+            }
+          },
+        },
+      },
     },
     test: {
       globals: true,

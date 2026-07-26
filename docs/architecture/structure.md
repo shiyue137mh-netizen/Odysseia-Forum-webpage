@@ -16,7 +16,9 @@ Odysseia-Forum-Main/
 │   │   │
 │   │   ├── pages/                  # [Pages 面向路由层] 每个路由对应的容器页面
 │   │   │   ├── SearchPage/         # 搜索主页
-│   │   │   ├── FollowsPage/        # 关注中心
+│   │   │   ├── DrawPage/           # 抽卡发现
+│   │   │   ├── TournamentsPage/    # 赛事域（另有 Detail / Manage / My 三个页面）
+│   │   │   ├── MePage/             # 我的空间（关注中心是它的 ?tab=follows）
 │   │   │   └── ...
 │   │   │
 │   │   ├── widgets/                # [Widgets 面向区块层] 组装多个特性的庞大独立 UI 块
@@ -26,8 +28,12 @@ Odysseia-Forum-Main/
 │   │   │
 │   │   ├── features/               # [Features 面向行为层] 带有明确业务闭环和网络读写的特性操作
 │   │   │   ├── auth/               # 认证流程 (登录守卫、会话管理)
+│   │   │   ├── authors/            # 作者卡片与作品悬浮预览
 │   │   │   ├── banner/             # 轮播图管理 (Banner 申请交互)
 │   │   │   ├── booklists/          # 书单系统 (书单增删改查、帖子批量加入)
+│   │   │   ├── discovery/          # 发现接口 (热点轨道、随机推荐)
+│   │   │   ├── draw/               # 抽卡揭晓浮层
+│   │   │   ├── easter-eggs/        # 彩蛋系统
 │   │   │   ├── follows/            # 关注系统 (未读状态拉取、更新中心)
 │   │   │   ├── mascot/             # 吉祥物面板 (全局提示、互动气泡)
 │   │   │   ├── notifications/      # 通知中心 (整合提醒、未读汇总)
@@ -35,12 +41,16 @@ Odysseia-Forum-Main/
 │   │   │   ├── plaza/              # 广场大盘
 │   │   │   ├── preferences/        # 用户偏好设置 (搜索习惯、标签过滤黑白名单)
 │   │   │   ├── search/             # 搜索中枢 (分词器、URL状态同步、API桥接)
-│   │   │   └── threads/            # 帖子行为总成 (点赞、转发、预览流等动作钩子)
+│   │   │   ├── tags/               # 标签目录
+│   │   │   ├── threads/            # 帖子行为总成 (点赞、转发、预览流等动作钩子)
+│   │   │   └── tournaments/        # 赛事 (本质是标记为 is_tournament 的书单)
 │   │   │
 │   │   ├── entities/               # [Entities 面向实体层] 以特定业务模型为核心的对象与轻量视图
-│   │   │   ├── thread/             # 帖子骨架与数据结构 (ThreadCard)
-│   │   │   ├── user/               # 用户卡片 (AuthorAvatar)
-│   │   │   └── channel/            # 频道展示区
+│   │   │   ├── thread/             # 帖子骨架与数据结构 (ThreadCard, ThreadListItem)
+│   │   │   ├── booklist/           # 书单卡片
+│   │   │   ├── tournament/         # 赛事类型 (Tournament = Booklist 的别名)
+│   │   │   └── user/               # 用户卡片 (AuthorAvatar)
+│   │   │                           # 注：频道没有 entity 层，统一由 shared/hooks/useChannels 提供
 │   │   │
 │   │   ├── shared/                 # [Shared 面向共享基建] 纯粹的通用组件与核心底层逻辑
 │   │   │   ├── ui/                 # 原子组件大盘 (Button, Tooltip, LazyImage)
@@ -62,7 +72,7 @@ Odysseia-Forum-Main/
 
 在日常开发中，如果你需要修改某一个特定的功能，可以通过如下规律快速定界：
 
-- **搜索与列表展现**: 主要被汇聚在了 `src/features/search/`。通过 `searchTokenizer` 提供分词功能，利用 `useSearchURLParams` 提取并监听 URL query 参数作为唯一数据源。而 `store` 被细分为控制纯 UI 的 `searchStore` (如 `isMainBannerVisible`, `activeBannerId`) 与独立处理帖子浮层数据的 `previewStore`。
+- **搜索与列表展现**: 主要被汇聚在了 `src/features/search/`。通过 `searchTokenizer` 提供分词功能，利用 `useSearchURLParams` 提取并监听 URL query 参数作为唯一数据源；帖子浮层数据由独立的 `previewStore` 承载。
 - **发现广场与抽卡**: `src/features/plaza/` 不再复用搜索接口，而是通过 `plazaApi.ts` 调用专用的后端发现接口（`/discovery/rails`、`/discovery/random`），在 `PlazaPage` 和 `DrawPage` 中直接获取独立组装的热点轨道或随机推荐帖子。
 - **全局预览浮层**: `src/widgets/thread-preview/`，响应 `previewStore` 的状态从而在任意页面顶部展示帖子快照阅读流。
 - **主框架皮肤与顶栏**: 放置在 `src/widgets/layout/` 中。这些区块天然包裹在页面周围，属于高度复用的骨架级挂件。
@@ -82,3 +92,11 @@ import { Thread } from "@/entities/thread/types";
 // ✅ 对于由 npm run gen:api 产生的类型文件，专用了强关联短标识
 import { paths } from "@shared-types/openapi";
 ```
+
+## 4. 分层依赖方向（有 lint 兜底）
+
+`shared < entities < features < widgets < pages < app`，**下层不得引用上层**。
+
+`eslint.config.js` 里用 `no-restricted-imports` 为每一层配置了禁止引用的上层路径。目前存量违规按 `warn` 计入 `pnpm lint` 的 `--max-warnings` 基线，**新增违规会让基线超标从而 CI 失败**。存量清单见 `docs/code-review-2026-07-26.md` §3.1，清零后应把规则提升为 `error`。
+
+常见的正确解法是 **props 注入** 而不是直接 import：底层组件暴露 `actionsSlot?: ReactNode` 之类的插槽，由上层把业务组件传进来。

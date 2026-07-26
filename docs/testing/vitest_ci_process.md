@@ -6,9 +6,12 @@
 
 在 `package.json` 中配置了以下快捷指令：
 
-- `npm run test` 或 `pnpm run test`: 执行全部测试并在文件改变时热更新 (Watch 模式)。
-- `npm run test:ui`: 启动提供可视化的测试管理面板 (Vitest UI)。
-- `npm run test:coverage`: 执行单次测试并输出基于 `v8` 引擎的代码覆盖率报告。
+- `pnpm test`: 执行全部测试并在文件改变时热更新 (Watch 模式)。**注意它不会自己退出**，CI 与脚本里不要用。
+- `pnpm test:run`: 单次运行，跑完即退出。CI 用的就是这条。
+- `pnpm test:ui`: 启动提供可视化的测试管理面板 (Vitest UI)。
+- `pnpm test:coverage`: 执行单次测试并输出基于 `v8` 引擎的代码覆盖率报告。
+
+> Vitest 4 已移除 `basic` reporter，`--reporter=basic` 会直接启动失败。`test:run` 用的是 `dot`。
 
 ## 2. 单元测试编写指南
 
@@ -44,16 +47,28 @@ src/features/auth/
 
 ## 3. Mock 机制 (网络请求与外部依赖)
 
-测试时绝不允许真的发起网络请求。前端通常面临两种层面的 mock：
+测试时不应真的发起网络请求。目前采用的是 **Hook 级别的 mock**：用 Vitest 原生的 `vi.mock()` 直接拦截自定义 hook 或 api 模块的返回值。
 
-1. **Mock 钩子 (Hook级别的 Mock)**：最简单的方法是使用 Vitest 原生的 `vi.mock()` 直接拦截 `useQuery` 自定义钩子的返回值。
-2. **Mock 网络 (MSW - Mock Service Worker)**: 针对高度依赖原生 Axios Fetch 操作的深度组件，在 `src/tests/setup.ts` 中可以配置 MSW 在网络层级劫持真实请求并返回 JSON。
+`src/tests/setup.ts` 目前只 stub 了 `IntersectionObserver`。
 
-## 4. CI/CD 流水线检查预设
+> ⚠️ **已知缺口**（2026-07-26 审查）：
+>
+> - **项目并没有安装 MSW。** 少数组件测试仍会让 axios 真的发起 XHR，靠「请求必然失败 → 走静态兜底」这条路径通过（运行日志里的 `AxiosError: Network Error` 就是它）。要么引入 msw，要么在 setup 里全局 stub `apiClient`。
+> - ~~`setup.ts` 缺 `ResizeObserver` / `matchMedia` / `scrollTo` 的 stub~~（2026-07-26 已补齐，与 `IntersectionObserver` stub 对齐）。
+> - `coverage` 没有配 `include`，未被 import 的源文件不计入分母，**覆盖率数字偏高**。
 
-由于团队经常涉及快速迭代，强建议项目托管（如 GitHub）启用如下自动化的合并前检视（PR Check 流水线）：
+## 4. CI 流水线
 
-1. **代码风格约束**: 每次 PR 执行 `pnpm run lint` 与 `pnpm run format` 检查。
-2. **TypeScript 类型校验**: 执行 `tsc --noEmit` 拦截潜在类型隐患。
-3. **单元测试网关**: 强制运行 `pnpm run test:coverage`，任何断言失败都会拦截代码合并。
-4. **编译期检测**: 执行 `pnpm run build` 保障最终编译成功。
+`.github/workflows/ci.yml` 在每次 push 到 main 与每个 PR 上运行，五道门禁**全部必须通过**：
+
+1. `pnpm typecheck` — `tsc -b`
+2. `pnpm lint` — ESLint，带 `--max-warnings` 棘轮基线
+3. `pnpm lint:styles` — Stylelint
+4. `pnpm test:run` — 单元测试
+5. `pnpm build` — 编译产物
+
+### 关于 lint 的棘轮基线
+
+`pnpm lint` 的 `--max-warnings <N>` 是**当前存量 warning 的数量**，不是 0。这样做是为了在不阻塞开发的前提下防止新增：任何新 warning 都会让总数超过 N 从而 CI 失败。
+
+修掉一批 warning 之后，请顺手把 `package.json` 里的这个数字**调低到新的实际值**——否则棘轮就松了。最终目标是降到 0 并去掉这个参数。

@@ -92,20 +92,24 @@ export function useTopBarSearchController({
   }, []);
 
   useEffect(() => {
-    const persisted = getPersistedDraftQuery();
-    
     if (params.query) {
       setSearchInput(params.query);
       setPersistedDraftQuery(params.query);
-    } else if (persisted) {
-      setSearchInput(persisted);
-      if (isSearchPage) {
-        setParams({ query: persisted });
-      }
-    } else {
-      setSearchInput("");
+      return;
     }
-  }, [params.query, isSearchPage, setParams]);
+
+    // URL 上没有 query 时，草稿只负责回填输入框，绝不反写回 URL。
+    // 此前这里会在搜索页上 setParams({ query: persisted })，于是「清除所有筛选」
+    // 刚把 URL 清空，草稿立刻又把旧搜索词写回去，用户看起来就像按钮没反应。
+    if (isSearchPage) {
+      // 搜索页上 URL 就是唯一数据源：URL 清空即视为用户主动清空，草稿一并作废
+      setSearchInput("");
+      setPersistedDraftQuery("");
+      return;
+    }
+
+    setSearchInput(getPersistedDraftQuery());
+  }, [params.query, isSearchPage]);
 
   useEffect(() => {
     setPersistedDraftChannel(params.channel);

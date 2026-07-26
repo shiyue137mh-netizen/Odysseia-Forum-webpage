@@ -2,7 +2,8 @@
  * usePreviewStore — 帖子预览独立状态
  *
  * 从 searchStore 中抽离，使"帖子预览"和"搜索条件"彻底解耦。
- * 消费者：GlobalThreadPreview, FloatingBanner, NotificationCenter, SearchPage, FollowsPage
+ * 消费者：GlobalThreadPreview, FloatingBanner, NotificationCenter, SearchPage,
+ * MePage 的关注 tab（/me?tab=follows）
  */
 
 import { create } from 'zustand';

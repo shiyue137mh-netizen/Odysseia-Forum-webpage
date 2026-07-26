@@ -1,4 +1,4 @@
-import { LayoutGrid, RefreshCw, Rows3, Trophy } from "lucide-react";
+import { RefreshCw, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
@@ -10,6 +10,7 @@ import {
 } from "@/features/booklists/hooks/useBooklistsData";
 import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 
 export function MyTournamentsPage() {
   const navigate = useNavigate();
@@ -40,36 +41,11 @@ export function MyTournamentsPage() {
           这里集中管理你举办的赛事，可以更新封面、简介，也可以整理参赛帖子。
         </p>
 
-        <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
-          <button
-            type="button"
-            onClick={() => setLayoutMode("list")}
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              layoutMode === "list"
-                ? "bg-(--od-accent) text-white"
-                : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-            }`}
-            aria-label="切换到列表展示"
-            title="列表展示"
-          >
-            <Rows3 className="h-3.5 w-3.5" />
-            列表
-          </button>
-          <button
-            type="button"
-            onClick={() => setLayoutMode("grid")}
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              layoutMode === "grid"
-                ? "bg-(--od-accent) text-white"
-                : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-            }`}
-            aria-label="切换到网格展示"
-            title="网格展示"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            网格
-          </button>
-        </div>
+        <LayoutModeToggle
+          value={layoutMode}
+          onChange={setLayoutMode}
+          className="mt-6"
+        />
       </section>
 
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">

@@ -200,35 +200,6 @@
 }
 
 @utility od-setting-row {
-  &:hover .od-choice-icon {
-    transition:
-      color 180ms ease,
-      opacity 180ms ease;
-  }
-
-  &:hover .od-choice-title {
-    transition:
-      color 180ms ease,
-      opacity 180ms ease;
-  }
-
-  &:hover .od-choice-value {
-    transition:
-      color 180ms ease,
-      opacity 180ms ease;
-  }
-
-  &:hover .od-choice-icon {
-    color: var(--od-accent);
-  }
-
-  &:hover .od-choice-title {
-    color: var(--od-accent);
-  }
-
-  &:hover .od-choice-value {
-    color: var(--od-accent);
-  }
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -237,6 +208,36 @@
   padding: 0.9rem 0;
   background: transparent;
   border-top: 1px solid color-mix(in srgb, var(--od-divider) 82%, transparent);
+
+  &:hover .od-choice-icon {
+    transition:
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  &:hover .od-choice-title {
+    transition:
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  &:hover .od-choice-value {
+    transition:
+      color 180ms ease,
+      opacity 180ms ease;
+  }
+
+  &:hover .od-choice-icon {
+    color: var(--od-accent);
+  }
+
+  &:hover .od-choice-title {
+    color: var(--od-accent);
+  }
+
+  &:hover .od-choice-value {
+    color: var(--od-accent);
+  }
 
   &:first-child {
     border-top: 0;

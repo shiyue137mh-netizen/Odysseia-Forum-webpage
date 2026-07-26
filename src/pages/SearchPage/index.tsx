@@ -1,4 +1,5 @@
 import { ThreadCardSkeleton } from "@/entities/thread/ThreadCardSkeleton";
+import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { ThreadListItemSkeleton } from "@/entities/thread/ThreadListItemSkeleton";
 import { ThreadResultsCollection } from "@/entities/thread/ThreadResultsCollection";
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
@@ -31,14 +32,12 @@ import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 import { AnimatedPagination } from "@/shared/ui/AnimatedPagination";
 import { scrollPageToTop } from "@/shared/lib/pageScroll";
+import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import {
   ArrowUpDown,
   Compass,
   MoveDown,
   MoveUp,
-  LayoutGrid,
-  Columns3,
-  Rows3,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -72,7 +71,6 @@ export function SearchPage() {
   );
   const resultPagingMode = useResultPagingModeSetting();
   const hasTriggeredSearchCueRef = useRef<string | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const lastSearchLocationRef = useRef<string | null>(null);
 
   const {
@@ -100,6 +98,10 @@ export function SearchPage() {
   const booklistTotal = booklistQuery.data?.total ?? 0;
   const searchTotalPages = Math.max(1, Math.ceil(totalResults / pageSize));
   const isInfiniteMode = resultPagingMode === "infinite";
+  const loadMoreRef = useInfiniteScrollTrigger(infiniteQueryState, {
+    rootMargin: "360px",
+    enabled: isInfiniteMode,
+  });
   useSearchWhisper(query);
 
   useEffect(() => {
@@ -185,28 +187,6 @@ export function SearchPage() {
     }
   }, [preferences, params.sortMethod, query, setParams]);
 
-  useEffect(() => {
-    if (!isInfiniteMode) return;
-
-    const target = loadMoreRef.current;
-    if (!target || !infiniteQueryState.hasNextPage) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (
-          entry.isIntersecting &&
-          infiniteQueryState.hasNextPage &&
-          !infiniteQueryState.isFetchingNextPage
-        ) {
-          infiniteQueryState.fetchNextPage();
-        }
-      },
-      { rootMargin: "360px" },
-    );
-
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [infiniteQueryState, isInfiniteMode]);
 
   const isThreadTab = params.type === "thread";
   const showDiscoveryHub =
@@ -366,53 +346,13 @@ export function SearchPage() {
               </div>
             )}
 
-            <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
-              {isThreadTab && (
-                <button
-                  type="button"
-                  onClick={() => setLayoutMode("masonry")}
-                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                    layoutMode === "masonry"
-                      ? "bg-(--od-accent) text-white"
-                      : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                  }`}
-                  aria-label="切换到实验性瀑布流展示"
-                  title="瀑布流展示（实验性）"
-                >
-                  <Columns3 className="h-3.5 w-3.5" />
-                  瀑布
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setLayoutMode("list")}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "list"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                }`}
-                aria-label="切换到列表展示"
-                title="列表展示"
-              >
-                <Rows3 className="h-3.5 w-3.5" />
-                列表
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayoutMode("grid")}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "grid" ||
-                  (!isThreadTab && layoutMode === "masonry")
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                }`}
-                aria-label="切换到网格展示"
-                title="网格展示"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                网格
-              </button>
-            </div>
+            <LayoutModeToggle
+              value={
+                !isThreadTab && layoutMode === "masonry" ? "grid" : layoutMode
+              }
+              onChange={setLayoutMode}
+              showMasonry={isThreadTab}
+            />
 
             {isThreadTab && hasSearchFilters && (
               <button

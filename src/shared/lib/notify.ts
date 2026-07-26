@@ -17,15 +17,6 @@ export function notifySuccess(message: string, options?: NotifyMessageOptions) {
   });
 }
 
-export function notifyInfo(message: string, options?: NotifyMessageOptions) {
-  return showMascotToast({
-    emotion: 'hi',
-    title: '宝宝的小提醒',
-    message,
-    duration: DEFAULT_DURATION,
-    ...options,
-  });
-}
 
 export function notifyError(message: string, options?: NotifyMessageOptions) {
   // 这里的 message 可能是后端返回的原始错误，我们后续可以增加更智能的解析

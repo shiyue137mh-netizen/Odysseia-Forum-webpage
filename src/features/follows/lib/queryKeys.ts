@@ -4,5 +4,4 @@ export const followsKeys = {
   all: ['follows'] as const,
   list: (params: FollowsQueryParams = {}) => [...followsKeys.all, 'list', params] as const,
   unreadCount: () => [...followsKeys.all, 'unread-count'] as const,
-  combined: (params: FollowsQueryParams = {}) => [...followsKeys.all, 'combined', params] as const,
 };

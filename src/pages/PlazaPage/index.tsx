@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Dices, Plus, RotateCw, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -12,11 +11,17 @@ import {
   discoveryApi,
   type DiscoveryRailKey,
 } from "@/features/discovery/api/discoveryApi";
+import {
+  DISCOVERY_RAIL_LIMIT,
+  useDiscoveryRails,
+} from "@/features/discovery/hooks/useDiscoveryRails";
 import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
-import { plazaApi } from "@/features/plaza/api/plazaApi";
-import { plazaKeys } from "@/features/plaza/lib/queryKeys";
+import {
+  usePlazaBanners,
+  usePlazaFeaturedBooklists,
+} from "@/features/plaza/hooks/usePlazaData";
 import { usePreviewStore } from "@/features/search/store/previewStore";
 import { useTournamentsList } from "@/features/tournaments/hooks/useTournamentsData";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
@@ -28,8 +33,6 @@ import {
   ThreadRankingPanel,
 } from "@/widgets/content-display/ContentDisplayCards";
 import { BannerCarousel } from "@/widgets/layout/BannerCarousel";
-
-const RAIL_LIMIT = 20;
 
 interface RailRefreshButtonProps {
   label: string;
@@ -82,17 +85,8 @@ export function PlazaPage() {
     [preferences],
   );
 
-  const bannersQuery = useQuery({
-    queryKey: plazaKeys.banners(),
-    queryFn: plazaApi.getBanners,
-    staleTime: 60 * 1000,
-  });
-
-  const booklistsQuery = useQuery({
-    queryKey: plazaKeys.booklists(),
-    queryFn: plazaApi.getFeaturedBooklists,
-    staleTime: 2 * 60 * 1000,
-  });
+  const bannersQuery = usePlazaBanners();
+  const booklistsQuery = usePlazaFeaturedBooklists();
 
   const tournamentsQuery = useTournamentsList({
     pageIndex: 0,
@@ -101,20 +95,7 @@ export function PlazaPage() {
     sortOrder: "desc",
   });
 
-  const railsQuery = useQuery({
-    queryKey: plazaKeys.rails({
-      limit: RAIL_LIMIT,
-      days: 30,
-      applyPreferences: !ignorePreferenceFilter,
-    }),
-    queryFn: () =>
-      discoveryApi.getRails({
-        limit: RAIL_LIMIT,
-        days: 30,
-        apply_preferences: !ignorePreferenceFilter,
-      }),
-    staleTime: 90 * 1000,
-  });
+  const railsQuery = useDiscoveryRails(!ignorePreferenceFilter);
 
   useEffect(() => {
     if (!railsQuery.data) return;
@@ -147,7 +128,7 @@ export function PlazaPage() {
         const currentList = railThreadsMap[key] || [];
         const currentOffset = railOffsets[key] ?? currentList.length;
         let nextThreads = await discoveryApi.getRail(key, {
-          limit: RAIL_LIMIT,
+          limit: DISCOVERY_RAIL_LIMIT,
           days: 30,
           offset: currentOffset,
           apply_preferences: !ignorePreferenceFilter,
@@ -156,7 +137,7 @@ export function PlazaPage() {
 
         if (nextThreads.length === 0 && currentOffset > 0) {
           nextThreads = await discoveryApi.getRail(key, {
-            limit: RAIL_LIMIT,
+            limit: DISCOVERY_RAIL_LIMIT,
             days: 30,
             offset: 0,
             apply_preferences: !ignorePreferenceFilter,

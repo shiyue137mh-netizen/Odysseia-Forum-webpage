@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
-  LayoutGrid,
   Plus,
   RefreshCw,
-  Rows3,
   Search,
   SlidersHorizontal,
 } from "lucide-react";
@@ -28,6 +26,7 @@ import { AnimatedPagination } from "@/shared/ui/AnimatedPagination";
 import { useBooklistURLParams } from "@/features/booklists/hooks/useBooklistURLParams";
 import { useCardGridClass, useSettings } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 
 type BooklistScope = "public" | "mine" | "collected";
 
@@ -208,36 +207,7 @@ export function BooklistsPage() {
           </div>
 
           <div className="flex justify-end">
-            <div className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1">
-              <button
-                type="button"
-                onClick={() => setLayoutMode("list")}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "list"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                }`}
-                aria-label="切换到列表展示"
-                title="列表展示"
-              >
-                <Rows3 className="h-3.5 w-3.5" />
-                列表
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayoutMode("grid")}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  layoutMode === "grid"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
-                }`}
-                aria-label="切换到网格展示"
-                title="网格展示"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                网格
-              </button>
-            </div>
+            <LayoutModeToggle value={layoutMode} onChange={setLayoutMode} />
           </div>
         </div>
       </section>

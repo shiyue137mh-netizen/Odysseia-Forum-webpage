@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { FileText, MessageCircle, ThumbsUp, UserRoundX } from "lucide-react";
 import {
   type CSSProperties,
@@ -14,9 +13,11 @@ import { toast } from "sonner";
 
 import type { Author, Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
-import { authorsApi } from "@/features/authors/api/authorsApi";
+import {
+  useAuthorProfile,
+  useAuthorRecentWorks,
+} from "@/features/authors/hooks/useAuthorsData";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
-import { searchApi } from "@/features/search/api/searchApi";
 import { usePreviewStore } from "@/features/search/store/previewStore";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { LazyImage } from "@/shared/ui/LazyImage";
@@ -224,31 +225,12 @@ export function AuthorWorksHoverCard({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [confirmBlockOpen]);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: [
-      "search",
-      "author-works-hover",
-      author.id,
-      currentThreadId || null,
-    ],
-    queryFn: () =>
-      searchApi.search({
-        include_authors: [author.id],
-        exclude_thread_ids: currentThreadId ? [currentThreadId] : undefined,
-        apply_preferences: true,
-        limit: 3,
-        sort_method: "created_desc",
-      }),
-    enabled: isOpen,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data, isLoading, isError, refetch } = useAuthorRecentWorks(
+    author.id,
+    { excludeThreadId: currentThreadId, enabled: isOpen },
+  );
 
-  const { data: profile } = useQuery({
-    queryKey: ["author-profile", author.id],
-    queryFn: () => authorsApi.getAuthorProfile(author.id),
-    enabled: isOpen,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: profile } = useAuthorProfile(author.id, { enabled: isOpen });
 
   const threads = (data?.results || []) as Thread[];
 

@@ -4,27 +4,41 @@ import { followsApi, type FollowsQueryParams } from '@/features/follows/api/foll
 import { followsKeys } from '@/features/follows/lib/queryKeys';
 import { extractErrorMessage, notifyError, notifySuccess } from '@/shared/lib/notify';
 
-export function useFollowedThreads(params: FollowsQueryParams = {}) {
+interface EnabledOption {
+  enabled?: boolean;
+}
+
+export function useFollowedThreads(params: FollowsQueryParams = {}, { enabled = true }: EnabledOption = {}) {
   return useQuery({
     queryKey: followsKeys.list(params),
     queryFn: () => followsApi.getFollowsRaw(params),
     staleTime: 60 * 1000,
+    enabled,
   });
 }
 
-export function useUnreadFollowCount() {
+export function useUnreadFollowCount({ enabled = true }: EnabledOption = {}) {
   return useQuery({
     queryKey: followsKeys.unreadCount(),
     queryFn: followsApi.getUnreadCount,
     staleTime: 60 * 1000,
     refetchInterval: 30 * 1000,
     refetchOnWindowFocus: true,
+    enabled,
   });
 }
 
-export function useFollowsFeed(params: FollowsQueryParams = {}) {
-  const followsQuery = useFollowedThreads(params);
-  const unreadQuery = useUnreadFollowCount();
+interface FollowsFeedOptions extends EnabledOption {
+  /** 完整列表通常只在面板展开时才需要；未读数则要常驻，红点依赖它。 */
+  listEnabled?: boolean;
+}
+
+export function useFollowsFeed(
+  params: FollowsQueryParams = {},
+  { enabled = true, listEnabled = true }: FollowsFeedOptions = {},
+) {
+  const followsQuery = useFollowedThreads(params, { enabled: enabled && listEnabled });
+  const unreadQuery = useUnreadFollowCount({ enabled });
 
   return {
     data: {

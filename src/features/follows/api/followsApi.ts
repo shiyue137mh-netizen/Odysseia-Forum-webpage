@@ -66,7 +66,7 @@ export const followsApi = {
 
   /**
    * 获取关注列表 + 未读数量的组合数据
-   * 兼容现有 FollowsPage 使用的结构
+   * 兼容 MePage 关注 tab 使用的结构
    */
   getFollows: async (params: FollowsQueryParams = {}): Promise<FollowsResponse> => {
     const [follows, unread] = await Promise.all([
