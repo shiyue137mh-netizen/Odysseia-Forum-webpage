@@ -34,6 +34,7 @@ import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
+import { PageStatusMessage } from "@/shared/ui/PageStatusMessage";
 
 function toTournamentThread(item: BooklistItem): Thread {
   return threadFromBooklistItem(item, { is_tournament: true });
@@ -80,38 +81,34 @@ export function TournamentManagePage() {
   );
 
   if (!normalizedBooklistId) {
-    return <div className="p-8 text-sm text-(--od-error)">无效赛事 ID</div>;
+    return <PageStatusMessage tone="error">无效赛事 ID</PageStatusMessage>;
   }
 
   if (detailQuery.isLoading || itemsQuery.isLoading) {
-    return (
-      <div className="p-8 text-sm text-(--od-text-secondary)">
-        正在帮你加载赛事管理台...
-      </div>
-    );
+    return <PageStatusMessage>正在帮你加载赛事管理台...</PageStatusMessage>;
   }
 
   if (detailQuery.isError || !tournament) {
     return (
-      <div className="p-8 text-sm text-(--od-error)">
+      <PageStatusMessage tone="error">
         赛事加载出错了，可能不存在或已经被删除了
-      </div>
+      </PageStatusMessage>
     );
   }
 
   if (!tournament.is_tournament) {
     return (
-      <div className="p-8 text-sm text-(--od-error)">
+      <PageStatusMessage tone="error">
         这个书单不是赛事书单，不能在这里管理。
-      </div>
+      </PageStatusMessage>
     );
   }
 
   if (!isOwner) {
     return (
-      <div className="p-8 text-sm text-(--od-error)">
+      <PageStatusMessage tone="error">
         只有赛事举办者可以管理这个赛事。
-      </div>
+      </PageStatusMessage>
     );
   }
 

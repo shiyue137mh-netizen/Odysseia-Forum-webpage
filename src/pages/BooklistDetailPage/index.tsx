@@ -52,6 +52,7 @@ import {
 } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
+import { PageStatusMessage } from "@/shared/ui/PageStatusMessage";
 import { resolveDiscordPublishedMessageUrl } from "@/shared/lib/discord";
 
 export function BooklistDetailPage() {
@@ -131,22 +132,18 @@ export function BooklistDetailPage() {
   const loadMoreRef = useInfiniteScrollTrigger(itemsQuery);
 
   if (!booklistId) {
-    return <div className="p-8 text-sm text-(--od-error)">无效书单 ID</div>;
+    return <PageStatusMessage tone="error">无效书单 ID</PageStatusMessage>;
   }
 
   if (detailQuery.isLoading || itemsQuery.isLoading) {
-    return (
-      <div className="p-8 text-sm text-(--od-text-secondary)">
-        正在帮你加载书单...
-      </div>
-    );
+    return <PageStatusMessage>正在帮你加载书单...</PageStatusMessage>;
   }
 
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <div className="p-8 text-sm text-(--od-error)">
+      <PageStatusMessage tone="error">
         书单加载出错了，可能不存在或已经被删除了
-      </div>
+      </PageStatusMessage>
     );
   }
 
