@@ -1,29 +1,21 @@
-import {
-  BookOpen,
-  Calendar,
-  Clock3,
-  Eye,
-  Image as ImageIcon,
-  MessageCircle,
-  ThumbsUp,
-} from "lucide-react";
+import { BookOpen, Calendar, Clock3, Image as ImageIcon } from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 
+import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
+import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
+import { ThreadTagList } from "@/entities/thread/ThreadTagList";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
-import { ThreadAchievementTag } from "@/entities/thread/ThreadAchievementTag";
 import type { Thread } from "@/entities/thread/types";
+import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
 import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
 import {
   useCardSizeSetting,
-  useFontSizeSetting,
   useImageModeSetting,
 } from "@/shared/hooks/useSettings";
-import { formatRelativeDateTime } from "@/shared/lib/dateTime";
-import { fontSizeMap } from "@/shared/lib/settings";
 import { DiscordMarkdownText } from "@/shared/ui/DiscordMarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { LazyImage } from "@/shared/ui/LazyImage";
@@ -61,8 +53,17 @@ function ThreadCardImpl({
       onPreview?.(thread);
     }
   };
-  const fontSize = useFontSizeSetting();
-  const fontSizes = fontSizeMap[fontSize];
+  const {
+    fontSize,
+    fontSizes,
+    quickAddOpen,
+    setQuickAddOpen,
+    createdTime,
+    lastActiveTime,
+    virtualOnlyTags,
+    hasExcerpt,
+    animationDelay,
+  } = useThreadCardModel(thread, index);
   const cardSize = useCardSizeSetting();
   const imageMode = useImageModeSetting();
 
@@ -79,7 +80,6 @@ function ThreadCardImpl({
   const titleTrackRef = useRef<HTMLSpanElement>(null);
   const [titleShift, setTitleShift] = useState(0);
   const [isTitleHovered, setIsTitleHovered] = useState(false);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const shouldMarquee = isTitleHovered && titleShift > 0;
 
   useEffect(() => {
@@ -108,17 +108,6 @@ function ThreadCardImpl({
     return () => window.removeEventListener("resize", updateTitleShift);
   }, [thread.title, fontSize, searchQuery]);
 
-  const createdTime = formatRelativeDateTime(thread.created_at);
-  const lastActiveTime = thread.last_active_at
-    ? formatRelativeDateTime(thread.last_active_at)
-    : null;
-  const virtualOnlyTags = (thread.virtual_tags || []).filter(
-    (tag) => !thread.tags.includes(tag),
-  );
-  const hasExcerpt =
-    !!thread.first_message_excerpt &&
-    thread.first_message_excerpt.trim() !== "...";
-
   const mediaAspectClass =
     cardSize === "compact"
       ? "aspect-3/4"
@@ -135,7 +124,7 @@ function ThreadCardImpl({
         onKeyDown={handleKeyDown}
         className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
-          animationDelay: `${(index % 24) * 40}ms`,
+          animationDelay,
           WebkitTapHighlightColor: "transparent",
         }}
         onMouseDown={(e) => {
@@ -312,83 +301,17 @@ function ThreadCardImpl({
             </div>
 
             <div className="min-h-11 content-start">
-              {(thread.reaction_count >= 100 || thread.tags.length > 0 || virtualOnlyTags.length > 0) && (
-                <div className="flex flex-wrap gap-1.5">
-                  <ThreadAchievementTag reactionCount={thread.reaction_count} variant="card" />
-                  {thread.tags.slice(0, 3).map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onTagClick?.(tag);
-                      }}
-                      className="rounded-md border border-(--od-border)/30 bg-(--od-surface-raised)/60 px-2 py-0.5 text-[10px] text-(--od-text-secondary) transition-colors hover:bg-(--od-surface-raised) hover:text-(--od-text-primary)"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                  {thread.tags.length > 3 && (
-                    <span className="rounded-md border border-(--od-border)/30 bg-(--od-surface-raised)/60 px-2 py-0.5 text-[10px] text-(--od-text-secondary)">
-                      +{thread.tags.length - 3}
-                    </span>
-                  )}
-                  {virtualOnlyTags.slice(0, 2).map((tag) => (
-                    <span
-                      key={`vt-${tag}`}
-                      className="rounded-md border border-cyan-200/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-500"
-                    >
-                      ~{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <ThreadTagList
+                thread={thread}
+                virtualOnlyTags={virtualOnlyTags}
+                onTagClick={onTagClick}
+                variant="card"
+              />
             </div>
 
-            {booklistComment !== undefined && (
-              <p className="min-h-12 line-clamp-2 text-xs leading-6 text-(--od-text-secondary)">
-                {booklistComment ? (
-                  <>
-                    <span className="font-medium text-(--od-accent)">
-                      推荐语
-                    </span>
-                    <span className="mx-1 text-(--od-text-tertiary)">/</span>
-                    {booklistComment}
-                  </>
-                ) : (
-                  "\u00a0"
-                )}
-              </p>
-            )}
+            <ThreadBooklistComment comment={booklistComment} variant="card" />
 
-            <div className="mt-auto grid grid-cols-3 gap-2 text-(--od-text-tertiary)">
-              <span
-                className="inline-flex min-w-0 items-center gap-1 text-[11px]"
-                title="浏览量"
-              >
-                <Eye className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 truncate text-[clamp(9px,1.8vw,11px)] font-medium tabular-nums">
-                  {thread.display_count}
-                </span>
-              </span>
-              <span
-                className="inline-flex min-w-0 items-center gap-1 text-[11px]"
-                title="回复数"
-              >
-                <MessageCircle className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 truncate text-[clamp(9px,1.8vw,11px)] font-medium tabular-nums">
-                  {thread.reply_count}
-                </span>
-              </span>
-              <span
-                className="inline-flex min-w-0 items-center gap-1 text-[11px]"
-                title="点赞数"
-              >
-                <ThumbsUp className="h-3.5 w-3.5 shrink-0" />
-                <span className="min-w-0 truncate text-[clamp(9px,1.8vw,11px)] font-medium tabular-nums">
-                  {thread.reaction_count}
-                </span>
-              </span>
-            </div>
+            <ThreadStatsRow thread={thread} variant="card" />
 
             {!hideBottomDivider && (
               <div className="h-px w-full bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-border-strong)_36%,transparent),transparent)]" />
