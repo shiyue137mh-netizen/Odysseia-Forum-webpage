@@ -379,6 +379,17 @@ URL(q) ─┬─> parseParams ──> params ──> useSearchResults ──> se
 
 ---
 
+## 附：整改状态（2026-07-26，分支 `chore/code-review-fixes`）
+
+四阶段路线图 30 条全部落地，共 17 个 checkpoint commit。两处与原建议不同的决定：
+
+- **第 22 条（`@utility` 加 `od-` 前缀）：复核后不改。** 实测两条同名定义并存时是 transition-duration 与 animation-duration 各自生效，实际危害低；而改名波及 51 处调用点，且会让 19 处入场动画的 `duration-500` 语义从 0.5s 退化为 Tailwind 内置的 0.3s，风险大于收益。保留现状，后续升级 Tailwind 时再评估。
+- **第 29 条（补 tournaments API 测试）：对象已消失。** 解环时（第 26 条）`tournamentsApi` 纯转发层被整个删除，tournaments hooks 直接复用 `booklistsApi`，无独立 API 层可测。
+
+另有两项范围说明：第 27 条 discovery 域的 rails 查询原挂在 `plazaKeys` 下，本次归位为 `discoveryKeys` 并建 hooks；MePage / TestPage 的少量裸 useQuery 属 me / 调试域，不在四域范围内，未动。
+
+---
+
 ## 附：审查方法与可信度
 
 - 所有"未使用"结论均有 grep 证据，已二次核实：`three`/`ahooks`/`date-fns`/`embla-carousel-react`/`remark-gfm`/`class-variance-authority`/`react-virtual` 在 `src/` 下均为 **0 命中**；`src/features/followers/` 确认 **0 个文件**；`React.lazy`/`Suspense` 确认 **0 处**。

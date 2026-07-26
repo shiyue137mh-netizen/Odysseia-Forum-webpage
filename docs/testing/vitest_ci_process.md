@@ -54,7 +54,7 @@ src/features/auth/
 > ⚠️ **已知缺口**（2026-07-26 审查）：
 >
 > - **项目并没有安装 MSW。** 少数组件测试仍会让 axios 真的发起 XHR，靠「请求必然失败 → 走静态兜底」这条路径通过（运行日志里的 `AxiosError: Network Error` 就是它）。要么引入 msw，要么在 setup 里全局 stub `apiClient`。
-> - `setup.ts` 缺 `ResizeObserver` / `matchMedia` / `scrollTo` 的 stub。现在没炸只是因为大部分组件还没有测试覆盖，补组件测试时会连环报错。
+> - ~~`setup.ts` 缺 `ResizeObserver` / `matchMedia` / `scrollTo` 的 stub~~（2026-07-26 已补齐，与 `IntersectionObserver` stub 对齐）。
 > - `coverage` 没有配 `include`，未被 import 的源文件不计入分母，**覆盖率数字偏高**。
 
 ## 4. CI 流水线
