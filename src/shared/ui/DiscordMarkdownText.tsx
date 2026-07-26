@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 
 import { Spoiler } from '@/shared/ui/Spoiler';
 
@@ -7,15 +8,17 @@ interface DiscordMarkdownTextProps {
   truncateClassName?: string;
 }
 
-export function DiscordMarkdownText({ text, className = '', truncateClassName = '' }: DiscordMarkdownTextProps) {
-  if (!text) return null;
+type MarkdownPart =
+  | { type: 'text' | 'spoiler' | 'bold' | 'code'; content: string }
+  | { type: 'link'; text: string; url: string };
 
-  // 简易行内 Markdown 解析器
-  // 匹配: 链接 [text](url) | 粗体 **text** | 行内代码 `code`
+// 简易行内 Markdown 解析器
+// 匹配: 链接 [text](url) | 剧透 ||text|| | 粗体 **text** | 行内代码 `code`
+function parseDiscordMarkdown(text: string): MarkdownPart[] {
   const regex = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\|\|(.+?)\|\||\*\*([^*]+)\*\*|`([^`]+)`/g;
-  const parts = [];
+  const parts: MarkdownPart[] = [];
   let lastIndex = 0;
-  
+
   let match;
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
@@ -37,10 +40,20 @@ export function DiscordMarkdownText({ text, className = '', truncateClassName = 
 
     lastIndex = regex.lastIndex;
   }
-  
+
   if (lastIndex < text.length) {
     parts.push({ type: 'text', content: text.substring(lastIndex) });
   }
+
+  return parts;
+}
+
+export function DiscordMarkdownText({ text, className = '', truncateClassName = '' }: DiscordMarkdownTextProps) {
+  // 列表页每张卡片的摘要都要经过这里，解析结果按 text 缓存，
+  // 与 MarkdownText 的 useMemo 策略保持一致。
+  const parts = useMemo(() => (text ? parseDiscordMarkdown(text) : []), [text]);
+
+  if (!text) return null;
 
   return (
     <span className={`inline ${className} ${truncateClassName}`}>
