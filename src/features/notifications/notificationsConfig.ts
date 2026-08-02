@@ -1,10 +1,22 @@
 import { APP_VERSION, RELEASE_FEED_URL } from '@/shared/config/appInfo';
-import type { Thread } from '@/entities/thread/types';
 import { parse as parseYaml } from 'yaml';
 import serverIconUrl from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
 
 // ── 通知类型 ──────────────────────────────────────────
 export type NotificationKind = 'release' | 'announcement' | 'maintenance';
+export type NotificationPresentation = 'inbox' | 'required';
+
+export interface StaticNotificationContent {
+  title: string;
+  message: string;
+  tags: string[];
+  virtual_tags: string[];
+  thumbnail_urls: string[];
+  author: {
+    name: string;
+    avatar_url: string | null;
+  };
+}
 
 export interface StaticNotificationDefinition {
   id: string;
@@ -16,7 +28,9 @@ export interface StaticNotificationDefinition {
   expires_at: string | null;
   version?: string;
   url?: string;
-  previewThread?: Thread;
+  presentation: NotificationPresentation;
+  acknowledgement: string;
+  content: StaticNotificationContent;
 }
 
 export interface ResolvedNotificationContext {
@@ -34,22 +48,18 @@ interface ReleaseFeedItem {
   source?: 'webpage' | 'system';
   version?: string;
   url?: string;
+  presentation?: NotificationPresentation;
+  acknowledgement?: string;
   min_app_version?: string;
   starts_at?: string;
   expires_at?: string;
   preview_thread?: {
-    thread_id?: string;
-    guild_id?: string;
-    channel_id?: string;
     title?: string;
-    created_at?: string;
-    last_active_at?: string | null;
     first_message_excerpt?: string;
     thumbnail_urls?: string[];
     tags?: string[];
     virtual_tags?: string[];
     author?: {
-      id?: string;
       name?: string;
       global_name?: string | null;
       display_name?: string;
@@ -93,43 +103,18 @@ function resolveKind(item: ReleaseFeedItem): NotificationKind {
 
 // ── 数据转换 ──────────────────────────────────────────
 
-function toPreviewThread(item: ReleaseFeedItem): Thread {
+function toNotificationContent(item: ReleaseFeedItem): StaticNotificationContent {
   const preview = item.preview_thread;
-  const createdAt = preview?.created_at ?? item.created_at;
-  const author = preview?.author
-    ? {
-        id: preview.author.id ?? `notification-author-${item.id}`,
-        name: preview.author.name ?? preview.author.display_name ?? 'Odysseia',
-        global_name: preview.author.global_name ?? null,
-        display_name: preview.author.display_name ?? preview.author.name ?? 'Odysseia',
-        // 默认头像：服务器 icon
-        avatar_url: preview.author.avatar_url ?? serverIconUrl,
-      }
-    : {
-        id: `notification-author-${item.id}`,
-        name: 'Odysseia',
-        global_name: null,
-        display_name: 'Odysseia',
-        avatar_url: serverIconUrl,
-      };
-
   return {
-    thread_id: preview?.thread_id ?? `notification-${item.id}`,
-    guild_id: preview?.guild_id,
-    channel_id: preview?.channel_id ?? 'notification',
     title: preview?.title ?? item.title,
-    author,
-    created_at: createdAt,
-    last_active_at: preview?.last_active_at ?? createdAt,
-    reaction_count: 0,
-    reply_count: 0,
-    display_count: 0,
-    first_message_excerpt: preview?.first_message_excerpt ?? item.message,
+    message: preview?.first_message_excerpt ?? item.message,
     tags: preview?.tags ?? [],
     virtual_tags: preview?.virtual_tags ?? [],
     thumbnail_urls: preview?.thumbnail_urls ?? [],
-    collected_flag: false,
-    has_update: false,
+    author: {
+      name: preview?.author?.display_name ?? preview?.author?.global_name ?? preview?.author?.name ?? 'Odysseia',
+      avatar_url: preview?.author?.avatar_url ?? serverIconUrl,
+    },
   };
 }
 
@@ -145,7 +130,11 @@ function mapFeedItem(item: ReleaseFeedItem): StaticNotificationDefinition {
     expires_at: item.expires_at ?? null,
     version: item.version,
     url: item.url,
-    previewThread: toPreviewThread(item),
+    presentation: item.presentation === 'required' ? 'required' : 'inbox',
+    acknowledgement: typeof item.acknowledgement === 'string' && item.acknowledgement.trim()
+      ? item.acknowledgement
+      : '我已了解',
+    content: toNotificationContent(item),
   };
 }
 

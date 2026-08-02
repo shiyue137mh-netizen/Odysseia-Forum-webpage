@@ -88,6 +88,7 @@ npm run dev
 - [项目的全身检查报告 (Overview)](docs/architecture/overview.md)
 - [大家住的房间分布 (Structure)](docs/architecture/structure.md)
 - [每个房间的门牌号功能 (Pages Overview)](docs/architecture/pages_overview.md)
+- [动态 Open Graph 跨端实施方案](docs/architecture/dynamic_open_graph.md)
 - [该怎么开发这个网站 (Development Guide)](docs/development/)
 - [怎么保护大家不要被抢走 (Security)](docs/development/security.md)
 - [给大家的代码做定期的体格检查 (Testing & CI)](docs/testing/vitest_ci_process.md)

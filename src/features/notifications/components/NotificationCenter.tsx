@@ -6,17 +6,23 @@ import { useFollowsFeed, useMarkAllFollowsViewed } from '@/features/follows/hook
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import type { Thread } from '@/entities/thread/types';
 import { APP_VERSION } from '@/shared/config/appInfo';
-import { resolveStaticNotifications, type NotificationKind } from '@/features/notifications/notificationsConfig';
+import {
+  resolveStaticNotifications,
+  type NotificationKind,
+  type StaticNotificationDefinition,
+} from '@/features/notifications/notificationsConfig';
 import { usePreviewStore } from '@/features/search/store/previewStore';
 import { useThemeSettings } from '@/shared/hooks/useSettings';
 import { formatRelativeDateTime } from '@/shared/lib/dateTime';
 import { extractErrorMessage, notifyError } from '@/shared/lib/notify';
 import { LazyImage } from '@/shared/ui/LazyImage';
+import { NotificationAnnouncementModal } from '@/features/notifications/components/NotificationAnnouncementModal';
 
 // ── LocalStorage 工具 ──────────────────────────────────
 
 const LS_LAST_OPENED = 'od_notifications_last_opened_at';
 const LS_DISMISSED = 'od_notifications_dismissed';
+const LS_ACKNOWLEDGED = 'od_notifications_acknowledged';
 
 function getLastOpenedAt(): string | null {
   if (typeof window === 'undefined') return null;
@@ -32,7 +38,8 @@ function getDismissedIds(): string[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = window.localStorage.getItem(LS_DISMISSED);
-    return raw ? (JSON.parse(raw) as string[]) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
   } catch {
     return [];
   }
@@ -42,6 +49,26 @@ function setDismissedIds(ids: string[]) {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(LS_DISMISSED, JSON.stringify(ids));
+  } catch {
+    // ignore
+  }
+}
+
+function getAcknowledgedIds(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(LS_ACKNOWLEDGED);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function setAcknowledgedIds(ids: string[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LS_ACKNOWLEDGED, JSON.stringify(ids));
   } catch {
     // ignore
   }
@@ -66,6 +93,7 @@ interface NotificationItem {
   message: string;
   created_at?: string;
   thread?: Thread;
+  staticNotification?: StaticNotificationDefinition;
 }
 
 interface NotificationCenterProps {
@@ -88,6 +116,8 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
 
   // 手动 dismiss 的 ID 列表（永久隐藏）
   const [dismissedIds, setDismissedIdsState] = useState<string[]>(() => getDismissedIds());
+  const [acknowledgedIds, setAcknowledgedIdsState] = useState<string[]>(() => getAcknowledgedIds());
+  const [selectedStaticId, setSelectedStaticId] = useState<string | null>(null);
 
   // 关注帖子更新的 dismiss 记录
   const [dismissedFollowUpdates, setDismissedFollowUpdates] = useState<Record<string, string>>({});
@@ -96,6 +126,10 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
   useEffect(() => {
     setDismissedIds(dismissedIds);
   }, [dismissedIds]);
+
+  useEffect(() => {
+    setAcknowledgedIds(acknowledgedIds);
+  }, [acknowledgedIds]);
 
   // ── 数据拉取 ──
 
@@ -131,7 +165,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
         title: def.title,
         message: def.message,
         created_at: def.created_at,
-        thread: def.previewThread,
+        staticNotification: def,
       })),
     [staticDefs, dismissedIds],
   );
@@ -160,6 +194,19 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
     () => [...staticNotifications, ...followNotifications],
     [staticNotifications, followNotifications],
   );
+
+  const pendingRequiredNotification = useMemo(
+    () => [...staticDefs]
+      .filter((def) => def.presentation === 'required' && !acknowledgedIds.includes(def.id))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0] ?? null,
+    [acknowledgedIds, staticDefs],
+  );
+  const selectedStaticNotification = useMemo(
+    () => staticDefs.find((def) => def.id === selectedStaticId) ?? null,
+    [selectedStaticId, staticDefs],
+  );
+  const activeStaticNotification = pendingRequiredNotification ?? selectedStaticNotification;
+  const activeRequiresAcknowledgement = pendingRequiredNotification?.id === activeStaticNotification?.id;
 
   // ── 未读计算 ──
 
@@ -214,10 +261,17 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
       return;
     }
 
-    setPreviewThread(item.thread ?? null, {
-      hideExternalButton: true,
-      externalUrlOverride: null,
-    });
+    if (item.staticNotification) setSelectedStaticId(item.staticNotification.id);
+  };
+
+  const handleAnnouncementClose = () => {
+    if (!activeStaticNotification) return;
+    if (activeRequiresAcknowledgement) {
+      setAcknowledgedIdsState((prev) => (
+        prev.includes(activeStaticNotification.id) ? prev : [...prev, activeStaticNotification.id]
+      ));
+    }
+    setSelectedStaticId(null);
   };
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
@@ -259,12 +313,13 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
     }
   };
 
-  if (!open) return null;
+  if (!open && !activeStaticNotification) return null;
 
   const hasAnyNotification = allNotifications.length > 0;
 
   return (
-    <div
+    <>
+    {open && <div
       role="dialog"
       aria-modal="true"
       aria-label="通知中心"
@@ -344,6 +399,9 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
               const unread = isUnread(item);
               const kc = item.kind !== 'follow_update' ? kindConfig[item.kind] : null;
               const KindIcon = kc?.icon;
+              const canDismiss = item.kind !== 'follow_update' && (
+                item.staticNotification?.presentation !== 'required' || acknowledgedIds.includes(item.id)
+              );
 
               return (
                 <div
@@ -374,12 +432,17 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
                           关注更新
                         </span>
                       )}
+                      {item.staticNotification?.presentation === 'required' && (
+                        <span className="rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                          {acknowledgedIds.includes(item.id) ? '已确认' : '需确认'}
+                        </span>
+                      )}
                       {item.created_at && (
                         <span className="whitespace-nowrap text-[10px] text-(--od-text-tertiary)">
                           {formatRelativeDateTime(item.created_at)}
                         </span>
                       )}
-                      {item.kind !== 'follow_update' && (
+                      {canDismiss && (
                         <button
                           type="button"
                           onClick={(e) => handleDismiss(item.id, e)}
@@ -430,6 +493,15 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
           </div>
         )}
       </div>
-    </div>
+    </div>}
+    {activeStaticNotification && (
+      <NotificationAnnouncementModal
+        key={activeStaticNotification.id}
+        notification={activeStaticNotification}
+        required={activeRequiresAcknowledgement}
+        onClose={handleAnnouncementClose}
+      />
+    )}
+    </>
   );
 }

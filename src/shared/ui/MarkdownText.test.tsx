@@ -35,7 +35,9 @@ describe('MarkdownText', () => {
 
     fireEvent.click(link);
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog.parentElement).toBe(document.body);
     expect(screen.getByText('example.com')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '继续前往' }));
@@ -55,5 +57,19 @@ describe('MarkdownText', () => {
 
     expect(container.querySelectorAll('code.inline-code')).toHaveLength(0);
     expect(container.querySelector('pre.code-block code')?.textContent).toBe('const x = `xx`;');
+  });
+
+  it('只高亮 Markdown 文本节点，不破坏链接与代码', () => {
+    const { container } = render(
+      <MarkdownText
+        text={'**Odysseia** [Odysseia](https://discord.com/channels/1/3) `Odysseia`'}
+        highlight="Odysseia"
+      />,
+    );
+
+    expect(container.querySelectorAll('mark')).toHaveLength(2);
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://discord.com/channels/1/3');
+    expect(container.querySelector('code.inline-code')).toHaveTextContent('Odysseia');
+    expect(container.querySelector('code.inline-code mark')).toBeNull();
   });
 });

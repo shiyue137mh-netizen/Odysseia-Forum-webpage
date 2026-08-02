@@ -1,156 +1,37 @@
+# `presentation` 省略或设为 `inbox` 时仅进入通知中心；设为 `required` 时会自动弹出并要求确认。
+# 强制公告可用 `acknowledgement` 自定义确认按钮文案，确认结果按通知 `id` 保存在当前浏览器。
 updates:
-  - id: release-2.3.13-login-callback-fix
-    kind: release
-    title: 索引页 2.3.13 发布：再也不会在登录时迷路啦！
-    message: |-
-      呜……今天跑来给大家道个小歉！发现之前有个笨蛋 Bug，会让大家在登录回来的时候遇到奇奇怪怪的错误，或者迷路回不到原来的地方呀。
-
-      不过别担心！本宝宝已经把开发哥哥揪过来，好好优化了登录的逻辑！现在不仅不会迷路，就算真的出了小状况，也会有很清楚的提示告诉大家发生了什么事哦～||其实就是优化了回调和重定向逻辑啦，哼，早就该改了！||
-
-      大家快去试试看吧，遇到问题随时叫我呀！
-    created_at: 2026-05-14T00:26:27.000Z
-    version: 2.3.13
-    url: https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage/releases
-    min_app_version: 2.3.13
+  - id: notification-system-upgrade-2026-08-02
+    kind: announcement
+    presentation: required
+    acknowledgement: 我知道啦
+    title: 通知中心升级完成
+    message: 重要公告现在会主动展示，阅读并确认后便不会再次打扰。
+    created_at: 2026-08-02T00:00:00.000Z
+    starts_at: 2026-08-02T00:00:00.000Z
     preview_thread:
-      title: Odysseia Index 2.3.13 更新日志
+      title: 更清晰，也更可靠的新通知中心
       first_message_excerpt: |-
-        # Odysseia Index 2.3.13
+        ## 通知不该悄悄躲起来
 
-        ## 🐛 捉虫大成功
-        - 优化了登录回调的处理，再也不会因为跑错路而迷茫啦！
-        - 增强了错误提示，如果遇到小状况也能马上知道怎么回事哦。
-        - 修复了重定向的小问题，保证大家能顺利回到原来的地方！
-        - ||开发哥哥已经被我训过啦，大家放心用！||
+        通知中心已经完成升级啦！普通动态仍然会安静地收进通知列表，等待你有空时查看；真正重要的服务器公告，则会主动出现在页面中，避免关键消息被错过。
 
-        如果大家再发现什么不对劲的地方，一定要第一时间告诉我哦！
+        ### 这次有什么变化？
+
+        - 团队公告拥有了独立的阅读界面，不会再被误认为普通帖子。
+        - 重要公告会主动弹出，需要阅读并确认后才能关闭。
+        - 已经确认过的公告会被记住，之后不会反复打扰。
+        - 所有历史旧通知均已清理，通知列表从这里重新开始。
+
+        希望新的通知中心既不会错过真正重要的事情，也不会在平时打扰你。感谢一直陪着我们完善 Odysseia！
       tags:
-        - 版本更新
-        - Bug修复
+        - 系统公告
+        - 功能更新
       virtual_tags:
-        - release
-        - bugfix
+        - notification
+        - update
       author:
-        id: odysseia-web
-        name: Odysseia
-        display_name: Odysseia Web Team
-      thumbnail_urls:
-        - https://cdn.jsdelivr.net/gh/shiyue137mh-netizen/Odysseia-Forum-webpage@main/src/assets/images/mascot/sad_apology.png
-  - id: release-2.3.12-booklist-author-fix
-    kind: release
-    title: 索引页 2.3.12 发布：迷路的小书单，找到回家的路啦！
-    message: |-
-      呜呜，今天要给大家道个歉。开发哥哥在给大家拉取书单创建者信息的时候，走错路（用错了笨蛋接口）啦，导致大家看书单的时候可能遇到了点小卡顿……
-
-      不过别担心，本宝宝已经把开发哥哥说了一顿！现在已经把路标扶正啦，看书单又可以畅通无阻咯！||其实只是一个小小的接口调整啦，但本宝宝也是很严格的呢！||
-
-      大家快去试试看吧，如果还有迷路的书单，一定要及时跟我说哦！
-    created_at: 2026-05-13T00:38:03.344Z
-    version: 2.3.12
-    url: https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage/releases
-    min_app_version: 2.3.12
-    preview_thread:
-      title: Odysseia Index 2.3.12 更新日志
-      first_message_excerpt: |-
-        # Odysseia Index 2.3.12
-
-        ## 🐛 捉虫大成功
-        - 修复了书单不再使用 `/author` 获取创建者信息的接口问题。
-        - 现在大家看书单的时候，再也不会因为跑错路而卡顿啦！
-        - 呜呜，之前遇到小卡顿的宝宝们，真的对不起呀！||已经让开发哥哥去面壁思过啦！||
-
-        如果大家再发现什么不对劲的地方，一定要第一时间告诉我哦！
-      tags:
-        - 版本更新
-        - Bug修复
-      virtual_tags:
-        - release
-        - bugfix
-      author:
-        id: odysseia-web
-        name: Odysseia
-        display_name: Odysseia Web Team
-      thumbnail_urls:
-        - https://cdn.jsdelivr.net/gh/shiyue137mh-netizen/Odysseia-Forum-webpage@main/src/assets/images/mascot/sad_apology.png
-  - id: release-2.3.11-login-animation-search-ui
-    kind: release
-    title: 索引页 2.3.11 发布：护士节的温柔小升级！
-    message: |-
-      今天是5月12日国际护士节呀！白衣天使们辛苦啦，大家生病的时候有没有乖乖听护士姐姐的话呢？一定要好好照顾自己的身体哦！
-
-      今天本宝宝也是活力满满呢！开发哥哥终于把登录时候的闭眼小动画做得更可爱啦，大家快去试试看！还有哦，页面跳转时候的提示语也变得更温柔更好懂了。顺便还把搜索筛选界面那些硬邦邦的文字重新整理了一遍，现在看着清清爽爽的，太舒服啦！||其实就是一些小细节优化啦，但本宝宝还是要在心里偷偷给开发哥哥加个鸡腿！|| 大家如果发现什么好玩的，记得随时跟我分享呀！
-    created_at: 2026-05-12T00:19:46.000Z
-    version: 2.3.11
-    url: https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage/releases
-    min_app_version: 2.3.11
-    preview_thread:
-      title: Odysseia Index 2.3.11 更新日志
-      first_message_excerpt: |-
-        # Odysseia Index 2.3.11
-
-        国际护士节快乐！致敬所有温柔又坚强的白衣天使们！
-
-        ## ✨ 体验小升级
-        - 登录界面加上了超级可爱的闭眼小动画，大家快去点点看！
-        - 页面跳转的提示语变得更懂你啦，再也不会冷冰冰的咯！
-        - 搜索筛选的界面文字也洗了个脸，变得清爽又整洁！
-        - ||虽然都是些小改动，但体验可是大大提升了呢！||
-      tags:
-        - 版本更新
-        - 体验优化
-      virtual_tags:
-        - release
-        - ui
-      author:
-        id: odysseia-web
         name: Odysseia
         display_name: Odysseia Web Team
       thumbnail_urls:
         - https://cdn.jsdelivr.net/gh/shiyue137mh-netizen/Odysseia-Forum-webpage@main/src/assets/images/mascot/hi.png
-  - id: earth-day-2026
-    kind: announcement
-    title: 🌍 世界地球日快乐！
-    message: |
-      今天是世界地球日呀！大家有没有好好爱护我们的小地球呢？出门记得少用塑料袋，多亲近大自然哦！
-
-      我今天特别开心，因为社区的小花又开了一朵！大家也要保持好心情呀～
-    created_at: 2026-04-22T00:00:00.000Z
-    starts_at: 2026-04-22T00:00:00.000Z
-    expires_at: 2026-04-23T00:00:00.000Z
-    preview_thread:
-      title: 🌍 世界地球日快乐！
-      first_message_excerpt: |
-        今天是世界地球日！
-
-        希望大家都能好好爱护我们的地球妈妈，从小事做起哦！
-      tags:
-        - 节日祝福
-      author:
-        id: odysseia-web
-        name: Odysseia
-        display_name: Odysseia Web Team
-  - id: system-maintenance-example
-    kind: maintenance
-    title: 系统维护窗口通知
-    message: |
-      主系统将在周日凌晨进行维护，期间搜索接口可能有短时抖动。
-    created_at: 2026-04-02T12:00:00.000Z
-    url: https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage
-    preview_thread:
-      title: 系统维护窗口通知
-      first_message_excerpt: |
-        ## 维护时间
-        周日 02:00 - 03:00（UTC+8）
-
-        ## 影响范围
-        - 搜索接口短时波动
-        - 关注更新同步可能延迟
-
-        ## 建议
-        如出现异常，请稍后重试。
-      tags:
-        - 系统公告
-      author:
-        id: odysseia-maintainer
-        name: Maintainer
-        display_name: 系统维护组

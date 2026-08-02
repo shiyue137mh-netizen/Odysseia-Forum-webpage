@@ -4,6 +4,7 @@ import { ExternalLinkWarningDialog } from '@/shared/ui/ExternalLinkWarningDialog
 
 interface MarkdownTextProps {
   text: string;
+  highlight?: string;
 }
 
 interface PendingExternalLink {
@@ -100,8 +101,44 @@ function parseMarkdown(text: string): string {
   return html;
 }
 
-export function MarkdownText({ text }: MarkdownTextProps) {
-  const html = useMemo(() => parseMarkdown(text), [text]);
+function highlightHtmlText(html: string, highlight: string): string {
+  const keyword = highlight.trim();
+  if (!keyword || typeof document === 'undefined') return html;
+
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  const walker = document.createTreeWalker(template.content, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+
+  const pattern = new RegExp(`(${escapeRegExp(keyword)})`, 'gi');
+  for (const textNode of textNodes) {
+    if (textNode.parentElement?.closest('code, pre')) continue;
+    const parts = textNode.data.split(pattern);
+    if (parts.length === 1) continue;
+
+    const fragment = document.createDocumentFragment();
+    for (const part of parts) {
+      if (part.toLowerCase() === keyword.toLowerCase()) {
+        const mark = document.createElement('mark');
+        mark.className = 'rounded bg-[#5865f2]/30 px-0.5 font-semibold text-[#00a8fc]';
+        mark.textContent = part;
+        fragment.append(mark);
+      } else {
+        fragment.append(document.createTextNode(part));
+      }
+    }
+    textNode.replaceWith(fragment);
+  }
+
+  return template.innerHTML;
+}
+
+export function MarkdownText({ text, highlight = '' }: MarkdownTextProps) {
+  const html = useMemo(
+    () => highlightHtmlText(parseMarkdown(text), highlight),
+    [highlight, text],
+  );
   const [pendingExternalLink, setPendingExternalLink] = useState<PendingExternalLink | null>(null);
 
   const handleClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {

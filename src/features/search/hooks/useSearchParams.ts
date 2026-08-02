@@ -25,7 +25,7 @@ export type SortMethod =
 export type SortOrder = "asc" | "desc";
 
 export type TagLogic = "and" | "or";
-export type SearchTargetType = "thread" | "booklist";
+export type SearchTargetType = "thread" | "booklist" | "tournament";
 
 export interface SearchParams {
   query: string;
@@ -108,7 +108,9 @@ export function parseParams(sp: URLSearchParams): SearchParams {
     rawTagLogic === "or" || rawTagLogic === "and" ? rawTagLogic : DEFAULT_TAG_LOGIC;
 
   const rawType = sp.get("type");
-  const type: SearchTargetType = rawType === "booklist" ? "booklist" : "thread";
+  const type: SearchTargetType = rawType === "booklist" || rawType === "tournament"
+    ? rawType
+    : "thread";
   const rawPage = Number.parseInt(sp.get("page") || "1", 10);
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
   const sortOrder: SortOrder = sp.get("order") === "asc" ? "asc" : "desc";
@@ -163,6 +165,7 @@ export function useSearchURLParams() {
         updates.page === undefined &&
         ((updates.query !== undefined && updates.query !== current.query) ||
           (updates.channel !== undefined && updates.channel !== current.channel) ||
+          (updates.type !== undefined && updates.type !== current.type) ||
           (updates.sortMethod !== undefined && updates.sortMethod !== current.sortMethod) ||
           (updates.sortOrder !== undefined && updates.sortOrder !== current.sortOrder) ||
           (updates.tagLogic !== undefined && updates.tagLogic !== current.tagLogic) ||

@@ -18,6 +18,7 @@ export function useTournamentsList(params: {
   pageSize: number;
   sortMethod: number;
   sortOrder?: "asc" | "desc";
+  keywords?: string;
 }) {
   const listParams = {
     scope: "public" as const,
@@ -25,6 +26,7 @@ export function useTournamentsList(params: {
     pageSize: params.pageSize,
     sortMethod: params.sortMethod,
     sortOrder: params.sortOrder,
+    keywords: params.keywords,
     isTournament: true,
   };
 
@@ -36,6 +38,7 @@ export function useTournamentsList(params: {
         pageSize: params.pageSize,
         sortMethod: params.sortMethod,
         sortOrder: params.sortOrder,
+        keywords: params.keywords,
         isTournament: true,
       }),
     staleTime: 60 * 1000,

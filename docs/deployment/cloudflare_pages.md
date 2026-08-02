@@ -100,6 +100,10 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 
 ### 书单动态 OG
 
+跨端认证、后端接口契约、安全边界和验收流程详见
+[`docs/architecture/dynamic_open_graph.md`](../architecture/dynamic_open_graph.md)。当前 Pages
+Function 原型已经部署，但在后端机器认证完成前会因 `401` 安全回退到站点默认 OG。
+
 `functions/booklists/[id].js` 会在边缘节点读取公开书单数据，并显式通过
 `env.ASSETS` 获取 React 的 `index.html`。不能在这个路由里依赖 `public/_redirects`
 完成 SPA 回退，因为 Cloudflare 不会对已经命中 Function 的请求应用 `_redirects`。

@@ -8,7 +8,7 @@ import {
   User,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { ImageCarousel } from "@/entities/thread/ImageCarousel";
@@ -25,9 +25,10 @@ import {
   formatAbsoluteDateTime,
   formatRelativeDateTime,
 } from "@/shared/lib/dateTime";
-import { addToken } from "@/shared/lib/searchTokenizer";
+import { addToken, tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
 import { fontSizeMap } from "@/shared/lib/settings";
 import { MarkdownText } from "@/shared/ui/MarkdownText";
+import { HighlightText } from "@/shared/ui/HighlightText";
 import { AuthorRecommendations } from "@/features/threads/components/AuthorRecommendations";
 import { SimilarRecommendations } from "@/features/threads/components/SimilarRecommendations";
 
@@ -166,6 +167,10 @@ export function ThreadPreviewOverlay({
     (tag) => !thread.tags?.includes(tag),
   );
   const images = thread.thumbnail_urls || [];
+  const searchHighlight = useMemo(
+    () => tokenizeSearchPayload(params.query || "").text.trim(),
+    [params.query],
+  );
 
   const searchableAuthorName =
     thread.author?.display_name ??
@@ -297,7 +302,7 @@ export function ThreadPreviewOverlay({
             id="thread-preview-title"
             className="mt-4 min-w-0 max-w-full text-xl font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) [overflow-wrap:anywhere]"
           >
-            {thread.title}
+            <HighlightText text={thread.title} highlight={searchHighlight} />
           </h2>
         </div>
 
@@ -364,7 +369,7 @@ export function ThreadPreviewOverlay({
               <div
                 className={`mb-6 min-w-0 max-w-full [overflow-wrap:anywhere] ${fontSizes.content} text-(--od-text-secondary)`}
               >
-                <MarkdownText text={thread.first_message_excerpt} />
+                <MarkdownText text={thread.first_message_excerpt} highlight={searchHighlight} />
               </div>
             )}
 

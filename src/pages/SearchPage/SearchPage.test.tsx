@@ -63,6 +63,14 @@ describe('SearchPage 交互测试', () => {
     expect(mockSetParams).toHaveBeenCalledWith({ type: 'booklist' });
   });
 
+  it('切换到赛事时应该更新搜索类型', async () => {
+    render(<SearchPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: '赛事' }));
+
+    expect(mockSetParams).toHaveBeenCalledWith({ type: 'tournament' });
+  });
+
   it('点击清除所有筛选时应该恢复默认搜索参数', async () => {
     // 模拟有活动筛选的状态
     (useSearchURLParams as any).mockReturnValue({

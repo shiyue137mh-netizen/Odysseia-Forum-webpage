@@ -50,6 +50,10 @@ describe('useSearchParams URL 协议层', () => {
       const params = parseParams(sp);
       expect(params.sortMethod).toBe('created_desc');
     });
+
+    it('应该能解析赛事搜索类型', () => {
+      expect(parseParams(new URLSearchParams('type=tournament')).type).toBe('tournament');
+    });
   });
 
   describe('serializeParams', () => {
@@ -84,6 +88,10 @@ describe('useSearchParams URL 协议层', () => {
       expect(sp.get('channel')).toBe('news');
       expect(sp.get('sort')).toBe('relevance');
       expect(sp.get('tag_logic')).toBe('or');
+    });
+
+    it('应该序列化赛事搜索类型', () => {
+      expect(serializeParams({ type: 'tournament' }).get('type')).toBe('tournament');
     });
   });
 
@@ -123,6 +131,25 @@ describe('useSearchParams URL 协议层', () => {
 
       const nextParams = new URLSearchParams(result.current.location.search);
       expect(nextParams.get('sort')).toBe('relevance');
+    });
+
+    it('切换到赛事搜索时应该回到第一页', () => {
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(
+          MemoryRouter,
+          { initialEntries: ['/search?type=booklist&page=3'] },
+          children,
+        );
+      const { result } = renderHook(
+        () => ({ search: useSearchURLParams(), location: useLocation() }),
+        { wrapper },
+      );
+
+      act(() => result.current.search.setParams({ type: 'tournament' }));
+
+      const nextParams = new URLSearchParams(result.current.location.search);
+      expect(nextParams.get('type')).toBe('tournament');
+      expect(nextParams.get('page')).toBeNull();
     });
   });
 });

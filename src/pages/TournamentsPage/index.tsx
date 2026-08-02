@@ -5,8 +5,10 @@ import {
   Pencil,
   RefreshCw,
   Rows3,
+  Search,
   SlidersHorizontal,
   Trophy,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -40,13 +42,15 @@ export function TournamentsPage() {
   const collectMutation = useToggleBooklistCollection();
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
 
-  const { sort: sortMethod, page } = params;
+  const { sort: sortMethod, page, query } = params;
+  const [searchDraft, setSearchDraft] = useState(query);
   const pageIndex = page - 1;
 
   const listQuery = useTournamentsList({
     sortMethod,
     pageIndex,
     pageSize: 12,
+    keywords: query || undefined,
   });
 
   const tournaments = listQuery.data?.results ?? [];
@@ -65,9 +69,14 @@ export function TournamentsPage() {
   }, [tournaments]);
 
   const summaryText = useMemo(() => {
+    if (query) return `找到 ${total} 个匹配赛事`;
     if (total <= 0) return "赛事档案正在整理中";
     return `正在展示 ${total} 个赛事合集`;
-  }, [total]);
+  }, [query, total]);
+
+  useEffect(() => {
+    setSearchDraft(query);
+  }, [query]);
 
   useEffect(() => {
     if (activeBannerIndex < bannerSlides.length) return;
@@ -232,19 +241,58 @@ export function TournamentsPage() {
 
         <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4">
-              <SlidersHorizontal className="h-4 w-4 text-(--od-text-tertiary)" />
-              <Select
-                value={String(sortMethod)}
-                options={sortOptions.map((o) => ({
-                  value: String(o.value),
-                  label: o.label,
-                }))}
-                onChange={(v) => {
-                  setParams({ sort: Number.parseInt(v, 10), page: 1 });
+            <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setParams({ query: searchDraft });
                 }}
-                variant="inline"
-              />
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4"
+              >
+                <Search className="h-4 w-4 shrink-0 text-(--od-text-tertiary)" />
+                <input
+                  type="search"
+                  value={searchDraft}
+                  onChange={(event) => setSearchDraft(event.target.value)}
+                  placeholder="搜索赛事标题或简介"
+                  aria-label="搜索赛事"
+                  className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-(--od-text-primary) outline-none placeholder:text-(--od-text-tertiary)"
+                />
+                {searchDraft && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchDraft("");
+                      setParams({ query: "" });
+                    }}
+                    className="text-(--od-text-tertiary) transition-colors hover:text-(--od-text-primary)"
+                    aria-label="清除赛事搜索"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="shrink-0 text-xs font-semibold text-(--od-accent) transition-colors hover:text-(--od-accent-hover)"
+                >
+                  搜索
+                </button>
+              </form>
+
+              <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4">
+                <SlidersHorizontal className="h-4 w-4 text-(--od-text-tertiary)" />
+                <Select
+                  value={String(sortMethod)}
+                  options={sortOptions.map((o) => ({
+                    value: String(o.value),
+                    label: o.label,
+                  }))}
+                  onChange={(v) => {
+                    setParams({ sort: Number.parseInt(v, 10), page: 1 });
+                  }}
+                  variant="inline"
+                />
+              </div>
             </div>
 
             <button
@@ -280,10 +328,10 @@ export function TournamentsPage() {
           ) : tournaments.length === 0 ? (
             <div className="py-14 text-center">
               <p className="text-base font-semibold text-(--od-text-primary)">
-                暂无赛事
+                {query ? "没有找到匹配赛事" : "暂无赛事"}
               </p>
               <p className="mt-1 text-sm text-(--od-text-secondary)">
-                等活动开始后，这里会出现对应的赛事合集。
+                {query ? "试试换一个关键词。" : "等活动开始后，这里会出现对应的赛事合集。"}
               </p>
             </div>
           ) : (

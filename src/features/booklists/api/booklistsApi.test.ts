@@ -36,6 +36,29 @@ describe("booklistsApi", () => {
     );
   });
 
+  it("searches tournaments through the public booklist endpoint", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { results: [] } });
+
+    await booklistsApi.listPublic({
+      keywords: "绘画",
+      isTournament: true,
+      pageIndex: 1,
+      pageSize: 12,
+    });
+
+    expect(apiClient.get).toHaveBeenCalledWith(
+      "/booklist/list/page",
+      expect.objectContaining({
+        params: expect.objectContaining({
+          keywords: "绘画",
+          is_tournament: true,
+          limit: 12,
+          offset: 12,
+        }),
+      }),
+    );
+  });
+
   it("sends a Snowflake ID to sync without converting it to a number", async () => {
     vi.mocked(apiClient.post).mockResolvedValue({ data: {} });
     const payload = {

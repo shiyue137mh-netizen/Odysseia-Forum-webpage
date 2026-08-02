@@ -4,6 +4,7 @@ import { ThreadListItemSkeleton } from "@/entities/thread/ThreadListItemSkeleton
 import { ThreadResultsCollection } from "@/entities/thread/ThreadResultsCollection";
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
 import { BooklistListItem } from "@/entities/booklist/BooklistListItem";
+import { TournamentListItem } from "@/features/tournaments/components/TournamentListItem";
 import { useSearchWhisper } from "@/features/easter-eggs/hooks/useSearchWhisper";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import { SearchDiscoveryHub } from "@/features/search/components/SearchDiscoveryHub";
@@ -28,7 +29,11 @@ import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferen
 import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { useChannels } from "@/shared/hooks/useChannels";
-import { addToken, parseSearchQuery } from "@/shared/lib/searchTokenizer";
+import {
+  addToken,
+  parseSearchQuery,
+  tokenizeSearchPayload,
+} from "@/shared/lib/searchTokenizer";
 import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 import { AnimatedPagination } from "@/shared/ui/AnimatedPagination";
@@ -58,6 +63,12 @@ export function SearchPage() {
   const location = useLocation();
   const { params, setParams } = useSearchURLParams();
   const { query, channel: selectedChannel } = params;
+  const isThreadTab = params.type === "thread";
+  const isTournamentTab = params.type === "tournament";
+  const collectionKeywords = useMemo(
+    () => tokenizeSearchPayload(query).text,
+    [query],
+  );
 
   const { preferences } = useUserPreferences({ guildId: GUILD_ID });
   const collectBooklistMutation = useToggleBooklistCollection();
@@ -91,14 +102,18 @@ export function SearchPage() {
 
   const booklistQuery = useBooklistsList({
     scope: "public",
-    keywords: query || undefined,
+    keywords: collectionKeywords || undefined,
     sortMethod: 3,
-    pageIndex: 0,
+    pageIndex: params.page - 1,
     pageSize: 12,
+    isTournament: isTournamentTab,
+    enabled: !isThreadTab,
   });
 
   const booklistResults = booklistQuery.data?.results ?? [];
   const booklistTotal = booklistQuery.data?.total ?? 0;
+  const booklistPageSize = booklistQuery.data?.limit ?? 12;
+  const booklistTotalPages = Math.max(1, Math.ceil(booklistTotal / booklistPageSize));
   const searchTotalPages = Math.max(1, Math.ceil(totalResults / pageSize));
   const isInfiniteMode = resultPagingMode === "infinite";
   const loadMoreRef = useInfiniteScrollTrigger(infiniteQueryState, {
@@ -206,7 +221,6 @@ export function SearchPage() {
   }, [preferences, params.sortMethod, queryTokens, setParams]);
 
 
-  const isThreadTab = params.type === "thread";
   const showDiscoveryHub =
     isThreadTab &&
     !params.query.trim() &&
@@ -283,7 +297,7 @@ export function SearchPage() {
                     <span>已加载 {results.length} 条</span>
                   </>
                 )}
-                {selectedChannelName && (
+                {isThreadTab && selectedChannelName && (
                   <>
                     <span className="opacity-30">•</span>
                     <span>频道 {selectedChannelName}</span>
@@ -325,6 +339,17 @@ export function SearchPage() {
                 }`}
               >
                 书单
+              </button>
+              <button
+                type="button"
+                onClick={() => setParams({ type: "tournament" })}
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                  params.type === "tournament"
+                    ? "bg-(--od-accent) text-white"
+                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                }`}
+              >
+                赛事
               </button>
             </div>
 
@@ -518,10 +543,10 @@ export function SearchPage() {
               <SlidersHorizontal className="h-10 w-10" />
             </div>
             <h3 className="mb-2 text-xl font-bold text-(--od-text-primary)">
-              书单搜索出错了
+              {isTournamentTab ? "赛事搜索出错了" : "书单搜索出错了"}
             </h3>
             <p className="mb-6 text-(--od-text-secondary)">
-              暂时拉不到书单结果，稍后再试试吧。
+              暂时拉不到{isTournamentTab ? "赛事" : "书单"}结果，稍后再试试吧。
             </p>
             <button
               onClick={() => booklistQuery.refetch()}
@@ -531,45 +556,72 @@ export function SearchPage() {
             </button>
           </div>
         ) : booklistResults.length > 0 ? (
-          <div
-            className={
-              layoutMode === "list"
-                ? "flex flex-col space-y-od-list-gap"
-                : gridClass
-            }
-          >
-            {booklistResults.map((booklist) => {
-              const commonProps = {
-                booklist,
-                canManage: false,
-                onOpen: (id: number) => navigate(`/booklists/${id}`),
-                onToggleCollect: (item: typeof booklist) =>
-                  collectBooklistMutation.mutate({
-                    id: item.id,
-                    collected: Boolean(item.collected_flag),
-                  }),
-                onEdit: () => undefined,
-                onDelete: () => undefined,
-                collectLoading: collectBooklistMutation.isPending,
-              };
+          <div className="flex flex-col gap-6">
+            <div
+              className={
+                layoutMode === "list"
+                  ? "flex flex-col space-y-od-list-gap"
+                  : gridClass
+              }
+            >
+              {booklistResults.map((booklist) => {
+                if (isTournamentTab && layoutMode === "list") {
+                  return (
+                    <TournamentListItem
+                      key={booklist.id}
+                      tournament={booklist}
+                      onOpen={(tournament) => navigate(`/tournaments/${tournament.id}`)}
+                      onToggleCollect={(item) =>
+                        collectBooklistMutation.mutate({
+                          id: item.id,
+                          collected: Boolean(item.collected_flag),
+                        })
+                      }
+                      collectLoading={collectBooklistMutation.isPending}
+                    />
+                  );
+                }
 
-              return layoutMode === "list" ? (
-                <BooklistListItem
-                  key={booklist.id}
-                  {...commonProps}
-                  ownerName={
-                    booklist.author?.display_name ||
-                    booklist.author?.global_name ||
-                    booklist.author?.name ||
-                    undefined
-                  }
-                  ownerAvatarUrl={booklist.author?.avatar_url ?? null}
-                  coverImageUrl={booklist.cover_image_url || null}
-                />
-              ) : (
-                <BooklistCard key={booklist.id} {...commonProps} />
-              );
-            })}
+                const commonProps = {
+                  booklist,
+                  canManage: false,
+                  onOpen: (id: number) => navigate(
+                    isTournamentTab ? `/tournaments/${id}` : `/booklists/${id}`,
+                  ),
+                  onToggleCollect: (item: typeof booklist) =>
+                    collectBooklistMutation.mutate({
+                      id: item.id,
+                      collected: Boolean(item.collected_flag),
+                    }),
+                  onEdit: () => undefined,
+                  onDelete: () => undefined,
+                  collectLoading: collectBooklistMutation.isPending,
+                };
+
+                return layoutMode === "list" ? (
+                  <BooklistListItem
+                    key={booklist.id}
+                    {...commonProps}
+                    ownerName={
+                      booklist.author?.display_name ||
+                      booklist.author?.global_name ||
+                      booklist.author?.name ||
+                      undefined
+                    }
+                    ownerAvatarUrl={booklist.author?.avatar_url ?? null}
+                    coverImageUrl={booklist.cover_image_url || null}
+                  />
+                ) : (
+                  <BooklistCard key={booklist.id} {...commonProps} />
+                );
+              })}
+            </div>
+            <AnimatedPagination
+              currentPage={params.page}
+              totalPages={booklistTotalPages}
+              totalItems={booklistTotal}
+              onChange={(page) => setParams({ page })}
+            />
           </div>
         ) : (
           <div className="animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center justify-center py-20 text-center">
@@ -577,7 +629,7 @@ export function SearchPage() {
               <Search className="mx-auto h-24 w-24" />
             </div>
             <h3 className="mb-2 text-xl font-bold text-(--od-text-primary)">
-              没有找到匹配书单
+              没有找到匹配{isTournamentTab ? "赛事" : "书单"}
             </h3>
             <p className="text-(--od-text-secondary)">
               试试换个关键词，或者切回帖子分类继续探索。
