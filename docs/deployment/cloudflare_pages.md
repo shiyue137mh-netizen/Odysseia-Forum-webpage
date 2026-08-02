@@ -28,7 +28,7 @@
 
 - **项目名称**: `odysseia-forum-web`（或自定义）
 - **生产分支**: `main`（或你的主分支）
-- **根目录**: `/webpage`（重要！因为前端代码在 webpage 子目录）
+- **根目录**: `/`（`package.json` 与 `functions/` 都在当前仓库根目录）
 
 #### 构建设置
 
@@ -48,6 +48,10 @@
 | `NODE_VERSION`  | `18`                                  | Node.js 版本             |
 
 > **重要**: 环境变量必须以 `VITE_` 开头才能在前端代码中访问。
+
+Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单动态 OG Function
+默认连接 `https://forum.shimmerday.top/v1`；如果后端地址变化，可在 Pages 项目的
+**Settings > Variables and Secrets** 中设置 `API_BASE_URL`（包含 `/v1`）覆盖默认值。
 
 ### 4. 部署
 
@@ -81,6 +85,44 @@
 ```
 
 此文件确保所有路由请求都返回 `index.html`，实现 SPA 路由支持。**已自动包含在构建输出中**。
+
+### `/webpage/public/_routes.json`
+
+```json
+{
+  "version": 1,
+  "include": ["/booklists/*"],
+  "exclude": []
+}
+```
+
+该文件只让书单详情请求触发 Pages Function，其他页面和静态资源继续走免费静态托管。
+
+### 书单动态 OG
+
+`functions/booklists/[id].js` 会在边缘节点读取公开书单数据，并显式通过
+`env.ASSETS` 获取 React 的 `index.html`。不能在这个路由里依赖 `public/_redirects`
+完成 SPA 回退，因为 Cloudflare 不会对已经命中 Function 的请求应用 `_redirects`。
+
+OG 图片按以下顺序选择：
+
+1. 书单的 `cover_image_url`；
+2. 书单当前排序下第一个帖子的第一张 `thumbnail_urls`；
+3. 站点默认 `/og-image.png`。
+
+本地纯逻辑检查：
+
+```bash
+pnpm check:og
+```
+
+部署后可检查社交爬虫实际收到的原始 HTML：
+
+```bash
+curl -A Discordbot https://你的域名/booklists/书单ID
+```
+
+返回的 `<head>` 应包含该书单对应的 `og:title`、`og:description` 和 `og:image`。
 
 ### `/webpage/src/config/channels.ts`
 

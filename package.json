@@ -16,7 +16,8 @@
     "test": "vitest",
     "test:run": "vitest run --reporter=dot",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "check:og": "node scripts/check-booklist-og.mjs"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.3",
