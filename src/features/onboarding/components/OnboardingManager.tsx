@@ -7,7 +7,8 @@ import {
   SETTINGS_GUIDE_TUTORIAL, 
   ME_GUIDE_TUTORIAL, 
   SEARCH_GUIDE_TUTORIAL,
-  ADVANCED_SEARCH_GUIDE_TUTORIAL
+  ADVANCED_SEARCH_GUIDE_TUTORIAL,
+  AI_SEARCH_GUIDE_TUTORIAL,
 } from '../lib/tutorials';
 
 export function OnboardingManager() {
@@ -44,6 +45,11 @@ export function OnboardingManager() {
     if (location.pathname === '/search' && !isTutorialCompleted('search_guide')) {
       startTutorial(SEARCH_GUIDE_TUTORIAL);
       return;
+    }
+
+    // 5. 类脑娘搜索引导
+    if (location.pathname === '/ai-search' && !isTutorialCompleted('ai_search_guide')) {
+      startTutorial(AI_SEARCH_GUIDE_TUTORIAL);
     }
   }, [location.pathname, isTutorialCompleted, activeTutorial, startTutorial]);
 

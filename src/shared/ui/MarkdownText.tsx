@@ -5,6 +5,8 @@ import { ExternalLinkWarningDialog } from '@/shared/ui/ExternalLinkWarningDialog
 interface MarkdownTextProps {
   text: string;
   highlight?: string;
+  className?: string;
+  inline?: boolean;
 }
 
 interface PendingExternalLink {
@@ -134,14 +136,14 @@ function highlightHtmlText(html: string, highlight: string): string {
   return template.innerHTML;
 }
 
-export function MarkdownText({ text, highlight = '' }: MarkdownTextProps) {
+export function MarkdownText({ text, highlight = '', className = '', inline = false }: MarkdownTextProps) {
   const html = useMemo(
     () => highlightHtmlText(parseMarkdown(text), highlight),
     [highlight, text],
   );
   const [pendingExternalLink, setPendingExternalLink] = useState<PendingExternalLink | null>(null);
 
-  const handleClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleClickCapture = (event: React.MouseEvent<HTMLElement>) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
@@ -181,7 +183,7 @@ export function MarkdownText({ text, highlight = '' }: MarkdownTextProps) {
   return (
     <>
       <div
-        className="od-md min-w-0 max-w-full text-xs leading-relaxed text-(--od-text-secondary) [overflow-wrap:anywhere] [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto sm:text-sm"
+        className={`od-md min-w-0 max-w-full text-xs leading-relaxed text-(--od-text-secondary) [overflow-wrap:anywhere] [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto sm:text-sm ${inline ? 'inline' : ''} ${className}`}
         onClickCapture={handleClickCapture}
         dangerouslySetInnerHTML={{ __html: html }}
       />

@@ -183,3 +183,33 @@ export const ADVANCED_SEARCH_GUIDE_TUTORIAL: OnboardingTutorial = {
     }
   ]
 };
+
+export const AI_SEARCH_GUIDE_TUTORIAL: OnboardingTutorial = {
+  id: 'ai_search_guide',
+  steps: [
+    {
+      id: 'ai_search_entry',
+      target: '[data-tour="sidebar-ai-search"]',
+      title: '问问类脑娘',
+      content: '这里是类脑娘搜索的入口。你可以直接描述想找的作品，让她调用论坛索引帮你缩小范围。',
+      emotion: 'hi',
+      placement: 'right',
+    },
+    {
+      id: 'ai_search_settings',
+      target: '[data-tour="ai-search-settings"]',
+      title: '先连接自己的模型',
+      content: 'Odysseia 不提供免费模型服务。请在这里填写自己信任的兼容 OpenAI API 地址并选择模型，API Key 只保存在当前浏览器。',
+      emotion: 'searching',
+      placement: 'bottom',
+    },
+    {
+      id: 'ai_search_input',
+      target: '[data-tour="ai-search-input"]',
+      title: '告诉我你想找什么',
+      content: '输入自然语言，或用 @ 指定 Tag、作者和频道。结果来自论坛索引，帖子实际内容与可访问状态仍以 Discord 为准。',
+      emotion: 'letsgo',
+      placement: 'top',
+    },
+  ],
+};

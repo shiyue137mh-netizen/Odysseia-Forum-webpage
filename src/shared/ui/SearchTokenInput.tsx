@@ -5,7 +5,7 @@ import {
   tokensToQuery,
 } from "@/shared/lib/searchTokenizer";
 import { LazyImage } from "@/shared/ui/LazyImage";
-import { CalendarRange, MessageCircle, Tag as TagIcon, ThumbsUp, User, X } from "lucide-react";
+import { CalendarRange, Hash, MessageCircle, Tag as TagIcon, ThumbsUp, User, X } from "lucide-react";
 import {
   ChangeEvent,
   CompositionEvent,
@@ -210,6 +210,8 @@ export function SearchTokenInput({
         return <TagIcon className="h-3 w-3" />;
       case "author":
         return <User className="h-3 w-3" />;
+      case "channel":
+        return <Hash className="h-3 w-3" />;
       case "date":
         return <CalendarRange className="h-3 w-3" />;
       case "likes":
@@ -283,6 +285,7 @@ export function SearchTokenInput({
                     if (el) editInputRefs.current.set(index, el);
                   }}
                   type="text"
+                  autoComplete="off"
                   value={editingValue}
                   onChange={(e) => setEditingValue(e.target.value)}
                   onKeyDown={(e) => {
@@ -341,7 +344,10 @@ export function SearchTokenInput({
             externalInputRef.current = element;
           }
         }}
-        type="text"
+        type="search"
+        name="odysseia-forum-search"
+        autoComplete="off"
+        data-form-type="search"
         value={inputValue}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}

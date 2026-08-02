@@ -237,14 +237,18 @@ function buildSearchRequest(params: SearchUIRequest): ApiSearchParams {
 }
 
 export const searchApi = {
-  search: async (params: SearchUIRequest = {}): Promise<SearchResponse> => {
+  search: async (params: SearchUIRequest = {}, signal?: AbortSignal): Promise<SearchResponse> => {
     const requestBody = buildSearchRequest(params);
-    const response = await apiClient.post<SearchResponse>('/search/', requestBody);
+    const response = signal
+      ? await apiClient.post<SearchResponse>('/search/', requestBody, { signal })
+      : await apiClient.post<SearchResponse>('/search/', requestBody);
     return response.data;
   },
 
-  getThread: async (threadId: string): Promise<Thread> => {
-    const response = await apiClient.get<Thread>(`/search/thread/${threadId}`);
+  getThread: async (threadId: string, signal?: AbortSignal): Promise<Thread> => {
+    const response = signal
+      ? await apiClient.get<Thread>(`/search/thread/${threadId}`, { signal })
+      : await apiClient.get<Thread>(`/search/thread/${threadId}`);
     return response.data;
   },
 

@@ -1,0 +1,85 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  AI_SEARCH_CONVERSATIONS_KEY,
+  AI_SEARCH_SESSION_KEY,
+  abortAISearchConversation,
+  createConversationTitle,
+  loadAISearchConversationState,
+  registerAISearchController,
+  unregisterAISearchController,
+} from './session';
+
+describe('AI 搜索会话历史', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('使用第一条用户消息生成精简标题', () => {
+    expect(createConversationTitle('  帮我找\n最近很火的角色卡  ')).toBe('帮我找 最近很火的角色卡');
+  });
+
+  it('会把输入 Token 转成可读标题', () => {
+    expect(createConversationTitle('$tag:角色卡$ $author:123$ 帮我找作品')).toBe(
+      '角色卡 作者 123 帮我找作品',
+    );
+  });
+
+  it('把旧单会话迁移成第一条历史', () => {
+    window.localStorage.setItem(
+      AI_SEARCH_SESSION_KEY,
+      JSON.stringify([{ role: 'user', content: '找角色卡' }]),
+    );
+
+    const state = loadAISearchConversationState();
+    expect(state.conversations[0]?.title).toBe('找角色卡');
+    expect(state.conversations[0]?.messages).toEqual([{ role: 'user', content: '找角色卡' }]);
+    expect(window.localStorage.getItem(AI_SEARCH_SESSION_KEY)).toBeNull();
+    expect(window.localStorage.getItem(AI_SEARCH_CONVERSATIONS_KEY)).not.toBeNull();
+  });
+
+  it('损坏数据会被清理', () => {
+    window.localStorage.setItem(AI_SEARCH_CONVERSATIONS_KEY, '{');
+    expect(loadAISearchConversationState()).toEqual({
+      activeConversationId: null,
+      conversations: [],
+      unreadConversationIds: [],
+    });
+    expect(window.localStorage.getItem(AI_SEARCH_CONVERSATIONS_KEY)).toBeNull();
+  });
+
+  it('恢复 Assistant 消息中的快捷追问', () => {
+    window.localStorage.setItem(AI_SEARCH_CONVERSATIONS_KEY, JSON.stringify({
+      activeConversationId: 'conversation-1',
+      unreadConversationIds: [],
+      conversations: [{
+        id: 'conversation-1',
+        title: '找角色卡',
+        createdAt: 1,
+        updatedAt: 2,
+        messages: [{
+          role: 'assistant',
+          content: '整理结果',
+          followups: [
+            { direction: 'broader', text: '放宽条件' },
+            { direction: 'narrower', text: '收紧条件' },
+            { direction: 'alternate', text: '换个方向' },
+          ],
+        }],
+      }],
+    }));
+
+    expect(loadAISearchConversationState().conversations[0]?.messages[0]?.followups).toHaveLength(3);
+  });
+
+  it('允许跨页面通过会话 ID 终止运行中的请求', () => {
+    const controller = new AbortController();
+    registerAISearchController('conversation-1', controller);
+
+    abortAISearchConversation('conversation-1');
+    expect(controller.signal.aborted).toBe(true);
+
+    unregisterAISearchController('conversation-1', controller);
+  });
+});

@@ -14,6 +14,7 @@ const lazyPage = <K extends string>(
 const LoginPage = lazyPage(() => import('@/pages/AuthPage/LoginPage'), 'LoginPage');
 const CallbackPage = lazyPage(() => import('@/pages/AuthPage/CallbackPage'), 'CallbackPage');
 const SearchPage = lazyPage(() => import('@/pages/SearchPage'), 'SearchPage');
+const AISearchPage = lazyPage(() => import('@/pages/AISearchPage'), 'AISearchPage');
 const PlazaPage = lazyPage(() => import('@/pages/PlazaPage'), 'PlazaPage');
 const DrawPage = lazyPage(() => import('@/pages/DrawPage'), 'DrawPage');
 const TagsPage = lazyPage(() => import('@/pages/TagsPage'), 'TagsPage');
@@ -58,6 +59,10 @@ const appChildren = [
   {
     path: 'search',
     element: withSuspense(<SearchPage />),
+  },
+  {
+    path: 'ai-search',
+    element: withSuspense(<AISearchPage />),
   },
   {
     path: 'tournaments',

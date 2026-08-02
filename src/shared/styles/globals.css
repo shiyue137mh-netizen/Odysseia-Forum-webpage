@@ -87,6 +87,7 @@
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
   --animate-shimmer: shimmer 2s infinite;
+  --animate-ai-text-shine: ai-text-shine 3.8s linear infinite;
 
   @keyframes accordion-down {
     from { height: 0; }
@@ -97,6 +98,10 @@
     to { height: 0; }
   }
   @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  @keyframes ai-text-shine {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
@@ -114,4 +119,3 @@
 @utility grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
 @source '../../**/*.tsx';
-

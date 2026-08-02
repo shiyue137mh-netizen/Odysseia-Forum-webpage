@@ -1,8 +1,11 @@
 import ServerIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useServerIconSecret } from '@/features/easter-eggs/hooks/useServerIconSecret';
+import { MASCOT_IMAGES } from '@/features/mascot/assets';
 import { useSearchURLParams } from '@/features/search/hooks/useSearchParams';
 import { useChannels } from '@/shared/hooks/useChannels';
+import { useAISearchConversationStore } from '@/features/ai-search/lib/session';
+import { formatAISearchTimestamp } from '@/features/ai-search/lib/time';
 import { clearStoredAuthToken } from '@/shared/lib/authSession';
 import { withViewTransition } from '@/shared/lib/viewTransition';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
@@ -10,6 +13,7 @@ import { AnimatedIcon } from '@/shared/ui/animation/AnimatedIcon';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
 import {
     BookOpen,
+    ChevronUp,
     Compass,
     Dices,
     Info,
@@ -20,7 +24,8 @@ import {
     TestTube,
     Trophy,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export function AppSidebar() {
@@ -30,6 +35,11 @@ export function AppSidebar() {
   const { params, setParams } = useSearchURLParams();
   const { data: channelsData } = useChannels();
   const handleServerIconClick = useServerIconSecret();
+  const [isAISearchHistoryOpen, setIsAISearchHistoryOpen] = useState(false);
+  const aiSearchConversations = useAISearchConversationStore((state) => state.conversations);
+  const activeAIConversationId = useAISearchConversationStore((state) => state.activeConversationId);
+  const unreadAIConversationIds = useAISearchConversationStore((state) => state.unreadConversationIds);
+  const selectAIConversation = useAISearchConversationStore((state) => state.selectConversation);
 
   const groupedChannels = useMemo(() => {
     if (!channelsData?.channels) return [];
@@ -344,7 +354,84 @@ export function AppSidebar() {
 
       </div>
 
-      <div className="border-t border-(--od-border) p-2">
+      <div className="border-t border-(--od-border) px-4 py-2">
+        <button
+          type="button"
+          data-tour="sidebar-ai-search"
+          onClick={() => {
+            setIsAISearchHistoryOpen((current) => !current);
+            if (!isActive('/ai-search')) {
+              navigate(
+                activeAIConversationId
+                  ? `/ai-search?conversation=${encodeURIComponent(activeAIConversationId)}`
+                  : '/ai-search',
+              );
+            }
+          }}
+          aria-expanded={isAISearchHistoryOpen}
+          className="group flex w-full items-center gap-2 py-1.5 text-sm text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent)"
+        >
+          <img
+            src={MASCOT_IMAGES.greeting_window}
+            alt=""
+            aria-hidden="true"
+            className="h-6 w-6 shrink-0 object-contain transition-transform duration-200 group-hover:scale-110"
+          />
+          <span className="min-w-0 flex-1 truncate text-left">问问类脑娘</span>
+          {unreadAIConversationIds.length > 0 && (
+            <span className="relative flex h-2.5 w-2.5 shrink-0" aria-label="有新的类脑娘回复">
+              <span className="absolute inset-0 animate-ping rounded-full bg-(--od-accent) opacity-55" />
+              <span className="relative m-auto h-1.5 w-1.5 rounded-full bg-(--od-accent)" />
+            </span>
+          )}
+          <ChevronUp
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${isAISearchHistoryOpen ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {isAISearchHistoryOpen && aiSearchConversations.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-0.5 pb-1 pl-6 pt-1">
+                {aiSearchConversations.slice(0, 5).map((conversation) => {
+                  const active = conversation.id === activeAIConversationId;
+                  return (
+                    <Link
+                      key={conversation.id}
+                      to={`/ai-search?conversation=${encodeURIComponent(conversation.id)}`}
+                      onClick={() => selectAIConversation(conversation.id)}
+                      className={`group/history block py-1.5 text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${
+                        active
+                          ? 'font-medium text-(--od-accent)'
+                          : 'text-(--od-text-tertiary) hover:text-(--od-accent)'
+                      }`}
+                      title={conversation.title}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+                        {unreadAIConversationIds.includes(conversation.id) && (
+                          <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-(--od-accent)" />
+                        )}
+                      </span>
+                      <time className="mt-0.5 block text-[10px] font-normal text-(--od-text-tertiary) transition-colors group-hover/history:text-(--od-text-secondary)">
+                        {formatAISearchTimestamp(conversation.updatedAt)}
+                      </time>
+                    </Link>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="p-2 pt-0">
         <div className="od-fluid-panel rounded-xl p-2 shadow-xs transition-all hover:shadow-md">
           <div className="flex items-center gap-1">
             <Link

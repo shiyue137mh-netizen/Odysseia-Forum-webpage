@@ -1,35 +1,34 @@
-# `presentation` 省略或设为 `inbox` 时仅进入通知中心；设为 `required` 时会自动弹出并要求确认。
-# 强制公告可用 `acknowledgement` 自定义确认按钮文案，确认结果按通知 `id` 保存在当前浏览器。
+# `presentation: required` 会自动弹出并要求阅读确认；确认结果按通知 `id` 保存在当前浏览器。
 updates:
-  - id: notification-system-upgrade-2026-08-02
-    kind: announcement
+  - id: ai-search-launch-2026-08-03
+    kind: release
     presentation: required
-    acknowledgement: 我知道啦
-    title: 通知中心升级完成
-    message: 重要公告现在会主动展示，阅读并确认后便不会再次打扰。
-    created_at: 2026-08-02T00:00:00.000Z
-    starts_at: 2026-08-02T00:00:00.000Z
+    acknowledgement: 我已了解，去试试看
+    title: 类脑娘搜索正式上线
+    message: 类脑娘现在可以调用论坛索引，帮你搜索、筛选和阅读候选作品。
+    created_at: 2026-08-03T00:00:00+08:00
+    starts_at: 2026-08-03T00:00:00+08:00
     preview_thread:
-      title: 更清晰，也更可靠的新通知中心
+      title: 问问类脑娘，让搜索更接近你的想法
       first_message_excerpt: |-
-        ## 通知不该悄悄躲起来
+        ## 类脑娘搜索上线啦
 
-        通知中心已经完成升级啦！普通动态仍然会安静地收进通知列表，等待你有空时查看；真正重要的服务器公告，则会主动出现在页面中，避免关键消息被错过。
+        你可以直接描述想找的作品，也可以用 `@` 快速指定 Tag、作者或频道。类脑娘会调用论坛现有的搜索接口，筛选候选结果，并在需要时进一步阅读帖子内容。
 
-        ### 这次有什么变化？
+        ### 使用前请注意
 
-        - 团队公告拥有了独立的阅读界面，不会再被误认为普通帖子。
-        - 重要公告会主动弹出，需要阅读并确认后才能关闭。
-        - 已经确认过的公告会被记住，之后不会反复打扰。
-        - 所有历史旧通知均已清理，通知列表从这里重新开始。
+        - Odysseia 提供的是运行在浏览器中的搜索 Agent，不提供免费模型服务。
+        - 使用前需要在模型设置中填写你自己的兼容 OpenAI API 地址，并获取和选择模型。
+        - API Key 只保存在当前浏览器，但搜索请求和相关摘要会发送给你配置的模型服务，请确认自己信任对应的服务商。
+        - 搜索结果来自论坛索引，帖子实际内容与可访问状态仍以 Discord 为准。
 
-        希望新的通知中心既不会错过真正重要的事情，也不会在平时打扰你。感谢一直陪着我们完善 Odysseia！
+        配置完成后，就可以告诉类脑娘一个模糊的想法，让她帮你一步步缩小范围啦。
       tags:
-        - 系统公告
         - 功能更新
+        - AI 搜索
       virtual_tags:
-        - notification
-        - update
+        - release
+        - ai-search
       author:
         name: Odysseia
         display_name: Odysseia Web Team

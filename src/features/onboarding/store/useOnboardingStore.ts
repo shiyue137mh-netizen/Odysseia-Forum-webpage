@@ -35,7 +35,8 @@ export const ALL_TUTORIAL_IDS = [
   'settings_guide',
   'me_guide',
   'search_guide',
-  'advanced_search_guide'
+  'advanced_search_guide',
+  'ai_search_guide'
 ];
 
 function runOnboardingTransition(execute: () => void) {

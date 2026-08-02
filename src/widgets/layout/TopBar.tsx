@@ -300,7 +300,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                 }}
                 onFocus={handleInputFocus}
                 externalInputRef={searchInputRef}
-                placeholder="搜索标题、作者或内容..."
+                placeholder="不如来试试类脑娘搜索吧"
                 className="min-h-[40px] rounded-[24px] bg-transparent"
                 authorDetails={authorDetails}
               />
