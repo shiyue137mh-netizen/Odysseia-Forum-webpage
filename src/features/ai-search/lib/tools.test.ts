@@ -60,7 +60,8 @@ describe('AI 搜索工具结果', () => {
       updated_at: '2026-08-03T00:00:00Z',
     } as Booklist;
     vi.mocked(booklistsApi.listPublic).mockResolvedValue({ total: 1, limit: 8, offset: 0, results: [tournament] });
-    const runtime = createAISearchToolRuntime(() => undefined);
+    const controller = new AbortController();
+    const runtime = createAISearchToolRuntime(() => undefined, [], undefined, controller.signal);
 
     const result = JSON.parse(await runtime.execute({
       id: 'call-tournament',
@@ -68,11 +69,14 @@ describe('AI 搜索工具结果', () => {
       function: { name: 'search_tournaments', arguments: '{"keywords":"夏日","sort":"updated"}' },
     }));
 
-    expect(booklistsApi.listPublic).toHaveBeenCalledWith(expect.objectContaining({
-      keywords: '夏日',
-      sortMethod: 5,
-      isTournament: true,
-    }));
+    expect(booklistsApi.listPublic).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keywords: '夏日',
+        sortMethod: 5,
+        isTournament: true,
+      }),
+      controller.signal,
+    );
     expect(result.results[0]).toEqual(compactTournament(tournament));
   });
 

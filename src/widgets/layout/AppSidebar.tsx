@@ -56,7 +56,7 @@ export function AppSidebar() {
       map.get(gid)!.channels.push(c);
     }
     return Array.from(map.values());
-  }, [channelsData?.channels]);
+  }, [channelsData]);
 
   const currentURLParams = new URLSearchParams(location.search);
   const isFollowsPage = location.pathname === '/me' && currentURLParams.get('tab') === 'follows';

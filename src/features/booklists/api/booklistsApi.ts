@@ -51,10 +51,12 @@ function toPageParams(pageIndex = 0, pageSize = 12) {
 export const booklistsApi = {
   listPublic: async (
     params: BooklistListRequest = {},
+    signal?: AbortSignal,
   ): Promise<PaginatedResponse<Booklist>> => {
     const response = await apiClient.get<PaginatedResponse<Booklist>>(
       "/booklist/list/page",
       {
+        signal,
         params: {
           ...toPageParams(params.pageIndex, params.pageSize),
           keywords: params.keywords || undefined,
@@ -92,9 +94,10 @@ export const booklistsApi = {
     return response.data;
   },
 
-  getDetail: async (booklistId: number | string): Promise<Booklist> => {
+  getDetail: async (booklistId: number | string, signal?: AbortSignal): Promise<Booklist> => {
     const response = await apiClient.get<Booklist>(
       `/booklist/detail/${booklistId}`,
+      { signal },
     );
     return response.data;
   },
@@ -160,10 +163,12 @@ export const booklistsApi = {
       offset?: number;
       exclude_thread_ids?: string[];
     } = {},
+    signal?: AbortSignal,
   ): Promise<PaginatedResponse<BooklistItem>> => {
     const response = await apiClient.get<PaginatedResponse<BooklistItem>>(
       `/booklist/item/list/page/${booklistId}`,
       {
+        signal,
         params: {
           limit: params.limit ?? 24,
           offset: params.offset ?? 0,

@@ -239,7 +239,7 @@ export async function createChatCompletion({
     });
   } catch (error) {
     if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) throw error;
-    throw new Error('无法连接模型服务，请检查网络或 CORS 设置');
+    throw Object.assign(new Error('无法连接模型服务，请检查网络或 CORS 设置'), { cause: error });
   }
 
   if (!response.ok) {

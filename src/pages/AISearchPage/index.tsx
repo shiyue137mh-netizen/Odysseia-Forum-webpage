@@ -89,7 +89,7 @@ export function AISearchPage() {
   const settingsDialogRef = useRef<HTMLDialogElement>(null);
   const conversationScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
-  const liveResponseRef = useRef<AISearchLiveResponse | null>(null);
+  const liveResponsesRef = useRef(new Map<string, AISearchLiveResponse>());
   const shownFollowupKeyRef = useRef<string | null>(null);
   const followupTimerRef = useRef<number | null>(null);
   const isRunning = Boolean(
@@ -115,7 +115,10 @@ export function AISearchPage() {
       };
     });
   }, [channelsQuery.data]);
-  const messages = conversations.find((item) => item.id === activeConversationId)?.messages || [];
+  const messages = useMemo(
+    () => conversations.find((item) => item.id === activeConversationId)?.messages || [],
+    [activeConversationId, conversations],
+  );
   const pendingQuestion = useMemo(() => findPendingAISearchQuestion(messages), [messages]);
   const latestUserMessageIndex = useMemo(() => {
     for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -153,9 +156,20 @@ export function AISearchPage() {
   ]);
 
   useEffect(() => {
-    setEditingMessageIndex(null);
-    setEditDraft('');
-  }, [activeConversationId]);
+    const frame = window.requestAnimationFrame(() => {
+      setEditingMessageIndex(null);
+      setEditDraft('');
+      setLiveResponse(
+        activeConversationId ? liveResponsesRef.current.get(activeConversationId) ?? null : null,
+      );
+      setStatus(
+        activeConversationId && runningConversationIds.includes(activeConversationId)
+          ? 'thinking'
+          : 'idle',
+      );
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeConversationId, runningConversationIds]);
 
   useEffect(() => {
     const container = conversationScrollRef.current;
@@ -169,10 +183,9 @@ export function AISearchPage() {
 
   useEffect(() => {
     if (!liveResponse) return;
-    setLiveClock(Date.now());
     const timer = window.setInterval(() => setLiveClock(Date.now()), 1_000);
     return () => window.clearInterval(timer);
-  }, [liveResponse?.startedAt]);
+  }, [liveResponse]);
 
   const mascotEmotion: Record<typeof status, string> = {
     idle: 'hi',
@@ -255,11 +268,11 @@ export function AISearchPage() {
   ) => {
     const startedAt = Date.now();
     const controller = new AbortController();
-    registerAISearchController(conversationId, controller);
+    if (!registerAISearchController(conversationId, controller)) return;
     setConversationRunning(conversationId, true);
     setStatus('thinking');
     const initialProgress = { conversationId, startedAt, content: '', trace: [], threads: [] };
-    liveResponseRef.current = initialProgress;
+    liveResponsesRef.current.set(conversationId, initialProgress);
     setLiveResponse(initialProgress);
     try {
       const result = await runAISearchAgent({
@@ -279,7 +292,7 @@ export function AISearchPage() {
         },
         onProgress: (progress) => {
           const nextProgress = { conversationId, startedAt, ...progress };
-          liveResponseRef.current = nextProgress;
+          liveResponsesRef.current.set(conversationId, nextProgress);
           if (useAISearchConversationStore.getState().activeConversationId === conversationId) {
             setLiveResponse(nextProgress);
           }
@@ -305,7 +318,7 @@ export function AISearchPage() {
       }
     } catch (error) {
       if (controller.signal.aborted) {
-        const progress = liveResponseRef.current;
+        const progress = liveResponsesRef.current.get(conversationId);
         const partialContent = getStreamingSafeContent(progress?.content || '').trim();
         const interruptedTrace = (progress?.trace || []).map((item) =>
           item.type === 'tool' && item.status === 'running'
@@ -340,7 +353,7 @@ export function AISearchPage() {
         currentURL.searchParams.get('conversation') === conversationId;
       if (conversationIsVisible) markConversationRead(conversationId);
       else markConversationUnread(conversationId);
-      liveResponseRef.current = null;
+      liveResponsesRef.current.delete(conversationId);
       setLiveResponse((current) => current?.conversationId === conversationId ? null : current);
     }
   };
@@ -436,7 +449,7 @@ export function AISearchPage() {
   useEffect(() => {
     if (followupTimerRef.current !== null) window.clearTimeout(followupTimerRef.current);
     if (isRunning || !latestFollowupMessage) {
-      setFollowupsVisible(false);
+      followupTimerRef.current = window.setTimeout(() => setFollowupsVisible(false), 0);
       return;
     }
 
@@ -445,12 +458,14 @@ export function AISearchPage() {
     shownFollowupKeyRef.current = key;
     const age = latestFollowupMessage.createdAt ? Date.now() - latestFollowupMessage.createdAt : 5_000;
     if (age >= 5_000) {
-      setFollowupsVisible(false);
+      followupTimerRef.current = window.setTimeout(() => setFollowupsVisible(false), 0);
       return;
     }
 
-    setFollowupsVisible(true);
-    hideFollowupsLater(5_000 - age);
+    followupTimerRef.current = window.setTimeout(() => {
+      setFollowupsVisible(true);
+      hideFollowupsLater(5_000 - age);
+    }, 0);
     return () => {
       if (followupTimerRef.current !== null) window.clearTimeout(followupTimerRef.current);
     };
@@ -467,7 +482,7 @@ export function AISearchPage() {
               setSearchParams({}, { replace: true });
               setStatus('idle');
               setLiveResponse(null);
-              liveResponseRef.current = null;
+              if (activeConversationId) liveResponsesRef.current.delete(activeConversationId);
               setInput('');
               setPlaceholderIndex((current) => (current + 1) % INPUT_PLACEHOLDERS.length);
             }}

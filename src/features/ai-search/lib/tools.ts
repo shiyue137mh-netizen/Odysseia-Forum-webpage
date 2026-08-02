@@ -27,7 +27,7 @@ export const AI_SEARCH_TOOLS = [
     function: {
       name: 'search_threads',
       description:
-        '使用类脑现有的传统索引搜索候选帖子。每次最多返回12条标题、Tag、统计和200字以内首楼摘要。搜索精度有限，可以通过改变关键词、Tag、频道、作者、时间、热度、收藏范围和排序进行最多三轮搜索。短摘要只能用于初筛；在明确推荐前必须再调用 get_thread_details 确认内容。用户偏好会由搜索 API 自动应用。参数组合示例：找今天最新的卡=今天到明天的 created 日期边界 + sort:newest；找本月热门作品=本月日期边界 + sort:reactions，必要时添加 reaction_min；找最近有讨论的作品=sort:active 或 sort:replies；只看自己收藏=search_by_collection:true。',
+        '使用类脑现有的传统索引搜索候选帖子。每次最多返回12条标题、Tag、统计和200字以内首楼摘要。搜索精度有限，可以通过改变关键词、Tag、频道、作者、时间、热度、收藏范围和排序进行最多三轮搜索。短摘要只能用于初筛；在明确推荐前必须再调用 get_resource_details 确认内容。用户偏好会由搜索 API 自动应用。参数组合示例：找今天最新的卡=今天到明天的 created 日期边界 + sort:newest；找本月热门作品=本月日期边界 + sort:reactions，必要时添加 reaction_min；找最近有讨论的作品=sort:active 或 sort:replies；只看自己收藏=search_by_collection:true。',
       parameters: {
         type: 'object',
         properties: {
@@ -212,6 +212,14 @@ export function parseAISearchAskUserCall(call: AISearchToolCall): AISearchPendin
   return { toolCallId: call.id, question: args.question, options: args.options };
 }
 
+function describeToolArgumentError(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return error.issues.map((issue) => `${issue.path.join('.') || '参数'}：${issue.message}`).join('；');
+  }
+  if (error instanceof SyntaxError) return '参数不是合法 JSON';
+  return error instanceof Error ? error.message : '参数格式未知';
+}
+
 export function findPendingAISearchQuestion(messages: AISearchDisplayMessage[]) {
   const answeredToolIds = new Set(
     messages.filter((message) => message.role === 'tool' && message.tool_call_id).map((message) => message.tool_call_id),
@@ -337,7 +345,7 @@ export function createAISearchToolRuntime(
       }
 
       if (call.function.name === 'search_threads') {
-        if (searchCalls >= 3) throw new Error('本会话最多执行三次搜索');
+        if (searchCalls >= 3) throw new Error('本轮最多执行三次搜索');
         const args = searchArgsSchema.parse(rawArgs);
         searchCalls += 1;
         onStatus('searching');
@@ -408,7 +416,7 @@ export function createAISearchToolRuntime(
           sortMethod: args.sort ? tournamentSortMap[args.sort] : 5,
           sortOrder: args.sort_order || 'desc',
           isTournament: true,
-        });
+        }, signal);
         const results = (response.results || []).filter((item) => item.is_tournament).slice(0, 8);
         results.forEach((item) => {
           const id = String(item.id);
@@ -437,8 +445,8 @@ export function createAISearchToolRuntime(
         ).values());
         const threadResources = uniqueResources.filter((resource) => resource.type === 'thread');
         const tournamentResources = uniqueResources.filter((resource) => resource.type === 'tournament');
-        if (detailThreads + threadResources.length > 8) throw new Error('本会话最多读取八篇帖子详情');
-        if (detailTournaments + tournamentResources.length > 4) throw new Error('本会话最多读取四个赛事详情');
+        if (detailThreads + threadResources.length > 8) throw new Error('本轮最多读取八篇帖子详情');
+        if (detailTournaments + tournamentResources.length > 4) throw new Error('本轮最多读取四个赛事详情');
         const unknownThread = threadResources.find((resource) => !allowedThreadIds.has(resource.id));
         if (unknownThread) throw new Error(`帖子 ${unknownThread.id} 不在本会话搜索结果中`);
         const unknownTournament = tournamentResources.find((resource) => !allowedTournamentIds.has(resource.id));
@@ -456,8 +464,8 @@ export function createAISearchToolRuntime(
         const threadDetails = await Promise.all(threadResources.map((resource) => searchApi.getThread(resource.id, signal)));
         const tournamentDetails = await Promise.all(tournamentResources.map(async (resource) => {
           const [detail, items] = await Promise.all([
-            booklistsApi.getDetail(resource.id),
-            booklistsApi.listItems(resource.id, { limit: 8, offset: 0 }),
+            booklistsApi.getDetail(resource.id, signal),
+            booklistsApi.listItems(resource.id, { limit: 8, offset: 0 }, signal),
           ]);
           searchedTournaments.set(resource.id, detail);
           return { detail, items: items.results || [] };
@@ -505,7 +513,15 @@ export function createAISearchToolRuntime(
       }
 
       if (call.function.name === 'ask_user') {
-        throw new Error('ask_user 必须由 Agent 暂停流程处理');
+        try {
+          parseAISearchAskUserCall(call);
+        } catch (error) {
+          throw Object.assign(
+            new Error(`ask_user 参数无效：${describeToolArgumentError(error)}`),
+            { cause: error },
+          );
+        }
+        throw new Error('ask_user 必须作为本次回复中唯一的工具调用');
       }
 
       throw new Error(`不支持的工具：${call.function.name}`);

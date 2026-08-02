@@ -38,17 +38,19 @@ describe("booklistsApi", () => {
 
   it("searches tournaments through the public booklist endpoint", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { results: [] } });
+    const controller = new AbortController();
 
     await booklistsApi.listPublic({
       keywords: "绘画",
       isTournament: true,
       pageIndex: 1,
       pageSize: 12,
-    });
+    }, controller.signal);
 
     expect(apiClient.get).toHaveBeenCalledWith(
       "/booklist/list/page",
       expect.objectContaining({
+        signal: controller.signal,
         params: expect.objectContaining({
           keywords: "绘画",
           is_tournament: true,

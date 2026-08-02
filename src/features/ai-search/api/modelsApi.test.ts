@@ -14,4 +14,3 @@ describe('模型列表解析', () => {
     expect(() => parseModelIds({ models: [] })).toThrow('不兼容');
   });
 });
-

@@ -75,11 +75,24 @@ describe('AI 搜索会话历史', () => {
 
   it('允许跨页面通过会话 ID 终止运行中的请求', () => {
     const controller = new AbortController();
-    registerAISearchController('conversation-1', controller);
+    expect(registerAISearchController('conversation-1', controller)).toBe(true);
 
     abortAISearchConversation('conversation-1');
     expect(controller.signal.aborted).toBe(true);
 
     unregisterAISearchController('conversation-1', controller);
+  });
+
+  it('拒绝同一会话同时登记第二个请求', () => {
+    const first = new AbortController();
+    const second = new AbortController();
+
+    expect(registerAISearchController('conversation-2', first)).toBe(true);
+    expect(registerAISearchController('conversation-2', second)).toBe(false);
+
+    abortAISearchConversation('conversation-2');
+    expect(first.signal.aborted).toBe(true);
+    expect(second.signal.aborted).toBe(false);
+    unregisterAISearchController('conversation-2', first);
   });
 });

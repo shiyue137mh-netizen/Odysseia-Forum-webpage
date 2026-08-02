@@ -115,8 +115,6 @@ export async function runAISearchAgent({
   const usage: ChatTokenUsage = {};
   let hasUsage = false;
   let displayContent = '';
-  let runtime: ReturnType<typeof createAISearchToolRuntime>;
-
   const emitProgress = () => {
     onProgress?.({
       content: displayContent,
@@ -141,7 +139,13 @@ export async function runAISearchAgent({
     emitProgress();
   };
 
-  runtime = createAISearchToolRuntime(onStatus, existingThreads, updateToolTrace, signal, existingResourceIds);
+  const runtime = createAISearchToolRuntime(
+    onStatus,
+    existingThreads,
+    updateToolTrace,
+    signal,
+    existingResourceIds,
+  );
 
   for (let step = 0; step < 8; step += 1) {
     signal?.throwIfAborted();
@@ -191,21 +195,26 @@ export async function runAISearchAgent({
 
     const askUserCall = assistant.tool_calls?.find((toolCall) => toolCall.function.name === 'ask_user');
     if (askUserCall && assistant.tool_calls?.length === 1 && !askAlreadyUsed) {
-      onStatus('complete');
-      return {
-        answer: null,
-        pendingQuestion: parseAISearchAskUserCall(askUserCall),
-        reasoning: trace
-          .filter((item) => item.type === 'reasoning')
-          .map((item) => item.content.trim())
-          .filter(Boolean)
-          .join('\n\n'),
-        trace,
-        threads: runtime.getThreads(),
-        usage: hasUsage ? usage : undefined,
-        followups: [],
-        turnMessages,
-      };
+      try {
+        const pendingQuestion = parseAISearchAskUserCall(askUserCall);
+        onStatus('complete');
+        return {
+          answer: null,
+          pendingQuestion,
+          reasoning: trace
+            .filter((item) => item.type === 'reasoning')
+            .map((item) => item.content.trim())
+            .filter(Boolean)
+            .join('\n\n'),
+          trace,
+          threads: runtime.getThreads(),
+          usage: hasUsage ? usage : undefined,
+          followups: [],
+          turnMessages,
+        };
+      } catch {
+        // 非法参数交给统一工具错误路径反馈给模型，让它有机会自行修正。
+      }
     }
 
     if (!assistant.tool_calls?.length) {
@@ -247,26 +256,39 @@ export async function runAISearchAgent({
         content = await runtime.execute(toolCall);
       } catch (error) {
         if (signal?.aborted) throw error;
+        const errorMessage = error instanceof Error ? error.message : '工具执行失败';
         const existing = trace.find(
           (item): item is AISearchToolTraceItem => item.type === 'tool' && item.id === toolCall.id,
         );
-        updateToolTrace({
+          updateToolTrace({
           type: 'tool',
           id: toolCall.id,
           tool: toolCall.function.name === 'search_tournaments'
             ? 'search_tournaments'
             : toolCall.function.name === 'get_resource_details' || toolCall.function.name === 'get_thread_details'
               ? 'get_resource_details'
-              : 'search_threads',
+              : toolCall.function.name === 'ask_user'
+                ? 'ask_user'
+                : 'search_threads',
           label: existing?.label || (toolCall.function.name === 'search_tournaments'
             ? '搜索赛事'
-            : toolCall.function.name.includes('details') ? '读取详情' : '搜索'),
+            : toolCall.function.name === 'ask_user'
+              ? '询问用户'
+              : toolCall.function.name.includes('details') ? '读取详情' : '搜索'),
           status: 'error',
           parameters: existing?.parameters || '参数校验失败',
-          result: error instanceof Error ? error.message : '工具执行失败',
+          result: errorMessage,
         });
         content = JSON.stringify({
-          error: error instanceof Error ? error.message : '工具执行失败',
+          ok: false,
+          tool: toolCall.function.name,
+          error: errorMessage,
+          ...(toolCall.function.name === 'ask_user' ? {
+            expected_arguments: {
+              question: '1 至 120 个字符的字符串',
+              options: '2 至 3 个互不重复、每项 1 至 60 个字符的字符串数组',
+            },
+          } : {}),
         });
       }
       messages.push({ role: 'tool', tool_call_id: toolCall.id, content });

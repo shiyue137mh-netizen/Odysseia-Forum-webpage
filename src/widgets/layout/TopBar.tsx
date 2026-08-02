@@ -210,6 +210,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
       applyInputChange,
       closePanels,
       executeSearch,
+      navigate,
       searchInput,
       selectAuthorToken,
       setPreviewThreadId,

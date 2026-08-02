@@ -16,7 +16,7 @@ export interface AISearchReasoningTraceItem {
 export interface AISearchToolTraceItem {
   type: 'tool';
   id: string;
-  tool: 'search_threads' | 'search_tournaments' | 'get_thread_details' | 'get_resource_details';
+  tool: 'search_threads' | 'search_tournaments' | 'get_thread_details' | 'get_resource_details' | 'ask_user';
   label: string;
   status: 'running' | 'complete' | 'error';
   parameters: string;
@@ -114,7 +114,7 @@ const messageSchema = z.object({
     z.object({
       type: z.literal('tool'),
       id: z.string().max(200),
-      tool: z.enum(['search_threads', 'search_tournaments', 'get_thread_details', 'get_resource_details']),
+      tool: z.enum(['search_threads', 'search_tournaments', 'get_thread_details', 'get_resource_details', 'ask_user']),
       label: z.string().max(100),
       status: z.enum(['running', 'complete', 'error']),
       parameters: z.string().max(2_000),
@@ -157,7 +157,9 @@ const emptyState: StoredConversationState = {
 const runningControllers = new Map<string, AbortController>();
 
 export function registerAISearchController(conversationId: string, controller: AbortController) {
+  if (runningControllers.has(conversationId)) return false;
   runningControllers.set(conversationId, controller);
+  return true;
 }
 
 export function unregisterAISearchController(conversationId: string, controller: AbortController) {

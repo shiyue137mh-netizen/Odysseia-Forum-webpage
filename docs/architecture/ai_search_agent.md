@@ -174,5 +174,5 @@ AI 搜索页不是常规聊天软件，而是与看板娘面对面对话的搜�
 1. 独立页面、看板娘舞台、输入区与本地模型设置；
 2. Chat Completions 连接测试和错误分类；
 3. 有限 `search_threads` 工具循环；
-4. `get_thread_details`、`present_threads` 和帖子引用卡片；
+4. `get_resource_details` 和帖子引用卡片；
 5. 上下文压缩、停止生成与最终回复流式输出。

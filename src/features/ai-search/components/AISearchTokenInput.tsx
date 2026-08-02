@@ -24,7 +24,6 @@ import {
 import {
   applyAISearchMentionToken,
   findAISearchMentionTrigger,
-  insertAISearchLineBreak,
   type AISearchMentionTrigger,
 } from '@/features/ai-search/lib/mentions';
 import { searchApi, type SearchSuggestionAuthor } from '@/features/search/api/searchApi';
@@ -73,7 +72,6 @@ export function AISearchTokenInput({
   const ownInputRef = useRef<HTMLDivElement>(null);
   const editorRef = inputRef || ownInputRef;
   const isComposingRef = useRef(false);
-  const inputSyncTimerRef = useRef<number | null>(null);
   const pendingCaretRef = useRef<number | null>(null);
   const [tokenPortals, setTokenPortals] = useState<Array<{
     element: HTMLElement;
@@ -88,6 +86,11 @@ export function AISearchTokenInput({
     if (!editor) return;
 
     if (serializeAISearchComposer(editor) !== value) {
+      // Portal 必须先卸载，再移除它的宿主节点，否则 React 会在清理时 removeChild 失败。
+      if (tokenPortals.length > 0) {
+        queueMicrotask(() => setTokenPortals([]));
+        return;
+      }
       const portals: typeof tokenPortals = [];
       const nodes = segments.map((segment) => {
         if (segment.type === 'text') return document.createTextNode(segment.content);
@@ -99,30 +102,18 @@ export function AISearchTokenInput({
         return element;
       });
       editor.replaceChildren(...nodes);
-      setTokenPortals(portals);
-    } else {
-      const tokenSegments = segments.filter(
-        (segment): segment is Extract<(typeof segments)[number], { type: 'token' }> => segment.type === 'token',
-      );
-      const elements = Array.from(editor.querySelectorAll<HTMLElement>('[data-ai-token-raw]'));
-      if (elements.length === tokenSegments.length) {
-        setTokenPortals(elements.map((element, index) => ({ element, segment: tokenSegments[index] })));
-      }
+      queueMicrotask(() => setTokenPortals(portals));
     }
 
     if (pendingCaretRef.current !== null) {
       setAISearchComposerCaret(editor, pendingCaretRef.current);
       pendingCaretRef.current = null;
     }
-  }, [editorRef, segments, value]);
+  }, [editorRef, segments, tokenPortals.length, value]);
 
   useEffect(() => {
     if (autoFocus) editorRef.current?.focus();
   }, [autoFocus, editorRef]);
-
-  useEffect(() => () => {
-    if (inputSyncTimerRef.current !== null) window.clearTimeout(inputSyncTimerRef.current);
-  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(trigger?.query.trim() || ''), 220);
@@ -166,10 +157,10 @@ export function AISearchTokenInput({
     return [...authors, ...tags, ...channelItems];
   }, [channels, selectedTokens, suggestedAuthors, trigger]);
 
-  useEffect(() => setSelectedIndex(0), [trigger?.query]);
-
   const updateTrigger = (nextValue: string, caret: number | null) => {
-    setTrigger(findAISearchMentionTrigger(nextValue, caret ?? nextValue.length));
+    const nextTrigger = findAISearchMentionTrigger(nextValue, caret ?? nextValue.length);
+    setTrigger(nextTrigger);
+    setSelectedIndex(0);
   };
 
   const commitValue = (nextValue: string, caret?: number | null) => {
@@ -199,29 +190,13 @@ export function AISearchTokenInput({
     updateTrigger(nextValue, caret);
   };
 
-  const cancelPendingInputSync = () => {
-    if (inputSyncTimerRef.current === null) return;
-    window.clearTimeout(inputSyncTimerRef.current);
-    inputSyncTimerRef.current = null;
-  };
-
   const handleInput = (event: FormEvent<HTMLDivElement>) => {
-    // 部分中文输入法的首个 input 仍会错误报告 isComposing=false，延后一拍让 compositionstart 先接管。
     const nativeEvent = event.nativeEvent as InputEvent;
     if (isComposingRef.current || nativeEvent.isComposing || nativeEvent.inputType === 'insertCompositionText') return;
-    cancelPendingInputSync();
-    inputSyncTimerRef.current = window.setTimeout(() => {
-      inputSyncTimerRef.current = null;
-      if (!isComposingRef.current) syncEditorValue();
-    }, 0);
+    syncEditorValue();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.nativeEvent.keyCode === 229) {
-      cancelPendingInputSync();
-      isComposingRef.current = true;
-      return;
-    }
     if (isComposingRef.current || event.nativeEvent.isComposing) return;
     if (trigger && suggestions.length > 0) {
       if (event.key === 'ArrowDown') {
@@ -246,10 +221,6 @@ export function AISearchTokenInput({
       return;
     }
     if (event.key === 'Enter' && event.shiftKey) {
-      event.preventDefault();
-      const caret = getAISearchComposerCaret(event.currentTarget) ?? value.length;
-      const next = insertAISearchLineBreak(value, caret, caret);
-      commitValue(next.value, next.caret);
       setTrigger(null);
       return;
     }
@@ -271,7 +242,7 @@ export function AISearchTokenInput({
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
-    handleInput(event);
+    syncEditorValue();
   };
 
   return (
@@ -288,13 +259,6 @@ export function AISearchTokenInput({
         aria-autocomplete="list"
         data-placeholder={placeholder}
         onInput={handleInput}
-        onBeforeInput={(event) => {
-          const nativeEvent = event.nativeEvent as InputEvent;
-          if (nativeEvent.isComposing || nativeEvent.inputType === 'insertCompositionText') {
-            cancelPendingInputSync();
-            isComposingRef.current = true;
-          }
-        }}
         onClick={() => {
           const editor = editorRef.current;
           if (editor) updateTrigger(serializeAISearchComposer(editor), getAISearchComposerCaret(editor));
@@ -307,11 +271,9 @@ export function AISearchTokenInput({
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         onCompositionStart={() => {
-          cancelPendingInputSync();
           isComposingRef.current = true;
         }}
         onCompositionEnd={(event: CompositionEvent<HTMLDivElement>) => {
-          cancelPendingInputSync();
           isComposingRef.current = false;
           const editor = event.currentTarget;
           const nextValue = serializeAISearchComposer(editor);

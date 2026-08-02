@@ -120,8 +120,12 @@ export function setAISearchComposerCaret(root: HTMLElement, offset: number) {
     return Array.from(node.childNodes).some(visit);
   };
 
-  if (!visit(root)) range.selectNodeContents(root), range.collapse(false);
-  else range.collapse(true);
+  if (!visit(root)) {
+    range.selectNodeContents(root);
+    range.collapse(false);
+  } else {
+    range.collapse(true);
+  }
   selection?.removeAllRanges();
   selection?.addRange(range);
 }

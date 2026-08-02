@@ -1,5 +1,5 @@
 import { Check, ChevronDown, FileText, LoaderCircle, Search, TriangleAlert } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { AISearchTraceItem } from '@/features/ai-search/lib/session';
 
@@ -19,14 +19,25 @@ export function AISearchReasoning({
     : content.trim()
       ? [{ type: 'reasoning', content }]
       : [];
-  const [open, setOpen] = useState(isStreaming && !hasAnswer);
-
-  useEffect(() => {
-    if (isStreaming) setOpen(!hasAnswer);
-    else setOpen(false);
-  }, [hasAnswer, isStreaming]);
-
   if (items.length === 0) return null;
+
+  return (
+    <ReasoningDetails
+      key={`${isStreaming}-${hasAnswer}`}
+      items={items}
+      initiallyOpen={isStreaming && !hasAnswer}
+    />
+  );
+}
+
+function ReasoningDetails({
+  items,
+  initiallyOpen,
+}: {
+  items: AISearchTraceItem[];
+  initiallyOpen: boolean;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
 
   return (
     <details
@@ -48,7 +59,9 @@ export function AISearchReasoning({
             );
           }
 
-          const ToolIcon = item.tool === 'search_threads' ? Search : FileText;
+          const ToolIcon = item.tool === 'search_threads' || item.tool === 'search_tournaments'
+            ? Search
+            : FileText;
           const StatusIcon = item.status === 'running'
             ? LoaderCircle
             : item.status === 'complete'
