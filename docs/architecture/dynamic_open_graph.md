@@ -357,13 +357,52 @@ Cloudflare Function：
 
 ### 阶段 C：后续扩展
 
-书单闭环稳定后，再逐项评估：
+书单闭环已经验证，当前前端准备状态：
 
-- `/tournaments/{id}`：可复用书单元数据模型；
-- `/u/{user_id}`：需要作者最小分享 DTO；
-- `/threads/{thread_id}`：前端当前没有独立帖子路由，需先建立可分享 URL；
+- [x] `/tournaments/{id}`：复用书单分享接口与数据模型；
+- [x] `/threads/{thread_id}`：建立站内详情 URL，复用现有帖子详情与预览组件；
+- [x] `/u/{user_id}`：Function 已能稳定返回 SPA 外壳；
+- [ ] 帖子内部分享元数据接口；
+- [ ] 作者内部分享元数据接口；
+- [ ] 作者合成 OG 图片；
 - 分享凭证：只有需要为私有资源显式授权分享时再引入；
 - 图片代理/R2：只有 Discord 附件过期成为实际故障时再考虑。
+
+帖子建议返回：
+
+```json
+{
+  "title": "帖子标题",
+  "description": "首条消息摘要",
+  "image_url": "https://cdn.discordapp.com/attachments/...",
+  "author_name": "作者名",
+  "updated_at": "2026-08-05T13:00:00Z"
+}
+```
+
+作者普通 OG 与后续合成图片共用同一份数据：
+
+```json
+{
+  "display_name": "作者名",
+  "avatar_url": "https://cdn.discordapp.com/avatars/...",
+  "stats": {
+    "thread_count": 12,
+    "reaction_count": 345,
+    "reply_count": 67
+  },
+  "latest_work_title": "最新作品标题",
+  "works": [
+    { "title": "作品一", "image_url": "https://cdn.discordapp.com/attachments/..." },
+    { "title": "作品二", "image_url": "https://cdn.discordapp.com/attachments/..." },
+    { "title": "作品三", "image_url": "https://cdn.discordapp.com/attachments/..." }
+  ],
+  "updated_at": "2026-08-05T13:00:00Z"
+}
+```
+
+作者合成图固定展示作者名、三项统计、最新作品标题与最多三张作品封面。第一阶段不在
+Cloudflare 引入 Satori/Resvg；后端接口接通后先验证普通 OG，再单独评估图片生成和缓存。
 
 ## 12. 验收标准
 
@@ -418,6 +457,6 @@ curl -s \
 - Cloudflare 图片代理；
 - R2 持久化 Discord 图片；
 - 动态标题或浏览器端 OG 修改；
-- 一次性覆盖赛事、作者和帖子。
+- 在作者数据接口接通前引入 Satori/Resvg。
 
 先完成书单最小闭环，再依据真实故障和使用量决定是否扩展。

@@ -59,6 +59,14 @@ describe('MarkdownText', () => {
     expect(container.querySelector('pre.code-block code')?.textContent).toBe('const x = `xx`;');
   });
 
+  it('不渲染只有空白内容的围栏代码块', () => {
+    const { container } = render(<MarkdownText text={'前文\n```\n\n```\n后文'} />);
+
+    expect(container.querySelector('pre.code-block')).toBeNull();
+    expect(container).toHaveTextContent('前文');
+    expect(container).toHaveTextContent('后文');
+  });
+
   it('只高亮 Markdown 文本节点，不破坏链接与代码', () => {
     const { container } = render(
       <MarkdownText

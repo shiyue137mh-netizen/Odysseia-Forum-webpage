@@ -23,8 +23,6 @@
 
   & h1 {
     font-size: 1.05rem;
-    border-bottom: 1px solid var(--od-border);
-    padding-bottom: 0.25rem;
   }
 
   & strong {

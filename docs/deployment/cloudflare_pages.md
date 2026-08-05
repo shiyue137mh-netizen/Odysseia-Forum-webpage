@@ -91,25 +91,28 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 ```json
 {
   "version": 1,
-  "include": ["/booklists/*"],
+  "include": ["/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
   "exclude": []
 }
 ```
 
-该文件只让书单详情请求触发 Pages Function，其他页面和静态资源继续走免费静态托管。
+书单和赛事路由返回动态 OG；帖子和作者路由暂时由 Function 显式返回 SPA 外壳，待后端分享
+接口接通后再注入动态元数据。其他页面和静态资源继续走静态托管。
 
-### 书单动态 OG
+### 动态 OG
 
 跨端认证、后端接口契约、安全边界和验收流程详见
 [`docs/architecture/dynamic_open_graph.md`](../architecture/dynamic_open_graph.md)。当前 Pages
 Function 已接入后端内部分享接口。部署前必须在 Cloudflare Production 和 Preview 环境分别
 配置加密 Secret `OG_SERVICE_TOKEN`，否则会安全回退到站点默认 OG。
 
-`functions/booklists/[id].js` 会在边缘节点读取公开书单数据，并显式通过
+`functions/booklists/[id].js` 与 `functions/tournaments/[id].js` 会在边缘节点读取公开分享
+数据，并显式通过
 `env.ASSETS` 获取 React 的 `index.html`。不能在这个路由里依赖 `public/_redirects`
 完成 SPA 回退，因为 Cloudflare 不会对已经命中 Function 的请求应用 `_redirects`。
 
-OG 图片按以下顺序选择：
+赛事复用书单分享接口，因为当前赛事本质上是 `is_tournament = true` 的书单。OG 图片按以下
+顺序选择：
 
 1. 后端分享接口返回的 `image_url`；
 2. 站点默认 `/og-image.png`。

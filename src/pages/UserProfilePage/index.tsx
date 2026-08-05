@@ -229,19 +229,14 @@ export function UserProfilePage() {
       icon: FileText,
     },
     {
-      label: "累计点赞",
+      label: "累计受赞",
       value: profile?.stats.reaction_count ?? 0,
       icon: Heart,
     },
     {
-      label: "累计回复",
+      label: "累计获评",
       value: profile?.stats.reply_count ?? 0,
       icon: MessageCircle,
-    },
-    {
-      label: "当前加载",
-      value: threads.length,
-      icon: RefreshCw,
     },
   ];
 

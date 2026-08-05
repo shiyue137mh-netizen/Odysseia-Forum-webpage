@@ -22,6 +22,10 @@ const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPag
 const AboutPage = lazyPage(() => import('@/pages/AboutPage'), 'AboutPage');
 const MePage = lazyPage(() => import('@/pages/MePage'), 'MePage');
 const UserProfilePage = lazyPage(() => import('@/pages/UserProfilePage'), 'UserProfilePage');
+const ThreadDetailPage = lazyPage(
+  () => import('@/pages/ThreadDetailPage'),
+  'ThreadDetailPage',
+);
 const BooklistsPage = lazyPage(() => import('@/pages/BooklistsPage'), 'BooklistsPage');
 const BooklistDetailPage = lazyPage(
   () => import('@/pages/BooklistDetailPage'),
@@ -107,6 +111,10 @@ const appChildren = [
   {
     path: 'u/:userId',
     element: withSuspense(<UserProfilePage />),
+  },
+  {
+    path: 'threads/:threadId',
+    element: withSuspense(<ThreadDetailPage />),
   },
   ...(isDevToolsEnabled
     ? [

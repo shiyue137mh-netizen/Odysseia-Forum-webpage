@@ -20,6 +20,7 @@ import {
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { usePreviewStore } from "@/features/search/store/previewStore";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
+import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { LazyImage } from "@/shared/ui/LazyImage";
 
 const OPEN_DELAY = 300;
@@ -412,6 +413,9 @@ export function AuthorWorksHoverCard({
                       <MessageCircle className="h-3 w-3" />
                       {thread.reply_count}
                     </span>
+                    <time dateTime={thread.created_at} className="ml-auto whitespace-nowrap">
+                      {formatRelativeDateTime(thread.created_at)}
+                    </time>
                   </span>
                 </span>
               </button>

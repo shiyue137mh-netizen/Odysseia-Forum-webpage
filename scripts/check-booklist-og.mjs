@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 
-import { buildBooklistOgMetadata, onRequestGet } from '../functions/booklists/[id].js';
+import { onRequestGet as onBooklistRequestGet } from '../functions/booklists/[id].js';
+import { onRequestGet as onTournamentRequestGet } from '../functions/tournaments/[id].js';
+import {
+  buildAuthorOgMetadata,
+  buildBooklistOgMetadata,
+  buildThreadOgMetadata,
+  buildTournamentOgMetadata,
+} from '../functions/_shared/og.js';
 
 const fallbackImage = 'https://example.com/og-image.png';
 const imageUrl = 'https://cdn.discordapp.com/attachments/1/2/first.png';
@@ -24,6 +31,48 @@ assert.equal(
     fallbackImage,
   ).image,
   fallbackImage,
+);
+
+assert.deepEqual(
+  buildTournamentOgMetadata(
+    { title: '夏夜祭', description: '', image_url: imageUrl, item_count: 16 },
+    'https://example.com/tournaments/42',
+    fallbackImage,
+  ),
+  {
+    title: '《夏夜祭》· 类脑索引赛事',
+    description: '已有 16 个参赛作品，来看看这场赛事。',
+    image: imageUrl,
+    url: 'https://example.com/tournaments/42',
+  },
+);
+
+assert.match(
+  buildThreadOgMetadata(
+    { title: '海边角色卡', description: '', author_name: '秋青子', image_url: imageUrl },
+    'https://example.com/threads/99',
+    fallbackImage,
+  ).description,
+  /秋青子发布的作品/,
+);
+
+assert.deepEqual(
+  buildAuthorOgMetadata(
+    {
+      display_name: '秋青子',
+      avatar_url: 'https://example.com/avatar.png',
+      stats: { thread_count: 12, reaction_count: 345, reply_count: 67 },
+      latest_work_title: '蛇与夏夜',
+    },
+    'https://example.com/u/123',
+    fallbackImage,
+  ),
+  {
+    title: '秋青子 · 类脑索引',
+    description: '发布 12 个作品 · 收获 345 个点赞 · 67 条回复。最新发布：《蛇与夏夜》',
+    image: 'https://example.com/avatar.png',
+    url: 'https://example.com/u/123',
+  },
 );
 
 const shell = `<!doctype html><html><head>
@@ -91,7 +140,7 @@ globalThis.fetch = async (input, init) => {
 };
 
 try {
-  const response = await onRequestGet({
+  const response = await onBooklistRequestGet({
     request: new Request('https://example.com/booklists/42?from=share'),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
@@ -110,13 +159,28 @@ try {
   assert.equal(requests[0].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
   assert.equal(requests[0].init.headers.Authorization, 'Bearer test-service-token');
 
+  const tournamentResponse = await onTournamentRequestGet({
+    request: new Request('https://example.com/tournaments/42?from=share'),
+    env: {
+      API_BASE_URL: 'https://api.example.com/v1/',
+      OG_SERVICE_TOKEN: 'test-service-token',
+      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
+    },
+    params: { id: '42' },
+  });
+  const tournamentHtml = await tournamentResponse.text();
+  assert.match(tournamentHtml, /<title>《夏夜收藏》· 类脑索引赛事<\/title>/);
+  assert.match(tournamentHtml, /property="og:url" content="https:\/\/example\.com\/tournaments\/42"/);
+  assert.equal(requests.length, 2);
+  assert.equal(requests[1].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
+
   let missingTokenLogged = false;
   console.error = (message) => {
     if (message === 'Booklist OG metadata failed: OG_SERVICE_TOKEN is missing') {
       missingTokenLogged = true;
     }
   };
-  const fallbackResponse = await onRequestGet({
+  const fallbackResponse = await onBooklistRequestGet({
     request: new Request('https://example.com/booklists/42'),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
@@ -126,11 +190,11 @@ try {
   });
   assert.match(await fallbackResponse.text(), /<title>default<\/title>/);
   assert.equal(missingTokenLogged, true);
-  assert.equal(requests.length, 1);
+  assert.equal(requests.length, 2);
 } finally {
   globalThis.fetch = originalFetch;
   globalThis.HTMLRewriter = originalHTMLRewriter;
   console.error = originalConsoleError;
 }
 
-console.log('booklist OG self-check passed');
+console.log('dynamic OG self-check passed');

@@ -11,8 +11,10 @@ interface UserStatsGridProps {
 }
 
 export function UserStatsGrid({ items }: UserStatsGridProps) {
+  const desktopColumns = items.length === 3 ? 'sm:grid-cols-3' : 'lg:grid-cols-4';
+
   return (
-    <div className="mx-auto grid max-w-4xl grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4 sm:gap-y-7 lg:grid-cols-4 lg:gap-x-5">
+    <div className={`mx-auto grid max-w-4xl grid-cols-2 gap-x-3 gap-y-4 sm:gap-x-4 sm:gap-y-7 lg:gap-x-5 ${desktopColumns}`}>
       {items.map((item) => (
         <div key={item.label} className="py-1 text-center sm:py-2">
           {item.icon && (

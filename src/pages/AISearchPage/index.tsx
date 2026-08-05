@@ -945,23 +945,23 @@ export function AISearchPage() {
                   />
                 </label>
                 <div className="space-y-2">
-                  <span className="text-sm font-medium">可用模型</span>
+                  <span className="text-sm font-medium">模型</span>
                   <div className="flex gap-2">
-                    <select
+                    <input
+                      type="text"
+                      list="odysseia-ai-models"
                       value={draftSettings.model}
                       onChange={(event) => updateDraft('model', event.target.value)}
-                      disabled={modelIds.length === 0}
-                      className="min-w-0 flex-1 rounded-xl border border-(--od-shell-line) bg-(--od-surface-input) px-3 py-2.5 text-sm outline-hidden transition-colors focus:border-(--od-accent) disabled:text-(--od-text-tertiary)"
-                      aria-label="选择模型"
-                    >
-                      {draftSettings.model && !modelIds.includes(draftSettings.model) && (
-                        <option value={draftSettings.model}>{draftSettings.model}</option>
-                      )}
-                      {modelIds.length === 0 && !draftSettings.model && <option value="">先获取模型</option>}
+                      placeholder="输入模型名称，或获取模型列表"
+                      autoComplete="off"
+                      className="min-w-0 flex-1 rounded-xl border border-(--od-shell-line) bg-(--od-surface-input) px-3 py-2.5 text-sm outline-hidden transition-colors placeholder:text-(--od-text-tertiary) focus:border-(--od-accent)"
+                      aria-label="模型名称"
+                    />
+                    <datalist id="odysseia-ai-models">
                       {modelIds.map((modelId) => (
-                        <option key={modelId} value={modelId}>{modelId}</option>
+                        <option key={modelId} value={modelId} />
                       ))}
-                    </select>
+                    </datalist>
                     <button
                       type="button"
                       onClick={handleFetchModels}

@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/booklists/*"],
+  "include": ["/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
   "exclude": []
 }

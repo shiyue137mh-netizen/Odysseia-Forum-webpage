@@ -66,6 +66,7 @@ function parseMarkdown(text: string): string {
     .replace(/>/g, '&gt;');
 
   html = html.replace(/```[^\n`]*\n?([\s\S]*?)```/g, (_match, code: string) => {
+    if (!code.trim()) return '';
     const token = `ODCODEBLOCK${codeBlocks.length}TOKEN`;
     codeBlocks.push(`<pre class="code-block"><code>${code.replace(/^\n|\n$/g, '')}</code></pre>`);
     return token;
