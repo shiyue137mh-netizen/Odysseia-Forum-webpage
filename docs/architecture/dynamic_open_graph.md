@@ -301,7 +301,7 @@ API_BASE_URL=https://forum.shimmerday.top/v1
 ```json
 {
   "version": 1,
-  "include": ["/booklists/*", "/share/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
+  "include": ["/booklists/*", "/share/booklists/*", "/tournaments/*", "/share/tournaments/*", "/threads/*", "/u/*"],
   "exclude": []
 }
 ```

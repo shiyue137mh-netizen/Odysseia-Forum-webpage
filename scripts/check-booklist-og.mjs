@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { onRequestGet as onBooklistRequestGet } from '../functions/booklists/[id].js';
 import { onRequestGet as onShareBooklistRequestGet } from '../functions/share/booklists/[id].js';
-import { onRequestGet as onTournamentRequestGet } from '../functions/tournaments/[id].js';
+import { onRequestGet as onShareTournamentRequestGet } from '../functions/share/tournaments/[id].js';
 import {
   buildAuthorOgMetadata,
   buildBooklistOgMetadata,
@@ -207,8 +207,10 @@ try {
   assert.match(await canonicalResponse.text(), /<title>default<\/title>/);
   assert.equal(requests.length, 1);
 
-  const tournamentResponse = await onTournamentRequestGet({
-    request: new Request('https://example.com/tournaments/42?from=share'),
+  const tournamentResponse = await onShareTournamentRequestGet({
+    request: new Request('https://example.com/share/tournaments/42?from=share', {
+      headers: { 'User-Agent': 'Discordbot/2.0' },
+    }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
       OG_SERVICE_TOKEN: 'test-service-token',
@@ -218,9 +220,21 @@ try {
   });
   const tournamentHtml = await tournamentResponse.text();
   assert.match(tournamentHtml, /<title>《夏夜收藏》· 类脑索引赛事<\/title>/);
-  assert.match(tournamentHtml, /property="og:url" content="https:\/\/example\.com\/tournaments\/42"/);
+  assert.match(tournamentHtml, /property="og:url" content="https:\/\/example\.com\/share\/tournaments\/42"/);
   assert.equal(requests.length, 2);
   assert.equal(requests[1].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
+
+  const tournamentRedirect = await onShareTournamentRequestGet({
+    request: new Request('https://example.com/share/tournaments/42'),
+    env: {
+      OG_SERVICE_TOKEN: 'test-service-token',
+      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
+    },
+    params: { id: '42' },
+  });
+  assert.equal(tournamentRedirect.status, 302);
+  assert.equal(tournamentRedirect.headers.get('location'), 'https://example.com/tournaments/42');
+  assert.equal(requests.length, 2);
 
   let missingTokenLogged = false;
   console.error = (message) => {

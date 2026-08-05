@@ -44,7 +44,7 @@ export function buildBooklistShareText(booklist: BooklistShareSource) {
 }
 
 export function buildTournamentShareText(tournament: BooklistShareSource) {
-  return buildCollectionShareText(tournament, '赛事', `/tournaments/${tournament.id}`);
+  return buildCollectionShareText(tournament, '赛事', `/share/tournaments/${tournament.id}`);
 }
 
 export function buildAuthorShareText({ userId, authorName, stats }: AuthorShareSource) {
