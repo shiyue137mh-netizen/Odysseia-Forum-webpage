@@ -91,7 +91,7 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 ```json
 {
   "version": 1,
-  "include": ["/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
+  "include": ["/booklists/*", "/share/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
   "exclude": []
 }
 ```
@@ -106,8 +106,8 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 Function 已接入后端内部分享接口。部署前必须在 Cloudflare Production 和 Preview 环境分别
 配置加密 Secret `OG_SERVICE_TOKEN`，否则会安全回退到站点默认 OG。
 
-`functions/booklists/[id].js` 与 `functions/tournaments/[id].js` 会在边缘节点读取公开分享
-数据，并显式通过
+书单动态 OG 位于 `functions/share/booklists/[id].js`。普通浏览器访问分享 URL 时会直接
+重定向到正常书单页，只有社交爬虫读取后端分享数据。Function 显式通过
 `env.ASSETS` 获取 React 的 `index.html`。不能在这个路由里依赖 `public/_redirects`
 完成 SPA 回退，因为 Cloudflare 不会对已经命中 Function 的请求应用 `_redirects`。
 
@@ -128,7 +128,7 @@ pnpm check:og
 部署后可检查社交爬虫实际收到的原始 HTML：
 
 ```bash
-curl -A Discordbot https://你的域名/booklists/书单ID
+curl -A Discordbot https://你的域名/share/booklists/书单ID
 ```
 
 返回的 `<head>` 应包含该书单对应的 `og:title`、`og:description` 和 `og:image`。

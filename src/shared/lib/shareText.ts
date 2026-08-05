@@ -24,15 +24,27 @@ export function buildAbsoluteUrl(path: string) {
   return `${window.location.origin}${normalizedPath}`;
 }
 
-export function buildBooklistShareText(booklist: BooklistShareSource) {
-  const url = buildAbsoluteUrl(`/booklists/${booklist.id}`);
+function buildCollectionShareText(
+  booklist: BooklistShareSource,
+  kind: '书单' | '赛事',
+  path: string,
+) {
+  const url = buildAbsoluteUrl(path);
   return [
-    `分享书单：《${booklist.title}》`,
+    `分享${kind}：《${booklist.title}》`,
     booklist.description?.trim() ? `简介：${booklist.description.trim()}` : null,
     `收录 ${booklist.item_count} 个帖子 · ${booklist.collection_count} 次收藏 · ${booklist.view_count} 次浏览`,
     booklist.is_public ? '公开书单' : '私有书单',
     url,
   ].filter(Boolean).join('\n');
+}
+
+export function buildBooklistShareText(booklist: BooklistShareSource) {
+  return buildCollectionShareText(booklist, '书单', `/share/booklists/${booklist.id}`);
+}
+
+export function buildTournamentShareText(tournament: BooklistShareSource) {
+  return buildCollectionShareText(tournament, '赛事', `/tournaments/${tournament.id}`);
 }
 
 export function buildAuthorShareText({ userId, authorName, stats }: AuthorShareSource) {

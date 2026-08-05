@@ -28,7 +28,7 @@ import {
 import { useToggleBooklistCollection } from "@/features/booklists/hooks/useBooklistsData";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import {
-  buildBooklistShareText,
+  buildTournamentShareText,
   copyTextToClipboard,
 } from "@/shared/lib/shareText";
 import { buildDiscordWebChannelUrl } from "@/shared/lib/discord";
@@ -308,7 +308,7 @@ export function TournamentDetailPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    setShareText(buildBooklistShareText(tournament))
+                    setShareText(buildTournamentShareText(tournament))
                   }
                   className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
                 >

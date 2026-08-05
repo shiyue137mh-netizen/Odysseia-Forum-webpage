@@ -1,6 +1,6 @@
 # 动态 Open Graph 跨端实施方案
 
-> 状态：后端书单分享接口已提供，Pages Function 已完成接入；待配置 Cloudflare Secret 并部署验收。
+> 状态：书单专用分享 URL 已接入；正常页面不再请求分享元数据，待部署验收。
 >
 > 更新时间：2026-08-05
 
@@ -16,7 +16,7 @@ SSR、不生成新图片、不开放论坛业务接口的前提下，为允许�
 第一阶段只覆盖书单：
 
 ```text
-https://odysseia-forum-webpage.pages.dev/booklists/{booklist_id}
+https://odysseia-forum-webpage.pages.dev/share/booklists/{booklist_id}
 ```
 
 书单闭环验证成功后，再评估赛事、作者与帖子。
@@ -35,7 +35,7 @@ Discord 分享链接时不会执行 React JavaScript。Discordbot 只读取服�
 
 ```text
 Discordbot
-    ↓ 匿名 GET /booklists/{id}
+    ↓ 匿名 GET /share/booklists/{id}
 Cloudflare Pages Function
     ↓ 携带机器凭证请求元数据
 Python 后端内部接口
@@ -54,8 +54,9 @@ Cloudflare Pages。
 
 前端仓库已经包含：
 
-- `functions/booklists/[id].js`：书单详情 Pages Function；
-- `public/_routes.json`：只让 `/booklists/*` 触发 Function；
+- `functions/share/booklists/[id].js`：书单动态 OG Pages Function；
+- `functions/booklists/[id].js`：只返回 SPA 外壳，不访问分享元数据接口；
+- `public/_routes.json`：注册书单详情和专用分享路由；
 - `scripts/check-booklist-og.mjs`：基于内部分享接口 DTO 的本地自检；
 - `pnpm check:og`：自检命令。
 
@@ -167,6 +168,8 @@ GET /v1/internal/share-metadata/booklists/{booklist_id}
   "description": "整理的一组夏日角色卡",
   "image_url": "https://cdn.discordapp.com/attachments/...",
   "item_count": 12,
+  "collection_count": 3,
+  "view_count": 120,
   "updated_at": "2026-08-02T13:00:00Z"
 }
 ```
@@ -179,6 +182,8 @@ GET /v1/internal/share-metadata/booklists/{booklist_id}
 | `description` | string/null | 否 | 书单简介；为空时由 Function 生成数量描述 |
 | `image_url` | string/null | 否 | 当前有效的 HTTP(S) Discord CDN URL |
 | `item_count` | integer | 是 | 书单内帖子数量 |
+| `collection_count` | integer | 否 | 收藏次数；提供后固定显示在 OG 描述末尾 |
+| `view_count` | integer | 否 | 浏览次数；提供后固定显示在 OG 描述末尾 |
 | `updated_at` | ISO 8601 string | 是 | 用于后续缓存和失效策略 |
 
 响应不需要复用完整 `BooklistDetail`。使用独立最小 DTO，避免业务模型以后新增字段时被无意
@@ -243,7 +248,7 @@ https://cdn.discordapp.com/attachments/.../image.png?ex=...&is=...&hm=...
 
 ## 8. Pages Function 实现
 
-`functions/booklists/[id].js` 当前实现：
+`functions/share/booklists/[id].js` 当前实现：
 
 1. 从 `env.OG_SERVICE_TOKEN` 读取机器 Secret；
 2. 只请求一次内部分享元数据接口；
@@ -253,6 +258,9 @@ https://cdn.discordapp.com/attachments/.../image.png?ex=...&is=...&hm=...
 6. 使用 `HTMLRewriter` 替换 HTML 与 Twitter/OG 元数据；
 7. 后端超时、`401`、`404` 或无效响应时回退默认 OG；
 8. 日志只记录状态码和资源 ID，不记录 Secret 或完整签名图片 URL。
+
+普通浏览器访问分享 URL 时，在请求后端之前直接 `302` 到 `/booklists/{id}`；社交爬虫才读取
+分享元数据。OG 简介会压缩空白并截断过长正文，统计数据固定追加在末尾。
 
 Function 输出字段：
 
@@ -293,7 +301,7 @@ API_BASE_URL=https://forum.shimmerday.top/v1
 ```json
 {
   "version": 1,
-  "include": ["/booklists/*"],
+  "include": ["/booklists/*", "/share/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
   "exclude": []
 }
 ```
@@ -427,7 +435,7 @@ curl -i \
 ```bash
 curl -s \
   -A Discordbot \
-  https://前端域名/booklists/4618?og-test=版本号
+  https://前端域名/share/booklists/4618?og-test=版本号
 ```
 
 原始 HTML 必须包含：
@@ -436,7 +444,7 @@ curl -s \
 <meta property="og:title" content="《实际书单标题》· 类脑索引">
 <meta property="og:description" content="实际书单简介或数量描述">
 <meta property="og:image" content="实际 Discord CDN URL">
-<meta property="og:url" content="https://前端域名/booklists/4618">
+<meta property="og:url" content="https://前端域名/share/booklists/4618">
 ```
 
 同时验证：

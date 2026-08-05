@@ -1,12 +1,5 @@
-import {
-  buildBooklistOgMetadata,
-  createShareMetadataHandler,
-} from '../_shared/og.js';
+import { fetchAppShell } from '../_shared/og.js';
 
-export { buildBooklistOgMetadata } from '../_shared/og.js';
-
-export const onRequestGet = createShareMetadataHandler({
-  resourceName: 'Booklist',
-  endpoint: (id) => `/internal/share-metadata/booklists/${id}`,
-  buildMetadata: buildBooklistOgMetadata,
-});
+export function onRequestGet({ request, env }) {
+  return fetchAppShell(request, env);
+}

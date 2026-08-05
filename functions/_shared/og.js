@@ -5,6 +5,16 @@ export function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function compactText(value) {
+  return cleanText(value).replace(/\s+/g, ' ');
+}
+
+function truncateText(value, maxLength) {
+  if (value.length <= maxLength) return value;
+  // ponytail: Discord 不公开稳定的预览字数；若后续确定平台上限，改为按平台生成描述。
+  return `${value.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
 export function safeHttpUrl(value) {
   const candidate = cleanText(value);
   if (!candidate) return null;
@@ -19,11 +29,16 @@ export function safeHttpUrl(value) {
 
 export function buildBooklistOgMetadata(booklist, pageUrl, fallbackImage) {
   const title = cleanText(booklist?.title) || '未命名书单';
-  const description =
-    cleanText(booklist?.description) ||
-    (Number.isFinite(booklist?.item_count)
-      ? `收录 ${booklist.item_count} 个帖子，来看看这份角色卡书单。`
-      : '在类脑索引浏览大家整理的角色卡书单。');
+  const introduction = truncateText(compactText(booklist?.description), 160);
+  const statistics = [
+    Number.isFinite(booklist?.item_count) ? `收录 ${booklist.item_count} 个帖子` : null,
+    Number.isFinite(booklist?.collection_count) ? `${booklist.collection_count} 次收藏` : null,
+    Number.isFinite(booklist?.view_count) ? `${booklist.view_count} 次浏览` : null,
+  ].filter(Boolean).join(' · ');
+  const description = [
+    introduction || '在类脑索引浏览大家整理的角色卡书单。',
+    statistics,
+  ].filter(Boolean).join(' · ');
 
   return {
     title: `《${title}》· ${SITE_NAME}`,
@@ -35,11 +50,16 @@ export function buildBooklistOgMetadata(booklist, pageUrl, fallbackImage) {
 
 export function buildTournamentOgMetadata(tournament, pageUrl, fallbackImage) {
   const title = cleanText(tournament?.title) || '未命名赛事';
-  const description =
-    cleanText(tournament?.description) ||
-    (Number.isFinite(tournament?.item_count)
-      ? `已有 ${tournament.item_count} 个参赛作品，来看看这场赛事。`
-      : '在类脑索引浏览社区赛事与参赛作品。');
+  const introduction = truncateText(compactText(tournament?.description), 160);
+  const statistics = [
+    Number.isFinite(tournament?.item_count) ? `${tournament.item_count} 个参赛作品` : null,
+    Number.isFinite(tournament?.collection_count) ? `${tournament.collection_count} 次收藏` : null,
+    Number.isFinite(tournament?.view_count) ? `${tournament.view_count} 次浏览` : null,
+  ].filter(Boolean).join(' · ');
+  const description = [
+    introduction || '在类脑索引浏览社区赛事与参赛作品。',
+    statistics,
+  ].filter(Boolean).join(' · ');
 
   return {
     title: `《${title}》· ${SITE_NAME}赛事`,
@@ -52,11 +72,20 @@ export function buildTournamentOgMetadata(tournament, pageUrl, fallbackImage) {
 export function buildThreadOgMetadata(thread, pageUrl, fallbackImage) {
   const title = cleanText(thread?.title) || '未命名帖子';
   const authorName = cleanText(thread?.author_name);
-  const excerpt = cleanText(thread?.description);
+  const excerpt = truncateText(compactText(thread?.description), 160);
+  const statistics = [
+    Number.isFinite(thread?.reaction_count) ? `${thread.reaction_count} 个点赞` : null,
+    Number.isFinite(thread?.reply_count) ? `${thread.reply_count} 条回复` : null,
+    Number.isFinite(thread?.collection_count) ? `${thread.collection_count} 次收藏` : null,
+  ].filter(Boolean).join(' · ');
+  const description = [
+    excerpt || (authorName ? `${authorName}发布的作品。` : '在类脑索引查看这篇帖子。'),
+    statistics,
+  ].filter(Boolean).join(' · ');
 
   return {
     title: `《${title}》· ${SITE_NAME}`,
-    description: excerpt || (authorName ? `${authorName}发布的作品。` : '在类脑索引查看这篇帖子。'),
+    description,
     image: safeHttpUrl(thread?.image_url) || fallbackImage,
     url: pageUrl,
   };
@@ -86,6 +115,12 @@ export function buildAuthorOgMetadata(author, pageUrl, fallbackImage) {
 
 export function fetchAppShell(request, env) {
   return env.ASSETS.fetch(new URL('/', request.url));
+}
+
+export function isSocialCrawler(request) {
+  return /(Discordbot|Twitterbot|facebookexternalhit|Slackbot|TelegramBot|WhatsApp|LinkedInBot|Pinterest|Embedly|Googlebot|bingbot|Applebot)/i.test(
+    request.headers.get('user-agent') || '',
+  );
 }
 
 async function fetchJson(url, token) {
@@ -135,13 +170,22 @@ function rewriteMetadata(response, metadata) {
     .transform(response);
 }
 
-export function createShareMetadataHandler({ resourceName, endpoint, buildMetadata }) {
+export function createShareMetadataHandler({
+  resourceName,
+  endpoint,
+  buildMetadata,
+  canonicalPath,
+}) {
   return async function onRequestGet({ request, env, params }) {
     const requestUrl = new URL(request.url);
     const resourceId = String(params.id || '').trim();
-    const shellResponse = await fetchAppShell(request, env);
+    if (!/^\d+$/.test(resourceId)) return fetchAppShell(request, env);
 
-    if (!/^\d+$/.test(resourceId)) return shellResponse;
+    if (canonicalPath && !isSocialCrawler(request)) {
+      return Response.redirect(new URL(canonicalPath(resourceId), requestUrl), 302);
+    }
+
+    const shellResponse = await fetchAppShell(request, env);
 
     const token = cleanText(env.OG_SERVICE_TOKEN);
     if (!token) {

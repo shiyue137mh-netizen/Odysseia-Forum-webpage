@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import { onRequestGet as onBooklistRequestGet } from '../functions/booklists/[id].js';
+import { onRequestGet as onShareBooklistRequestGet } from '../functions/share/booklists/[id].js';
 import { onRequestGet as onTournamentRequestGet } from '../functions/tournaments/[id].js';
 import {
   buildAuthorOgMetadata,
@@ -13,13 +14,20 @@ const fallbackImage = 'https://example.com/og-image.png';
 const imageUrl = 'https://cdn.discordapp.com/attachments/1/2/first.png';
 
 const metadata = buildBooklistOgMetadata(
-  { title: '夏夜收藏', description: '', image_url: imageUrl, item_count: 8 },
+  {
+    title: '夏夜收藏',
+    description: '沿着晚风整理的一组角色卡。',
+    image_url: imageUrl,
+    item_count: 8,
+    collection_count: 3,
+    view_count: 120,
+  },
   'https://example.com/booklists/42',
   fallbackImage,
 );
 assert.deepEqual(metadata, {
   title: '《夏夜收藏》· 类脑索引',
-  description: '收录 8 个帖子，来看看这份角色卡书单。',
+  description: '沿着晚风整理的一组角色卡。 · 收录 8 个帖子 · 3 次收藏 · 120 次浏览',
   image: imageUrl,
   url: 'https://example.com/booklists/42',
 });
@@ -33,6 +41,19 @@ assert.equal(
   fallbackImage,
 );
 
+const longDescription = buildBooklistOgMetadata(
+  {
+    title: '长简介书单',
+    description: '很长的简介'.repeat(80),
+    item_count: 2,
+    collection_count: 1,
+    view_count: 95,
+  },
+  'https://example.com/booklists/44',
+  fallbackImage,
+).description;
+assert.match(longDescription, /… · 收录 2 个帖子 · 1 次收藏 · 95 次浏览$/);
+
 assert.deepEqual(
   buildTournamentOgMetadata(
     { title: '夏夜祭', description: '', image_url: imageUrl, item_count: 16 },
@@ -41,7 +62,7 @@ assert.deepEqual(
   ),
   {
     title: '《夏夜祭》· 类脑索引赛事',
-    description: '已有 16 个参赛作品，来看看这场赛事。',
+    description: '在类脑索引浏览社区赛事与参赛作品。 · 16 个参赛作品',
     image: imageUrl,
     url: 'https://example.com/tournaments/42',
   },
@@ -133,6 +154,8 @@ globalThis.fetch = async (input, init) => {
       description: '沿着晚风整理的一组角色卡。',
       image_url: imageUrl,
       item_count: 1,
+      collection_count: 2,
+      view_count: 30,
       updated_at: '2026-08-05T12:00:00Z',
     });
   }
@@ -140,8 +163,10 @@ globalThis.fetch = async (input, init) => {
 };
 
 try {
-  const response = await onBooklistRequestGet({
-    request: new Request('https://example.com/booklists/42?from=share'),
+  const response = await onShareBooklistRequestGet({
+    request: new Request('https://example.com/share/booklists/42?from=share', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Discordbot/2.0)' },
+    }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
       OG_SERVICE_TOKEN: 'test-service-token',
@@ -152,12 +177,35 @@ try {
   const html = await response.text();
 
   assert.match(html, /<title>《夏夜收藏》· 类脑索引<\/title>/);
-  assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。"/);
+  assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。 · 收录 1 个帖子 · 2 次收藏 · 30 次浏览"/);
   assert.match(html, /property="og:image" content="https:\/\/cdn\.discordapp\.com\/attachments\/1\/2\/first\.png"/);
-  assert.match(html, /property="og:url" content="https:\/\/example\.com\/booklists\/42"/);
+  assert.match(html, /property="og:url" content="https:\/\/example\.com\/share\/booklists\/42"/);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
   assert.equal(requests[0].init.headers.Authorization, 'Bearer test-service-token');
+
+  const redirectResponse = await onShareBooklistRequestGet({
+    request: new Request('https://example.com/share/booklists/42'),
+    env: {
+      API_BASE_URL: 'https://api.example.com/v1/',
+      OG_SERVICE_TOKEN: 'test-service-token',
+      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
+    },
+    params: { id: '42' },
+  });
+  assert.equal(redirectResponse.status, 302);
+  assert.equal(redirectResponse.headers.get('location'), 'https://example.com/booklists/42');
+  assert.equal(requests.length, 1);
+
+  const canonicalResponse = await onBooklistRequestGet({
+    request: new Request('https://example.com/booklists/42'),
+    env: {
+      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
+    },
+    params: { id: '42' },
+  });
+  assert.match(await canonicalResponse.text(), /<title>default<\/title>/);
+  assert.equal(requests.length, 1);
 
   const tournamentResponse = await onTournamentRequestGet({
     request: new Request('https://example.com/tournaments/42?from=share'),
@@ -180,8 +228,10 @@ try {
       missingTokenLogged = true;
     }
   };
-  const fallbackResponse = await onBooklistRequestGet({
-    request: new Request('https://example.com/booklists/42'),
+  const fallbackResponse = await onShareBooklistRequestGet({
+    request: new Request('https://example.com/share/booklists/42', {
+      headers: { 'User-Agent': 'Discordbot/2.0' },
+    }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
       ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
