@@ -102,7 +102,8 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 
 跨端认证、后端接口契约、安全边界和验收流程详见
 [`docs/architecture/dynamic_open_graph.md`](../architecture/dynamic_open_graph.md)。当前 Pages
-Function 原型已经部署，但在后端机器认证完成前会因 `401` 安全回退到站点默认 OG。
+Function 已接入后端内部分享接口。部署前必须在 Cloudflare Production 和 Preview 环境分别
+配置加密 Secret `OG_SERVICE_TOKEN`，否则会安全回退到站点默认 OG。
 
 `functions/booklists/[id].js` 会在边缘节点读取公开书单数据，并显式通过
 `env.ASSETS` 获取 React 的 `index.html`。不能在这个路由里依赖 `public/_redirects`
@@ -110,9 +111,10 @@ Function 原型已经部署，但在后端机器认证完成前会因 `401` 安�
 
 OG 图片按以下顺序选择：
 
-1. 书单的 `cover_image_url`；
-2. 书单当前排序下第一个帖子的第一张 `thumbnail_urls`；
-3. 站点默认 `/og-image.png`。
+1. 后端分享接口返回的 `image_url`；
+2. 站点默认 `/og-image.png`。
+
+封面选择由后端统一处理，Function 不再请求书单详情或第一项帖子。
 
 本地纯逻辑检查：
 

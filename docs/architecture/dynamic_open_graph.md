@@ -1,8 +1,8 @@
 # 动态 Open Graph 跨端实施方案
 
-> 状态：方案确定，书单 Pages Function 原型已部署；后端机器认证尚未打通，因此当前仍回退到站点默认 OG。
+> 状态：后端书单分享接口已提供，Pages Function 已完成接入；待配置 Cloudflare Secret 并部署验收。
 >
-> 更新时间：2026-08-02
+> 更新时间：2026-08-05
 
 ## 1. 文档目的
 
@@ -56,7 +56,7 @@ Cloudflare Pages。
 
 - `functions/booklists/[id].js`：书单详情 Pages Function；
 - `public/_routes.json`：只让 `/booklists/*` 触发 Function；
-- `scripts/check-booklist-og.mjs`：基于 OpenAPI 数据形状的本地自检；
+- `scripts/check-booklist-og.mjs`：基于内部分享接口 DTO 的本地自检；
 - `pnpm check:og`：自检命令。
 
 Cloudflare 生产部署日志已经确认：
@@ -67,7 +67,8 @@ Cloudflare 生产部署日志已经确认：
 - `/booklists/4618?og-test=1` 成功触发 Function；
 - Function 最终返回 HTTP 200。
 
-动态 OG 没有出现的直接原因是后端返回了 `401 Unauthorized`：
+旧版动态 OG 没有出现的直接原因是 Function 匿名访问业务接口，后端返回了
+`401 Unauthorized`：
 
 ```text
 Booklist OG metadata failed
@@ -77,10 +78,10 @@ Error: API request failed: 401
 Function 捕获异常后按设计返回默认 `index.html`，因此 Cloudflare 控制台显示 `Ok`，Discord
 仍显示站点默认 OG。
 
-这说明问题不在 Discord CDN、HTMLRewriter、Functions 路由或 Cloudflare 构建，而在：
+后端现已提供带机器认证的内部接口，Pages Function 改为通过该接口获取最小分享元数据：
 
 ```text
-Pages Function 没有可用于访问论坛后端的机器凭证。
+GET /v1/internal/share-metadata/booklists/{booklist_id}
 ```
 
 ## 4. 访问与公开边界
@@ -240,9 +241,9 @@ https://cdn.discordapp.com/attachments/.../image.png?ex=...&is=...&hm=...
 
 第一阶段不增加图片代理、R2 镜像或动态 PNG 生成。
 
-## 8. Pages Function 改造
+## 8. Pages Function 实现
 
-后端接口上线后，`functions/booklists/[id].js` 应调整为：
+`functions/booklists/[id].js` 当前实现：
 
 1. 从 `env.OG_SERVICE_TOKEN` 读取机器 Secret；
 2. 只请求一次内部分享元数据接口；
@@ -338,20 +339,18 @@ Cloudflare Function：
 
 ### 阶段 A：后端
 
-- [ ] 新增 `OG_SERVICE_TOKEN` 配置；
-- [ ] 新增机器认证依赖；
-- [ ] 新增书单最小分享 DTO；
-- [ ] 新增内部书单分享元数据接口；
-- [ ] 后端统一实现封面选择；
-- [ ] 私有书单返回 `404`；
-- [ ] 增加无 Token、错误 Token、公开书单、私有书单和空封面测试。
+- [ ] 确认生产环境已配置 `OG_SERVICE_TOKEN`；
+- [ ] 验证无 Token、错误 Token、公开书单和私有书单行为；
+- [x] 新增书单最小分享 DTO；
+- [x] 新增内部书单分享元数据接口；
+- [ ] 验证后端封面选择和私有书单隐藏规则。
 
 ### 阶段 B：Cloudflare/前端
 
 - [ ] 在 Cloudflare Production 和 Preview 配置 `OG_SERVICE_TOKEN` Secret；
-- [ ] Function 改为调用内部接口并携带机器认证；
-- [ ] 删除 Function 内第二次书单项请求；
-- [ ] 更新 `pnpm check:og` 模拟契约；
+- [x] Function 改为调用内部接口并携带机器认证；
+- [x] 删除 Function 内第二次书单项请求；
+- [x] 更新 `pnpm check:og` 模拟契约；
 - [ ] 部署 Preview 并读取原始 HTML；
 - [ ] 部署 Production；
 - [ ] 验证 Discord 分享卡片。

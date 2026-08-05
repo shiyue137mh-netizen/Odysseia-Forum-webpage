@@ -18,15 +18,7 @@ function safeHttpUrl(value) {
   }
 }
 
-export function selectBooklistOgImage(booklist, firstItem, fallbackImage) {
-  return (
-    safeHttpUrl(booklist?.cover_image_url) ||
-    safeHttpUrl(firstItem?.thumbnail_urls?.[0]) ||
-    fallbackImage
-  );
-}
-
-export function buildBooklistOgMetadata(booklist, firstItem, pageUrl, fallbackImage) {
+export function buildBooklistOgMetadata(booklist, pageUrl, fallbackImage) {
   const title = cleanText(booklist?.title) || '未命名书单';
   const description =
     cleanText(booklist?.description) ||
@@ -37,37 +29,25 @@ export function buildBooklistOgMetadata(booklist, firstItem, pageUrl, fallbackIm
   return {
     title: `《${title}》· ${SITE_NAME}`,
     description,
-    image: selectBooklistOgImage(booklist, firstItem, fallbackImage),
+    image: safeHttpUrl(booklist?.image_url) || fallbackImage,
     url: pageUrl,
   };
 }
 
-async function fetchJson(url) {
+async function fetchJson(url, token) {
   const response = await fetch(url, {
-    headers: { Accept: 'application/json' },
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     signal: AbortSignal.timeout(4000),
   });
   if (!response.ok) throw new Error(`API request failed: ${response.status}`);
   return response.json();
 }
 
-async function loadBooklist(apiBaseUrl, booklistId) {
-  const booklist = await fetchJson(`${apiBaseUrl}/booklist/detail/${booklistId}`);
-  if (!booklist?.is_public) return null;
-
-  if (safeHttpUrl(booklist.cover_image_url) || Number(booklist.item_count) < 1) {
-    return { booklist, firstItem: null };
-  }
-
-  try {
-    const items = await fetchJson(
-      `${apiBaseUrl}/booklist/item/list/page/${booklistId}?limit=1&offset=0`,
-    );
-    return { booklist, firstItem: items?.results?.[0] || null };
-  } catch (error) {
-    console.warn('Booklist OG first item failed', error);
-    return { booklist, firstItem: null };
-  }
+async function loadBooklist(apiBaseUrl, booklistId, token) {
+  return fetchJson(`${apiBaseUrl}/internal/share-metadata/booklists/${booklistId}`, token);
 }
 
 class ContentAttributeHandler {
@@ -113,20 +93,20 @@ export async function onRequestGet({ request, env, params }) {
 
   if (!/^\d+$/.test(booklistId)) return shellResponse;
 
+  const token = cleanText(env.OG_SERVICE_TOKEN);
+  if (!token) {
+    console.error('Booklist OG metadata failed: OG_SERVICE_TOKEN is missing');
+    return shellResponse;
+  }
+
   try {
     const apiBaseUrl = cleanText(env.API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '');
-    const data = await loadBooklist(apiBaseUrl, booklistId);
-    if (!data) return shellResponse;
+    const booklist = await loadBooklist(apiBaseUrl, booklistId, token);
 
     requestUrl.search = '';
     requestUrl.hash = '';
     const fallbackImage = new URL('/og-image.png', requestUrl).href;
-    const metadata = buildBooklistOgMetadata(
-      data.booklist,
-      data.firstItem,
-      requestUrl.href,
-      fallbackImage,
-    );
+    const metadata = buildBooklistOgMetadata(booklist, requestUrl.href, fallbackImage);
 
     return rewriteMetadata(shellResponse, metadata);
   } catch (error) {
