@@ -7,7 +7,7 @@ import { CinematicCard } from '@/shared/ui/CinematicCard';
 import { withViewTransition } from '@/shared/lib/viewTransition';
 
 import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
-import backgroundImage from '@/assets/images/background/summer4.png';
+import backgroundImage from '@/assets/images/background/space.png';
 import { APP_VERSION } from '@/shared/config/appInfo';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
 

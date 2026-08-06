@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { BannerApplicationModal } from '@/features/banner/components/BannerApplicationModal';
-import springBackground from '@/assets/images/background/spring.png';
-import spring2Background from '@/assets/images/background/spring2.png';
-import summer1Background from '@/assets/images/background/summer1.png';
-import summer2Background from '@/assets/images/background/summer2.png';
-import summer3Background from '@/assets/images/background/summer3.png';
+import fantasyMarketBackground from '@/assets/images/background/apple.png';
+import gardenBackground from '@/assets/images/background/garden.png';
+import railwayBackground from '@/assets/images/background/railways.png';
+import rainyDayBackground from '@/assets/images/background/rainyday.png';
+import rooftopBackground from '@/assets/images/background/roof.png';
+import spaceBackground from '@/assets/images/background/space.png';
+import vendingMachineBackground from '@/assets/images/background/vending_machine.png';
 import { LazyImage } from '@/shared/ui/LazyImage';
 
 const WIKI_URL = 'https://wiki.xn--35zx7g.org/';
@@ -14,34 +16,46 @@ const bannerMediaClass = 'relative aspect-video min-h-[250px] sm:min-h-0';
 
 const fallbackBanners: Banner[] = [
   {
-    id: 'fallback-summer-1',
-    image: summer1Background,
+    id: 'fallback-fantasy-market',
+    image: fantasyMarketBackground,
     title: '欢迎来到类脑Odysseia索引页',
-    description: '今天的头图先交给季节背景值班，继续往下逛逛看吧。',
+    description: '从西幻集市出发，继续往下逛逛最近的作品吧。',
   },
   {
-    id: 'fallback-summer-2',
-    image: summer2Background,
+    id: 'fallback-balcony-garden',
+    image: gardenBackground,
     title: '欢迎来到类脑Odysseia索引页',
-    description: 'Banner 图暂时没有准备好，先用默认背景陪你巡游。',
+    description: '在阳台花园停一会儿，新的帖子和书单正在下面等你。',
   },
   {
-    id: 'fallback-summer-3',
-    image: summer3Background,
+    id: 'fallback-railway',
+    image: railwayBackground,
     title: '欢迎来到类脑Odysseia索引页',
-    description: '展示位偶尔会等一张图加载，内容仍然在下面等你。',
+    description: '搭上电车，沿着索引继续探索社区里的新故事。',
   },
   {
-    id: 'fallback-spring',
-    image: springBackground,
+    id: 'fallback-rainy-room',
+    image: rainyDayBackground,
     title: '欢迎来到类脑Odysseia索引页',
-    description: '先用一张浅春背景垫场，等下一条 Banner 就绪。',
+    description: '雨声适合慢慢阅读，也适合发现一张新的角色卡。',
   },
   {
-    id: 'fallback-spring-2',
-    image: spring2Background,
+    id: 'fallback-school-rooftop',
+    image: rooftopBackground,
     title: '欢迎来到类脑Odysseia索引页',
-    description: '默认背景正在轮换，继续探索最近的帖子和书单吧。',
+    description: '风从学校天台吹过，最近的社区内容仍在继续更新。',
+  },
+  {
+    id: 'fallback-earth-from-space',
+    image: spaceBackground,
+    title: '欢迎来到类脑Odysseia索引页',
+    description: '从星海回望地球，也回来看一看大家创造的新世界。',
+  },
+  {
+    id: 'fallback-vending-machine',
+    image: vendingMachineBackground,
+    title: '欢迎来到类脑Odysseia索引页',
+    description: '靠着自动贩卖机休息片刻，再继续今天的社区巡游。',
   },
 ];
 

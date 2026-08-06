@@ -199,7 +199,7 @@ export function createShareMetadataHandler({
 
       requestUrl.search = '';
       requestUrl.hash = '';
-      const fallbackImage = new URL('/og-image.png', requestUrl).href;
+      const fallbackImage = new URL('/og-image-202608.png', requestUrl).href;
       return rewriteMetadata(
         shellResponse,
         buildMetadata(data, requestUrl.href, fallbackImage),

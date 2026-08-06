@@ -116,7 +116,7 @@ Function 已接入后端内部分享接口。部署前必须在 Cloudflare Produ
 顺序选择：
 
 1. 后端分享接口返回的 `image_url`；
-2. 站点默认 `/og-image.png`。
+2. 站点默认 `/og-image-202608.png`。
 
 封面选择由后端统一处理，Function 不再请求书单详情或第一项帖子。
 

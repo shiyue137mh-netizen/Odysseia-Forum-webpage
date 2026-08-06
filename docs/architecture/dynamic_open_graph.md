@@ -212,7 +212,7 @@ GET /v1/internal/share-metadata/booklists/{booklist_id}
 image_url = null
 ```
 
-Function 在 `image_url = null` 时使用站点默认 `/og-image.png`。
+Function 在 `image_url = null` 时使用站点默认 `/og-image-202608.png`。
 
 后端负责这段逻辑的原因：
 

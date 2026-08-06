@@ -6,12 +6,13 @@ import {
 } from 'lucide-react';
 
 import type { UserSettings } from '@/shared/lib/settings';
-import defaultSpringBackground from '@/assets/images/background/spring.png';
-import defaultSpring2Background from '@/assets/images/background/spring2.png';
-import defaultSummer1Background from '@/assets/images/background/summer1.png';
-import defaultSummer2Background from '@/assets/images/background/summer2.png';
-import defaultSummer3Background from '@/assets/images/background/summer3.png';
-import defaultBannerBackground from '@/assets/images/banners/banner.png';
+import fantasyMarketBackground from '@/assets/images/background/apple.png';
+import gardenBackground from '@/assets/images/background/garden.png';
+import railwayBackground from '@/assets/images/background/railways.png';
+import rainyDayBackground from '@/assets/images/background/rainyday.png';
+import rooftopBackground from '@/assets/images/background/roof.png';
+import spaceBackground from '@/assets/images/background/space.png';
+import vendingMachineBackground from '@/assets/images/background/vending_machine.png';
 
 type ThemeOption = {
   id: UserSettings['theme'];
@@ -76,13 +77,6 @@ export const themeOptions: ThemeOption[] = [
     description: '护眼森林调，适合长时阅读',
   },
   {
-    id: 'sakura-day',
-    label: 'Sakura Day',
-    icon: Sun,
-    themeKey: 'sakuraDay',
-    description: '春樱明朝风，淡粉与叶绿',
-  },
-  {
     id: 'yozakura-night',
     label: 'Yozakura Night',
     icon: Moon,
@@ -115,39 +109,45 @@ export const dangerPinkThemeOption: ThemeOption = {
 
 export const backgroundPresets = [
   {
-    id: 'summer-1',
-    label: 'Summer 1',
-    description: '烟火大会1',
-    previewUrl: defaultSummer1Background,
+    id: 'fantasy-market',
+    label: '西幻集市',
+    description: '热闹而温暖的异世界街市',
+    previewUrl: fantasyMarketBackground,
   },
   {
-    id: 'summer-2',
-    label: 'Summer 2',
-    description: '烟火大会2',
-    previewUrl: defaultSummer2Background,
+    id: 'balcony-garden',
+    label: '阳台花园',
+    description: '安静明亮的城市绿意',
+    previewUrl: gardenBackground,
   },
   {
-    id: 'summer-3',
-    label: 'Summer 3',
-    description: '盛夏天台',
-    previewUrl: defaultSummer3Background,
+    id: 'railway',
+    label: '电车',
+    description: '沿着轨道驶入远方',
+    previewUrl: railwayBackground,
   },
   {
-    id: 'spring',
-    label: 'Spring',
-    description: '浅春枝影',
-    previewUrl: defaultSpringBackground,
+    id: 'rainy-room',
+    label: '雨天室内',
+    description: '隔着窗听一场安静的雨',
+    previewUrl: rainyDayBackground,
   },
   {
-    id: 'spring-2',
-    label: 'Spring 2',
-    description: '偏暖花雾',
-    previewUrl: defaultSpring2Background,
+    id: 'school-rooftop',
+    label: '学校天台',
+    description: '风吹过放学后的天台',
+    previewUrl: rooftopBackground,
   },
   {
-    id: 'banner',
-    label: 'Banner',
-    description: '站内主视觉',
-    previewUrl: defaultBannerBackground,
+    id: 'earth-from-space',
+    label: '太空远望',
+    description: '从星海之间回望地球',
+    previewUrl: spaceBackground,
+  },
+  {
+    id: 'vending-machine',
+    label: '自动贩卖机旁',
+    description: '靠着自动贩卖机稍作停留',
+    previewUrl: vendingMachineBackground,
   },
 ] as const;
