@@ -19,6 +19,7 @@ interface LazyImageProps {
   index?: number; // Used for staggered animation delay
   imageIndex?: number; // Used to identify which picture in the sequence this is
   onNaturalSize?: (width: number, height: number) => void;
+  onFallback?: () => void;
 }
 
 export function LazyImage({
@@ -33,14 +34,20 @@ export function LazyImage({
   index = 0,
   imageIndex = 0,
   onNaturalSize,
+  onFallback,
 }: LazyImageProps) {
   const [currentSrc, setCurrentSrc] = useState(() => optimizeDiscordImageUrl(src, 800));
+  const onFallbackRef = useRef(onFallback);
   // 会话内看过的图片直接以成品呈现：跳过懒加载门槛，不再播浮现动画
   const [isLoaded, setIsLoaded] = useState(() => sessionLoadedImages.has(currentSrc));
   const [isInView, setIsInView] = useState(isLoaded);
   const imgRef = useRef<HTMLDivElement>(null);
   const imageMode = useImageModeSetting();
   const isImageDisabled = imageMode === 'off';
+
+  useEffect(() => {
+    onFallbackRef.current = onFallback;
+  }, [onFallback]);
 
   useEffect(() => {
     if (isInView) return;
@@ -78,6 +85,7 @@ export function LazyImage({
     if (currentSrc === fallbackSrc) return;
 
     const timer = window.setTimeout(() => {
+      onFallbackRef.current?.();
       setCurrentSrc(fallbackSrc);
       setIsLoaded(false);
     }, loadTimeoutMs);
@@ -145,6 +153,7 @@ export function LazyImage({
               }}
               onError={() => {
                 if (fallbackSrc && currentSrc !== fallbackSrc) {
+                  onFallbackRef.current?.();
                   setCurrentSrc(fallbackSrc);
                   setIsLoaded(false);
                   return;

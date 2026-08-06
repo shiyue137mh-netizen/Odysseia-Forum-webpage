@@ -191,7 +191,7 @@ export function PlazaPage() {
             fullWidth={true}
             banners={bannersQuery.data.map((banner) => ({
               id: banner.thread_id,
-              image: banner.cover_image_url,
+              image: banner.cover_image_url || '',
               title: banner.title,
               description: banner.author
                 ? `作者：${banner.author.display_name || banner.author.global_name || banner.author.name}`

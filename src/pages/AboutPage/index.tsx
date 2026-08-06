@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Compass, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { withViewTransition } from '@/shared/lib/viewTransition';
 
 import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
-import backgroundImage from '@/assets/parallax/back1.png';
-import foregroundImage from '@/assets/parallax/front1.png';
 import { APP_VERSION } from '@/shared/config/appInfo';
+import { parallaxScenes } from '@/shared/config/parallaxScenes';
+import { useDeviceOrientationParallax } from '@/shared/hooks/useDeviceOrientationParallax';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
 
 const GITHUB_REPO_URL = 'https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage';
@@ -54,10 +54,9 @@ interface GithubContributor {
   type?: string;
 }
 
-type MotionStatus = 'idle' | 'granted' | 'denied' | 'unsupported';
-
 export function AboutPage() {
   const navigate = useNavigate();
+  const [scene] = useState(() => parallaxScenes[Math.floor(Math.random() * parallaxScenes.length)]!);
   const hasSpawnedRef = useRef(false);
   const backgroundLayerRef = useRef<HTMLImageElement>(null);
   const foregroundLayerRef = useRef<HTMLImageElement>(null);
@@ -66,39 +65,7 @@ export function AboutPage() {
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [isSharpening, setIsSharpening] = useState(false);
-  const [motionStatus, setMotionStatus] = useState<MotionStatus>(() =>
-    typeof DeviceOrientationEvent === 'undefined' ? 'unsupported' : 'idle'
-  );
-
-  useEffect(() => {
-    if (motionStatus !== 'granted') return;
-
-    let baselineBeta: number | null = null;
-    const handleOrientation = (event: DeviceOrientationEvent) => {
-      if (event.beta === null || event.gamma === null) return;
-      baselineBeta ??= event.beta;
-      parallaxTargetRef.current = {
-        x: Math.max(-1, Math.min(1, event.gamma / 30)),
-        y: Math.max(-1, Math.min(1, (event.beta - baselineBeta) / 30)),
-      };
-    };
-
-    window.addEventListener('deviceorientation', handleOrientation);
-    return () => window.removeEventListener('deviceorientation', handleOrientation);
-  }, [motionStatus]);
-
-  const enableDeviceMotion = async () => {
-    const orientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
-      requestPermission?: () => Promise<'granted' | 'denied'>;
-    };
-
-    try {
-      const permission = await orientationEvent.requestPermission?.();
-      setMotionStatus(permission === 'denied' ? 'denied' : 'granted');
-    } catch {
-      setMotionStatus('denied');
-    }
-  };
+  useDeviceOrientationParallax(parallaxTargetRef);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -278,43 +245,24 @@ export function AboutPage() {
       >
         <img
           ref={backgroundLayerRef}
-          src={backgroundImage}
+          src={scene.background}
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           style={{ transform: 'scale(1.08)', willChange: 'transform' }}
         />
         <img
           ref={foregroundLayerRef}
-          src={foregroundImage}
+          src={scene.foreground}
           alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-contain object-right-bottom"
+          className={`pointer-events-none absolute inset-0 h-full w-full ${
+            scene.foregroundFit === 'contain' ? 'object-contain object-right-bottom' : 'object-cover object-top'
+          }`}
           style={{ transform: 'translate3d(40px, 50px, 0) scale(1.00)', transformOrigin: 'right bottom', willChange: 'transform' }}
         />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-black/14" />
 
       {/* 隐藏/显示 UI 悬浮按钮 */}
-      {motionStatus !== 'unsupported' && (
-        <button
-          type="button"
-          onClick={() => void enableDeviceMotion()}
-          disabled={motionStatus === 'granted'}
-          className={`absolute bottom-6 right-20 z-50 flex h-10 w-10 items-center justify-center rounded-full text-white/80 backdrop-blur-md transition-all md:hidden ${
-            motionStatus === 'granted'
-              ? 'bg-(--od-accent)/70 text-white'
-              : 'bg-black/40 hover:bg-black/60 hover:text-white'
-          }`}
-          title={
-            motionStatus === 'granted'
-              ? '重力感应已开启'
-              : motionStatus === 'denied'
-                ? '未获得重力感应权限，点击重试'
-                : '开启重力感应'
-          }
-        >
-          <Compass className="h-5 w-5" />
-        </button>
-      )}
       <button
         type="button"
         onClick={() => setIsUiHidden((prev) => !prev)}

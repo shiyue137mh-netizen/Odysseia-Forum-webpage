@@ -1,70 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { BannerApplicationModal } from '@/features/banner/components/BannerApplicationModal';
-import fantasyMarketBackground from '@/assets/images/background/apple.png';
-import gardenBackground from '@/assets/images/background/garden.png';
-import railwayBackground from '@/assets/images/background/railways.png';
-import rainyDayBackground from '@/assets/images/background/rainyday.png';
-import rooftopBackground from '@/assets/images/background/roof.png';
-import spaceBackground from '@/assets/images/background/space.png';
-import vendingMachineBackground from '@/assets/images/background/vending_machine.png';
+import { parallaxScenes } from '@/shared/config/parallaxScenes';
 import { LazyImage } from '@/shared/ui/LazyImage';
 
 const WIKI_URL = 'https://wiki.xn--35zx7g.org/';
 const BANNER_LOAD_TIMEOUT_MS = 4500;
-const bannerMediaClass = 'relative aspect-video min-h-[250px] sm:min-h-0';
+const bannerMediaClass = 'relative aspect-video min-h-[250px] overflow-hidden sm:min-h-0';
+
+interface Banner {
+  id: string;
+  image: string;
+  foregroundImage?: string;
+  title: string;
+  description: string;
+  link?: string;
+}
 
 const fallbackBanners: Banner[] = [
   {
-    id: 'fallback-fantasy-market',
-    image: fantasyMarketBackground,
-    title: '欢迎来到类脑Odysseia索引页',
-    description: '从西幻集市出发，继续往下逛逛最近的作品吧。',
-  },
-  {
-    id: 'fallback-balcony-garden',
-    image: gardenBackground,
-    title: '欢迎来到类脑Odysseia索引页',
-    description: '在阳台花园停一会儿，新的帖子和书单正在下面等你。',
-  },
-  {
-    id: 'fallback-railway',
-    image: railwayBackground,
-    title: '欢迎来到类脑Odysseia索引页',
-    description: '搭上电车，沿着索引继续探索社区里的新故事。',
-  },
-  {
-    id: 'fallback-rainy-room',
-    image: rainyDayBackground,
-    title: '欢迎来到类脑Odysseia索引页',
-    description: '雨声适合慢慢阅读，也适合发现一张新的角色卡。',
-  },
-  {
-    id: 'fallback-school-rooftop',
-    image: rooftopBackground,
-    title: '欢迎来到类脑Odysseia索引页',
-    description: '风从学校天台吹过，最近的社区内容仍在继续更新。',
-  },
-  {
-    id: 'fallback-earth-from-space',
-    image: spaceBackground,
+    id: 'fallback-space',
+    image: parallaxScenes[0].background,
+    foregroundImage: parallaxScenes[0].foreground,
     title: '欢迎来到类脑Odysseia索引页',
     description: '从星海回望地球，也回来看一看大家创造的新世界。',
   },
   {
     id: 'fallback-vending-machine',
-    image: vendingMachineBackground,
+    image: parallaxScenes[1].background,
+    foregroundImage: parallaxScenes[1].foreground,
     title: '欢迎来到类脑Odysseia索引页',
     description: '靠着自动贩卖机休息片刻，再继续今天的社区巡游。',
   },
+  {
+    id: 'fallback-station',
+    image: parallaxScenes[2].background,
+    foregroundImage: parallaxScenes[2].foreground,
+    title: '欢迎来到类脑Odysseia索引页',
+    description: '列车驶过站台，新的故事也正在抵达。',
+  },
+  {
+    id: 'fallback-market',
+    image: parallaxScenes[3].background,
+    foregroundImage: parallaxScenes[3].foreground,
+    title: '欢迎来到类脑Odysseia索引页',
+    description: '穿过阳光下的集市，继续寻找社区里的新作品。',
+  },
 ];
 
-interface Banner {
-  id: string;
-  image: string;
-  title: string;
-  description: string;
-  link?: string;
+function getStableScene(id: string) {
+  // ponytail: 用轻量字符串散列稳定分配默认封面；场景池需要权重时再升级为显式映射。
+  let hash = 0;
+  for (const character of id) hash = (hash * 31 + character.charCodeAt(0)) | 0;
+  return parallaxScenes[Math.abs(hash) % parallaxScenes.length]!;
 }
 
 interface BannerCarouselProps {
@@ -75,11 +63,24 @@ interface BannerCarouselProps {
 }
 
 export function BannerCarousel({ banners, autoPlayInterval = 5000, onBannerClick, fullWidth = false }: BannerCarouselProps) {
+  const backgroundLayerRef = useRef<HTMLDivElement>(null);
+  const foregroundLayerRef = useRef<HTMLImageElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [fallbackBannerKey, setFallbackBannerKey] = useState<string | null>(null);
   const hasRealBanners = banners.length > 0;
-  const displayBanners = hasRealBanners ? banners : fallbackBanners;
+  const displayBanners = hasRealBanners
+    ? banners.map((banner) => {
+        if (banner.image.trim()) return banner;
+        const scene = getStableScene(banner.id);
+        return {
+          ...banner,
+          image: scene.background,
+          foregroundImage: scene.foreground,
+        };
+      })
+    : fallbackBanners;
 
   useEffect(() => {
     if (isHovered || displayBanners.length <= 1) return;
@@ -131,32 +132,77 @@ export function BannerCarousel({ banners, autoPlayInterval = 5000, onBannerClick
   );
 
   const currentBanner = displayBanners[currentIndex];
-  const fallbackImage = fallbackBanners[currentIndex % fallbackBanners.length].image;
+  const fallbackScene = getStableScene(currentBanner.id);
+  const currentBannerKey = `${currentBanner.id}:${currentBanner.image}`;
+  const isUsingFallback = fallbackBannerKey === currentBannerKey;
+  const foregroundImage = currentBanner.foregroundImage || (isUsingFallback ? fallbackScene.foreground : undefined);
+
+  const resetBannerParallax = () => {
+    if (backgroundLayerRef.current) backgroundLayerRef.current.style.transform = '';
+    if (foregroundLayerRef.current) foregroundLayerRef.current.style.transform = '';
+  };
+
+  const handleBannerParallax = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (
+      !foregroundImage ||
+      event.pointerType !== 'mouse' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width * 2 - 1;
+    const y = (event.clientY - rect.top) / rect.height * 2 - 1;
+    if (backgroundLayerRef.current) {
+      backgroundLayerRef.current.style.transform = `translate3d(${(-x * 3).toFixed(2)}px, ${(-y * 3).toFixed(2)}px, 0) scale(1.03)`;
+    }
+    if (foregroundLayerRef.current) {
+      foregroundLayerRef.current.style.transform = `translate3d(${(-x * 8).toFixed(2)}px, ${(-y * 6).toFixed(2)}px, 0) scale(1.04)`;
+    }
+  };
 
   return (
     <div
       className={`group relative overflow-hidden ${hasRealBanners ? 'cursor-pointer' : ''} ${fullWidth ? '' : 'mb-4 rounded-xl'}`}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        resetBannerParallax();
+      }}
       onClick={() => {
         if (hasRealBanners) onBannerClick?.(currentBanner);
       }}
     >
       {/* Banner 图片 */}
-      <div className={bannerMediaClass}>
-        <LazyImage
-          src={currentBanner.image}
-          alt={currentBanner.title}
-          fallbackSrc={fallbackImage}
-          loadTimeoutMs={BANNER_LOAD_TIMEOUT_MS}
-          className="h-full w-full transition-transform duration-700"
-        />
+      <div className={bannerMediaClass} onPointerMove={handleBannerParallax}>
+        <div
+          ref={backgroundLayerRef}
+          className={`absolute inset-0 transition-transform duration-300 ease-out ${foregroundImage ? 'scale-[1.03]' : ''}`}
+        >
+          <LazyImage
+            src={currentBanner.image}
+            alt={currentBanner.title}
+            fallbackSrc={fallbackScene.background}
+            loadTimeoutMs={BANNER_LOAD_TIMEOUT_MS}
+            className="h-full w-full"
+            onFallback={() => setFallbackBannerKey(currentBannerKey)}
+          />
+        </div>
 
-        {/* 渐变遮罩 */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
+        {foregroundImage && (
+          <img
+            ref={foregroundLayerRef}
+            src={foregroundImage}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] object-contain object-right-bottom transition-transform duration-300 ease-out"
+          />
+        )}
+
+        {/* 真实帖子封面保留可读性遮罩，站点视差封面直接展示原色。 */}
+        {!foregroundImage && (
+          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
+        )}
 
         {/* 内容 */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="absolute bottom-0 left-0 right-0 p-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]">
           <h2 className="mb-2 text-2xl font-bold text-white line-clamp-1">
             {currentBanner.title}
           </h2>

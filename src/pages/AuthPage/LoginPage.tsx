@@ -9,15 +9,16 @@ import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
 import { notifySuccess } from '@/shared/lib/notify';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
-import backgroundImage from '@/assets/parallax/back2.png';
-import foregroundImage from '@/assets/parallax/front2.png';
 import ruleImage from '@/assets/images/background/rule.png';
+import { parallaxScenes } from '@/shared/config/parallaxScenes';
+import { useDeviceOrientationParallax } from '@/shared/hooks/useDeviceOrientationParallax';
 import { WordLoader } from '@/shared/ui/loaders/WordLoader';
 import { ImageViewer } from '@/shared/ui/ImageViewer';
 import { useImageViewerStore } from '@/shared/store/useImageViewerStore';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [scene] = useState(() => parallaxScenes[Math.floor(Math.random() * parallaxScenes.length)]!);
   const { isAuthenticated } = useAuth();
   const refreshAuth = useRefreshAuth();
   const openImageViewer = useImageViewerStore((state) => state.open);
@@ -30,6 +31,7 @@ export function LoginPage() {
   const [isLoginCardReady, setIsLoginCardReady] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [hasAcceptedRules, setHasAcceptedRules] = useState(false);
+  useDeviceOrientationParallax(parallaxTargetRef);
 
   const loadingWordStyle: CSSProperties & { '--od-text-primary': string } = {
     '--od-text-primary': 'color-mix(in oklab, var(--od-accent) 78%, white 22%)',
@@ -188,14 +190,14 @@ export function LoginPage() {
       >
         <img
           ref={backgroundLayerRef}
-          src={backgroundImage}
+          src={scene.background}
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
           style={{ transform: 'scale(1.08)', willChange: 'transform' }}
         />
         <img
           ref={foregroundLayerRef}
-          src={foregroundImage}
+          src={scene.foreground}
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
           style={{ transform: 'scale(1.06)', willChange: 'transform' }}
