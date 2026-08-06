@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Compass, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-import { CinematicCard } from '@/shared/ui/CinematicCard';
 
 import { withViewTransition } from '@/shared/lib/viewTransition';
 
 import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
-import backgroundImage from '@/assets/images/background/space.png';
+import backgroundImage from '@/assets/parallax/back1.png';
+import foregroundImage from '@/assets/parallax/front1.png';
 import { APP_VERSION } from '@/shared/config/appInfo';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
 
@@ -55,13 +54,84 @@ interface GithubContributor {
   type?: string;
 }
 
+type MotionStatus = 'idle' | 'granted' | 'denied' | 'unsupported';
+
 export function AboutPage() {
   const navigate = useNavigate();
   const hasSpawnedRef = useRef(false);
+  const backgroundLayerRef = useRef<HTMLImageElement>(null);
+  const foregroundLayerRef = useRef<HTMLImageElement>(null);
+  const parallaxTargetRef = useRef({ x: 0, y: 0 });
   const [isLeaving, setIsLeaving] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [isSharpening, setIsSharpening] = useState(false);
+  const [motionStatus, setMotionStatus] = useState<MotionStatus>(() =>
+    typeof DeviceOrientationEvent === 'undefined' ? 'unsupported' : 'idle'
+  );
+
+  useEffect(() => {
+    if (motionStatus !== 'granted') return;
+
+    let baselineBeta: number | null = null;
+    const handleOrientation = (event: DeviceOrientationEvent) => {
+      if (event.beta === null || event.gamma === null) return;
+      baselineBeta ??= event.beta;
+      parallaxTargetRef.current = {
+        x: Math.max(-1, Math.min(1, event.gamma / 30)),
+        y: Math.max(-1, Math.min(1, (event.beta - baselineBeta) / 30)),
+      };
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation);
+    return () => window.removeEventListener('deviceorientation', handleOrientation);
+  }, [motionStatus]);
+
+  const enableDeviceMotion = async () => {
+    const orientationEvent = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<'granted' | 'denied'>;
+    };
+
+    try {
+      const permission = await orientationEvent.requestPermission?.();
+      setMotionStatus(permission === 'denied' ? 'denied' : 'granted');
+    } catch {
+      setMotionStatus('denied');
+    }
+  };
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let frameId = 0;
+    let currentX = 0;
+    let currentY = 0;
+
+    const render = () => {
+      currentX += (parallaxTargetRef.current.x - currentX) * 0.05;
+      currentY += (parallaxTargetRef.current.y - currentY) * 0.05;
+
+      if (backgroundLayerRef.current) {
+        backgroundLayerRef.current.style.transform = `translate3d(${(-currentX * 12).toFixed(2)}px, ${(-currentY * 12).toFixed(2)}px, 0) scale(1.08)`;
+      }
+      if (foregroundLayerRef.current) {
+        foregroundLayerRef.current.style.transform = `translate3d(${(60 - currentX * 58).toFixed(2)}px, ${(28 - currentY * 46).toFixed(2)}px, 0) scale(1.1)`;
+      }
+
+      frameId = requestAnimationFrame(render);
+    };
+
+    frameId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  const handleParallaxMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse') return;
+    parallaxTargetRef.current = {
+      x: (event.clientX / window.innerWidth) * 2 - 1,
+      y: (event.clientY / window.innerHeight) * 2 - 1,
+    };
+  };
 
   // 苏醒序列动画：仅在进入背景模式时触发
   useEffect(() => {
@@ -198,23 +268,53 @@ export function AboutPage() {
         className={`absolute inset-0 cursor-crosshair transition-[filter] duration-[3500ms] ease-out ${
           isSharpening ? 'blur-xl' : 'blur-0'
         }`}
+        onPointerMove={handleParallaxMove}
+        onPointerLeave={() => {
+          parallaxTargetRef.current = { x: 0, y: 0 };
+        }}
         onClick={() => {
           if (isUiHidden) setIsUiHidden(false);
         }}
       >
-        <CinematicCard
-          imageUrl={backgroundImage}
-          showGlow={false}
-          border={false}
-          showSheen={false}
-          useGlobalMouse={true}
-          povMode={true}
-          className="h-full w-full"
+        <img
+          ref={backgroundLayerRef}
+          src={backgroundImage}
+          alt=""
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          style={{ transform: 'scale(1.08)', willChange: 'transform' }}
+        />
+        <img
+          ref={foregroundLayerRef}
+          src={foregroundImage}
+          alt=""
+          className="pointer-events-none absolute inset-0 h-full w-full object-contain object-right-bottom"
+          style={{ transform: 'translate3d(40px, 50px, 0) scale(1.00)', transformOrigin: 'right bottom', willChange: 'transform' }}
         />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-black/14" />
 
       {/* 隐藏/显示 UI 悬浮按钮 */}
+      {motionStatus !== 'unsupported' && (
+        <button
+          type="button"
+          onClick={() => void enableDeviceMotion()}
+          disabled={motionStatus === 'granted'}
+          className={`absolute bottom-6 right-20 z-50 flex h-10 w-10 items-center justify-center rounded-full text-white/80 backdrop-blur-md transition-all md:hidden ${
+            motionStatus === 'granted'
+              ? 'bg-(--od-accent)/70 text-white'
+              : 'bg-black/40 hover:bg-black/60 hover:text-white'
+          }`}
+          title={
+            motionStatus === 'granted'
+              ? '重力感应已开启'
+              : motionStatus === 'denied'
+                ? '未获得重力感应权限，点击重试'
+                : '开启重力感应'
+          }
+        >
+          <Compass className="h-5 w-5" />
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setIsUiHidden((prev) => !prev)}

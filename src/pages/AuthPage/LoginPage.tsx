@@ -1,6 +1,7 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { DiscordIcon } from '@/shared/ui/icons/DiscordIcon';
 import { useAuth, useRefreshAuth } from '@/features/auth/hooks/useAuth';
 import { apiClient } from '@/shared/api/client';
@@ -8,10 +9,10 @@ import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
 import { notifySuccess } from '@/shared/lib/notify';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
-import backgroundImage from '@/assets/images/background/vending_machine.png';
+import backgroundImage from '@/assets/parallax/back2.png';
+import foregroundImage from '@/assets/parallax/front2.png';
 import ruleImage from '@/assets/images/background/rule.png';
 import { WordLoader } from '@/shared/ui/loaders/WordLoader';
-import { CinematicCard } from '@/shared/ui/CinematicCard';
 import { ImageViewer } from '@/shared/ui/ImageViewer';
 import { useImageViewerStore } from '@/shared/store/useImageViewerStore';
 
@@ -20,13 +21,56 @@ export function LoginPage() {
   const { isAuthenticated } = useAuth();
   const refreshAuth = useRefreshAuth();
   const openImageViewer = useImageViewerStore((state) => state.open);
+  const backgroundLayerRef = useRef<HTMLImageElement>(null);
+  const foregroundLayerRef = useRef<HTMLImageElement>(null);
+  const parallaxTargetRef = useRef({ x: 0, y: 0 });
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(true);
   const [isSharpening, setIsSharpening] = useState(true);
+  const [isLoginCardReady, setIsLoginCardReady] = useState(false);
+  const [isUiHidden, setIsUiHidden] = useState(false);
   const [hasAcceptedRules, setHasAcceptedRules] = useState(false);
 
   const loadingWordStyle: CSSProperties & { '--od-text-primary': string } = {
     '--od-text-primary': 'color-mix(in oklab, var(--od-accent) 78%, white 22%)',
+  };
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => setIsLoginCardReady(true), 10_000);
+    return () => window.clearTimeout(timerId);
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    let frameId = 0;
+    let currentX = 0;
+    let currentY = 0;
+
+    const render = () => {
+      currentX += (parallaxTargetRef.current.x - currentX) * 0.05;
+      currentY += (parallaxTargetRef.current.y - currentY) * 0.05;
+
+      if (backgroundLayerRef.current) {
+        backgroundLayerRef.current.style.transform = `translate3d(${(-currentX * 12).toFixed(2)}px, ${(-currentY * 12).toFixed(2)}px, 0) scale(1.08)`;
+      }
+      if (foregroundLayerRef.current) {
+        foregroundLayerRef.current.style.transform = `translate3d(${(-currentX * 34).toFixed(2)}px, ${(-currentY * 26).toFixed(2)}px, 0) scale(1.06)`;
+      }
+
+      frameId = requestAnimationFrame(render);
+    };
+
+    frameId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  const handleParallaxMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse') return;
+    parallaxTargetRef.current = {
+      x: (event.clientX / window.innerWidth) * 2 - 1,
+      y: (event.clientY / window.innerHeight) * 2 - 1,
+    };
   };
 
   // 苏醒序列动画：进入页面时自动触发
@@ -129,20 +173,32 @@ export function LoginPage() {
         }`}
       />
 
-      {/* Cinematic POV 背景 */}
+      {/* 双层视差背景 */}
       <div
-        className={`absolute inset-0 transition-[filter] duration-[3500ms] ease-out ${
+        className={`absolute inset-0 cursor-crosshair transition-[filter] duration-[3500ms] ease-out ${
           isSharpening ? 'blur-xl' : 'blur-0'
         }`}
+        onPointerMove={handleParallaxMove}
+        onPointerLeave={() => {
+          parallaxTargetRef.current = { x: 0, y: 0 };
+        }}
+        onClick={() => {
+          if (isUiHidden) setIsUiHidden(false);
+        }}
       >
-        <CinematicCard
-          imageUrl={backgroundImage}
-          showGlow={false}
-          border={false}
-          showSheen={false}
-          useGlobalMouse={true}
-          povMode={true}
-          className="h-full w-full"
+        <img
+          ref={backgroundLayerRef}
+          src={backgroundImage}
+          alt=""
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
+          style={{ transform: 'scale(1.08)', willChange: 'transform' }}
+        />
+        <img
+          ref={foregroundLayerRef}
+          src={foregroundImage}
+          alt=""
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
+          style={{ transform: 'scale(1.06)', willChange: 'transform' }}
         />
       </div>
 
@@ -158,6 +214,25 @@ export function LoginPage() {
         )}
       </AnimatePresence>
 
+      {!isRedirecting && isLoginCardReady && (
+        <button
+          type="button"
+          onClick={() => setIsUiHidden((current) => !current)}
+          className="absolute bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/80 backdrop-blur-md transition-all hover:bg-black/60 hover:text-white"
+          title={isUiHidden ? '显示登录界面' : '隐藏界面看背景'}
+        >
+          {isUiHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        </button>
+      )}
+
+      {isUiHidden && !isRedirecting && isLoginCardReady && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-40 flex justify-center animate-in fade-in zoom-in duration-500">
+          <span className="rounded-full bg-black/30 px-4 py-1.5 text-sm text-white/70 backdrop-blur-md">
+            点击背景任意处恢复登录界面
+          </span>
+        </div>
+      )}
+
       <div
         className={`relative mx-auto flex w-full max-w-7xl transition-all duration-1000 ${
           isRedirecting ? 'z-[110] justify-center' : 'z-20 justify-center md:justify-start md:pl-[8%] lg:pl-[10%]'
@@ -167,7 +242,7 @@ export function LoginPage() {
       >
 
         <AnimatePresence mode="wait">
-          {!isRedirecting ? (
+          {!isRedirecting && isLoginCardReady && !isUiHidden ? (
             <motion.div
               key="login-card"
               initial={{ opacity: 0, y: 20 }}
@@ -234,7 +309,7 @@ export function LoginPage() {
                 我们仅读取你是否在服务器内且拥有"已验证"身份组
               </p>
             </motion.div>
-          ) : (
+          ) : isRedirecting ? (
             <motion.div
               key="loading-animation"
               initial={{ opacity: 0, scale: 0.8 }}
@@ -256,7 +331,7 @@ export function LoginPage() {
                 欢迎来到类脑! 我们是非盈利性的AIRP社区
               </motion.p>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
       <ImageViewer />
