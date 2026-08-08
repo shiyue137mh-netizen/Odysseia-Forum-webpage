@@ -8,6 +8,7 @@ dist
 .kilo/
 Odysseia-Forum-webpage.code-workspace
 reference/
+playground/
 
 # 构建缓存与命令输出快照
 *.tsbuildinfo

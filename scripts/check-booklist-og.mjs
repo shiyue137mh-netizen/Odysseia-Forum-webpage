@@ -18,9 +18,7 @@ const metadata = buildBooklistOgMetadata(
     title: '夏夜收藏',
     description: '沿着晚风整理的一组角色卡。',
     image_url: imageUrl,
-    item_count: 8,
-    collection_count: 3,
-    view_count: 120,
+    stats: { item_count: 8, collection_count: 3, view_count: 120 },
   },
   'https://example.com/booklists/42',
   fallbackImage,
@@ -34,7 +32,7 @@ assert.deepEqual(metadata, {
 
 assert.equal(
   buildBooklistOgMetadata(
-    { title: '无图书单', description: '', image_url: 'javascript:alert(1)', item_count: 0 },
+    { title: '无图书单', description: '', image_url: 'javascript:alert(1)', stats: { item_count: 0 } },
     'https://example.com/booklists/43',
     fallbackImage,
   ).image,
@@ -45,9 +43,7 @@ const longDescription = buildBooklistOgMetadata(
   {
     title: '长简介书单',
     description: '很长的简介'.repeat(80),
-    item_count: 2,
-    collection_count: 1,
-    view_count: 95,
+    stats: { item_count: 2, collection_count: 1, view_count: 95 },
   },
   'https://example.com/booklists/44',
   fallbackImage,
@@ -56,7 +52,7 @@ assert.match(longDescription, /… · 收录 2 个帖子 · 1 次收藏 · 95 �
 
 assert.deepEqual(
   buildTournamentOgMetadata(
-    { title: '夏夜祭', description: '', image_url: imageUrl, item_count: 16 },
+    { title: '夏夜祭', description: '', image_url: imageUrl, stats: { item_count: 16 } },
     'https://example.com/tournaments/42',
     fallbackImage,
   ),
@@ -70,7 +66,7 @@ assert.deepEqual(
 
 assert.match(
   buildThreadOgMetadata(
-    { title: '海边角色卡', description: '', author_name: '秋青子', image_url: imageUrl },
+    { title: '海边角色卡', description: '', author: { display_name: '秋青子' }, image_url: imageUrl },
     'https://example.com/threads/99',
     fallbackImage,
   ).description,
@@ -83,7 +79,7 @@ assert.deepEqual(
       display_name: '秋青子',
       avatar_url: 'https://example.com/avatar.png',
       stats: { thread_count: 12, reaction_count: 345, reply_count: 67 },
-      latest_work_title: '蛇与夏夜',
+      latest_work: { title: '蛇与夏夜' },
     },
     'https://example.com/u/123',
     fallbackImage,
@@ -153,9 +149,7 @@ globalThis.fetch = async (input, init) => {
       title: '夏夜收藏',
       description: '沿着晚风整理的一组角色卡。',
       image_url: imageUrl,
-      item_count: 1,
-      collection_count: 2,
-      view_count: 30,
+      stats: { item_count: 1, collection_count: 2, view_count: 30 },
       updated_at: '2026-08-05T12:00:00Z',
     });
   }
@@ -178,7 +172,7 @@ try {
 
   assert.match(html, /<title>《夏夜收藏》· 类脑索引<\/title>/);
   assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。 · 收录 1 个帖子 · 2 次收藏 · 30 次浏览"/);
-  assert.match(html, /property="og:image" content="https:\/\/cdn\.discordapp\.com\/attachments\/1\/2\/first\.png"/);
+  assert.match(html, /property="og:image" content="https:\/\/example\.com\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z"/);
   assert.match(html, /property="og:url" content="https:\/\/example\.com\/share\/booklists\/42"/);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
