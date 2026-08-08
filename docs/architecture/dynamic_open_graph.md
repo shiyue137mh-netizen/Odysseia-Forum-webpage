@@ -13,9 +13,6 @@ Odysseia Forum 当前是部署在 Cloudflare Pages 上的 React SPA。所有页�
 本文档用于协调前端、Cloudflare Pages Functions 与 Python 后端的改造，目标是在不改为
 SSR、不生成新图片、不开放论坛业务接口的前提下，为允许分享的资源返回动态 OG 元数据。
 
-帖子、作者以及书单多封面的后端字段与验收要求见
-[动态 Open Graph 后端接口需求](./dynamic_open_graph_backend_requirements.md)。
-
 第一阶段只覆盖书单：
 
 ```text

@@ -7,7 +7,6 @@
     "build": "tsc -b && vite build",
     "build:analyze": "ANALYZE_BUNDLE=true vite build",
     "preview": "vite preview",
-    "preview:og-image": "node playground/og-satori/render.mjs",
     "typecheck": "tsc -b",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 93",
     "lint:ox": "oxlint . --deny-warnings",
@@ -23,7 +22,6 @@
   "dependencies": {
     "@chenglou/pretext": "^0.0.3",
     "@hookform/resolvers": "^5.2.2",
-    "@resvg/resvg-wasm": "2.6.2",
     "@tanstack/react-query": "^5.99.0",
     "axios": "^1.7.9",
     "clsx": "^2.1.0",
@@ -33,7 +31,6 @@
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.57.0",
     "react-router-dom": "^6.22.0",
-    "satori": "0.29.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.0.0",
     "yaml": "^2.8.3",
@@ -42,7 +39,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@resvg/resvg-js": "2.6.2",
     "@tailwindcss/vite": "^4.2.3",
     "@tanstack/react-query-devtools": "^5.99.0",
     "@testing-library/jest-dom": "^6.9.1",

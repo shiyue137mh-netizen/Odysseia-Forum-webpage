@@ -1,6 +1,5 @@
 export const DEFAULT_API_BASE_URL = 'https://forum.shimmerday.top/v1';
 const SITE_NAME = '类脑索引';
-const OG_IMAGE_REVISION = '20260808-1x';
 
 export function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -32,9 +31,9 @@ export function buildBooklistOgMetadata(booklist, pageUrl, fallbackImage) {
   const title = cleanText(booklist?.title) || '未命名书单';
   const introduction = truncateText(compactText(booklist?.description), 160);
   const statistics = [
-    Number.isFinite(booklist?.stats?.item_count) ? `收录 ${booklist.stats.item_count} 个帖子` : null,
-    Number.isFinite(booklist?.stats?.collection_count) ? `${booklist.stats.collection_count} 次收藏` : null,
-    Number.isFinite(booklist?.stats?.view_count) ? `${booklist.stats.view_count} 次浏览` : null,
+    Number.isFinite(booklist?.item_count) ? `收录 ${booklist.item_count} 个帖子` : null,
+    Number.isFinite(booklist?.collection_count) ? `${booklist.collection_count} 次收藏` : null,
+    Number.isFinite(booklist?.view_count) ? `${booklist.view_count} 次浏览` : null,
   ].filter(Boolean).join(' · ');
   const description = [
     introduction || '在类脑索引浏览大家整理的角色卡书单。',
@@ -53,9 +52,9 @@ export function buildTournamentOgMetadata(tournament, pageUrl, fallbackImage) {
   const title = cleanText(tournament?.title) || '未命名赛事';
   const introduction = truncateText(compactText(tournament?.description), 160);
   const statistics = [
-    Number.isFinite(tournament?.stats?.item_count) ? `${tournament.stats.item_count} 个参赛作品` : null,
-    Number.isFinite(tournament?.stats?.collection_count) ? `${tournament.stats.collection_count} 次收藏` : null,
-    Number.isFinite(tournament?.stats?.view_count) ? `${tournament.stats.view_count} 次浏览` : null,
+    Number.isFinite(tournament?.item_count) ? `${tournament.item_count} 个参赛作品` : null,
+    Number.isFinite(tournament?.collection_count) ? `${tournament.collection_count} 次收藏` : null,
+    Number.isFinite(tournament?.view_count) ? `${tournament.view_count} 次浏览` : null,
   ].filter(Boolean).join(' · ');
   const description = [
     introduction || '在类脑索引浏览社区赛事与参赛作品。',
@@ -72,12 +71,12 @@ export function buildTournamentOgMetadata(tournament, pageUrl, fallbackImage) {
 
 export function buildThreadOgMetadata(thread, pageUrl, fallbackImage) {
   const title = cleanText(thread?.title) || '未命名帖子';
-  const authorName = cleanText(thread?.author?.display_name);
+  const authorName = cleanText(thread?.author_name);
   const excerpt = truncateText(compactText(thread?.description), 160);
   const statistics = [
-    Number.isFinite(thread?.stats?.reaction_count) ? `${thread.stats.reaction_count} 个点赞` : null,
-    Number.isFinite(thread?.stats?.reply_count) ? `${thread.stats.reply_count} 条回复` : null,
-    Number.isFinite(thread?.stats?.collection_count) ? `${thread.stats.collection_count} 次收藏` : null,
+    Number.isFinite(thread?.reaction_count) ? `${thread.reaction_count} 个点赞` : null,
+    Number.isFinite(thread?.reply_count) ? `${thread.reply_count} 条回复` : null,
+    Number.isFinite(thread?.collection_count) ? `${thread.collection_count} 次收藏` : null,
   ].filter(Boolean).join(' · ');
   const description = [
     excerpt || (authorName ? `${authorName}发布的作品。` : '在类脑索引查看这篇帖子。'),
@@ -100,7 +99,7 @@ export function buildAuthorOgMetadata(author, pageUrl, fallbackImage) {
     Number.isFinite(stats.reaction_count) ? `收获 ${stats.reaction_count} 个点赞` : null,
     Number.isFinite(stats.reply_count) ? `${stats.reply_count} 条回复` : null,
   ].filter(Boolean);
-  const latestTitle = cleanText(author?.latest_work?.title);
+  const latestTitle = cleanText(author?.latest_work_title);
   const description = [
     statistics.join(' · '),
     latestTitle ? `最新发布：《${latestTitle}》` : null,
@@ -109,7 +108,7 @@ export function buildAuthorOgMetadata(author, pageUrl, fallbackImage) {
   return {
     title: `${name} · ${SITE_NAME}`,
     description,
-    image: safeHttpUrl(author?.avatar_url) || fallbackImage,
+    image: safeHttpUrl(author?.image_url) || safeHttpUrl(author?.avatar_url) || fallbackImage,
     url: pageUrl,
   };
 }
@@ -176,13 +175,9 @@ export function createShareMetadataHandler({
   endpoint,
   buildMetadata,
   canonicalPath,
-  imagePath,
 }) {
   return async function onRequestGet({ request, env, params }) {
     const requestUrl = new URL(request.url);
-    const useSvgImage = requestUrl.searchParams.get('og-format') === 'svg';
-    const useStaticFont = useSvgImage && requestUrl.searchParams.get('og-font') === 'static';
-    const imageTest = cleanText(requestUrl.searchParams.get('og-test'));
     const resourceId = String(params.id || '').trim();
     if (!/^\d+$/.test(resourceId)) return fetchAppShell(request, env);
 
@@ -205,18 +200,9 @@ export function createShareMetadataHandler({
       requestUrl.search = '';
       requestUrl.hash = '';
       const fallbackImage = new URL('/og-image-202608.png', requestUrl).href;
-      const imageUrl = imagePath ? new URL(imagePath(resourceId), requestUrl) : null;
-      const version = cleanText(data?.updated_at);
-      if (imageUrl && version) imageUrl.searchParams.set('v', version);
-      if (imageUrl) imageUrl.searchParams.set('r', OG_IMAGE_REVISION);
-      if (imageUrl && useSvgImage) imageUrl.searchParams.set('format', 'svg');
-      if (imageUrl && useStaticFont) imageUrl.searchParams.set('font', 'static');
-      if (imageUrl && useSvgImage && /^[\w-]{1,32}$/.test(imageTest)) imageUrl.searchParams.set('test', imageTest);
-      const metadata = buildMetadata(data, requestUrl.href, fallbackImage);
-      if (imageUrl) metadata.image = imageUrl.href;
       return rewriteMetadata(
         shellResponse,
-        metadata,
+        buildMetadata(data, requestUrl.href, fallbackImage),
       );
     } catch (error) {
       console.error(`${resourceName} OG metadata failed`, error);
