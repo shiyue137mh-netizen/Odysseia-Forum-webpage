@@ -204,9 +204,11 @@ async function loadEmoji(code, segment) {
   return data;
 }
 
-async function renderPng(data, images) {
+async function renderSvg(data, images, mark) {
   await initializeWasm();
+  mark('wasm');
   const font = await loadFont(collectFontText(data));
+  mark('font');
   const svg = await satori(renderOgLayout(data, images), {
     width: WIDTH,
     height: HEIGHT,
@@ -214,6 +216,12 @@ async function renderPng(data, images) {
     fonts: [{ name: 'Odysseia Sans', data: font, weight: 400, style: 'normal' }],
     loadAdditionalAsset: loadEmoji,
   });
+  mark('satori');
+  return svg;
+}
+
+async function renderPng(data, images, mark) {
+  const svg = await renderSvg(data, images, mark);
   const renderer = new Resvg(svg, {
     fitTo: { mode: 'width', value: WIDTH * SCALE },
     background: 'rgba(17,19,24,1)',
@@ -224,6 +232,7 @@ async function renderPng(data, images) {
   const png = rendered.asPng();
   rendered.free();
   renderer.free();
+  mark('resvg');
   return png;
 }
 
@@ -236,15 +245,31 @@ export function createOgImageHandler({ type, endpoint }) {
     const { request, env, params } = context;
     const id = String(params.id || '').trim();
     if (!/^\d+$/.test(id) || !cleanText(env.OG_SERVICE_TOKEN)) return defaultOg(request, env);
+    const startedAt = performance.now();
+    const mark = (stage) => console.log('OG image timing', { type, stage, elapsedMs: Math.round(performance.now() - startedAt) });
+    const returnSvg = new URL(request.url).searchParams.get('format') === 'svg';
     const cache = caches.default;
-    const cached = await cache.match(request);
+    const cached = returnSvg ? null : await cache.match(request);
     if (cached) return cached;
     try {
       const metadata = await fetchMetadata(env, endpoint, id);
+      mark('metadata');
       if (!metadata) return defaultOg(request, env);
       const prepared = await prepareData(type, id, metadata, env, request);
+      mark('images');
       if (!prepared) return defaultOg(request, env);
-      const png = await renderPng(prepared.data, prepared.images);
+      if (returnSvg) {
+        const svg = await renderSvg(prepared.data, prepared.images, mark);
+        return new Response(svg, {
+          headers: {
+            'Content-Type': 'image/svg+xml; charset=utf-8',
+            'Cache-Control': 'no-store',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Robots-Tag': 'noindex',
+          },
+        });
+      }
+      const png = await renderPng(prepared.data, prepared.images, mark);
       const response = new Response(png, {
         headers: {
           'Content-Type': 'image/png',

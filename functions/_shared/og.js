@@ -180,6 +180,8 @@ export function createShareMetadataHandler({
 }) {
   return async function onRequestGet({ request, env, params }) {
     const requestUrl = new URL(request.url);
+    const useSvgImage = requestUrl.searchParams.get('og-format') === 'svg';
+    const imageTest = cleanText(requestUrl.searchParams.get('og-test'));
     const resourceId = String(params.id || '').trim();
     if (!/^\d+$/.test(resourceId)) return fetchAppShell(request, env);
 
@@ -206,6 +208,8 @@ export function createShareMetadataHandler({
       const version = cleanText(data?.updated_at);
       if (imageUrl && version) imageUrl.searchParams.set('v', version);
       if (imageUrl) imageUrl.searchParams.set('r', OG_IMAGE_REVISION);
+      if (imageUrl && useSvgImage) imageUrl.searchParams.set('format', 'svg');
+      if (imageUrl && useSvgImage && /^[\w-]{1,32}$/.test(imageTest)) imageUrl.searchParams.set('test', imageTest);
       const metadata = buildMetadata(data, requestUrl.href, fallbackImage);
       if (imageUrl) metadata.image = imageUrl.href;
       return rewriteMetadata(

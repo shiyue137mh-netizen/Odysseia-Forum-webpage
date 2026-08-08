@@ -249,6 +249,20 @@ try {
   assert.match(await fallbackResponse.text(), /<title>default<\/title>/);
   assert.equal(missingTokenLogged, true);
   assert.equal(requests.length, 2);
+
+  const svgResponse = await onShareBooklistRequestGet({
+    request: new Request('https://example.com/share/booklists/42?og-format=svg', {
+      headers: { 'User-Agent': 'Discordbot/2.0' },
+    }),
+    env: {
+      API_BASE_URL: 'https://api.example.com/v1/',
+      OG_SERVICE_TOKEN: 'test-service-token',
+      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
+    },
+    params: { id: '42' },
+  });
+  assert.match(await svgResponse.text(), /property="og:image" content="[^\"]+(?:&|&amp;)format=svg"/);
+  assert.equal(requests.length, 3);
 } finally {
   globalThis.fetch = originalFetch;
   globalThis.HTMLRewriter = originalHTMLRewriter;
