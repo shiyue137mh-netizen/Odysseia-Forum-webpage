@@ -11,11 +11,17 @@ const HEIGHT = 630;
 const SCALE = 1;
 const BACKGROUNDS = ['apple', 'garden', 'railways', 'rainyday', 'roof', 'space', 'vending_machine'];
 const emojiCache = new Map();
-let wasmPromise;
+let yogaPromise;
+let resvgPromise;
 
-function initializeWasm() {
-  wasmPromise ||= Promise.all([initSatori(yogaWasm), initResvg(resvgWasm)]);
-  return wasmPromise;
+function initializeYoga() {
+  yogaPromise ||= Promise.resolve().then(() => initSatori(yogaWasm));
+  return yogaPromise;
+}
+
+function initializeResvg() {
+  resvgPromise ||= Promise.resolve().then(() => initResvg(resvgWasm));
+  return resvgPromise;
 }
 
 function bytesToBase64(bytes) {
@@ -205,8 +211,8 @@ async function loadEmoji(code, segment) {
 }
 
 async function renderSvg(data, images, mark) {
-  await initializeWasm();
-  mark('wasm');
+  await initializeYoga();
+  mark('yoga-wasm');
   const font = await loadFont(collectFontText(data));
   mark('font');
   const svg = await satori(renderOgLayout(data, images), {
@@ -222,6 +228,8 @@ async function renderSvg(data, images, mark) {
 
 async function renderPng(data, images, mark) {
   const svg = await renderSvg(data, images, mark);
+  await initializeResvg();
+  mark('resvg-wasm');
   const renderer = new Resvg(svg, {
     fitTo: { mode: 'width', value: WIDTH * SCALE },
     background: 'rgba(17,19,24,1)',
