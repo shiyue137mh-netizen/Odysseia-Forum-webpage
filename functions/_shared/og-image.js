@@ -189,13 +189,20 @@ async function prepareData(type, id, metadata, env, request) {
   } };
 }
 
-async function loadFont(text) {
-  const characters = [...new Set([...text].filter((character) => !/\p{Extended_Pictographic}/u.test(character)))].join('');
+async function loadFont(text, mark, staticFont) {
+  const characters = staticFont
+    ? 'ODYSSEIA POST CREATOR EVENT COLLECTION 0123456789 · /'
+    : [...new Set([...text].filter((character) => !/\p{Extended_Pictographic}/u.test(character)))].join('');
   const cssUrl = `https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400&display=swap&text=${encodeURIComponent(characters)}`;
   const css = await fetch(cssUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }).then((response) => response.text());
+  mark('font-css', { characters: characters.length });
   const fontUrl = css.match(/url\((https:[^)]+)\)/)?.[1];
   if (!fontUrl) throw new Error('Google Fonts did not return a font URL');
-  return fetch(fontUrl, { signal: AbortSignal.timeout(8000) }).then((response) => response.arrayBuffer());
+  const response = await fetch(fontUrl, { signal: AbortSignal.timeout(8000) });
+  mark('font-response', { contentLength: response.headers.get('content-length') });
+  const font = await response.arrayBuffer();
+  mark('font-buffer', { bytes: font.byteLength });
+  return font;
 }
 
 async function loadEmoji(code, segment) {
@@ -210,11 +217,10 @@ async function loadEmoji(code, segment) {
   return data;
 }
 
-async function renderSvg(data, images, mark) {
+async function renderSvg(data, images, mark, staticFont) {
   await initializeYoga();
   mark('yoga-wasm');
-  const font = await loadFont(collectFontText(data));
-  mark('font');
+  const font = await loadFont(collectFontText(data), mark, staticFont);
   const svg = await satori(renderOgLayout(data, images), {
     width: WIDTH,
     height: HEIGHT,
@@ -227,7 +233,7 @@ async function renderSvg(data, images, mark) {
 }
 
 async function renderPng(data, images, mark) {
-  const svg = await renderSvg(data, images, mark);
+  const svg = await renderSvg(data, images, mark, false);
   await initializeResvg();
   mark('resvg-wasm');
   const renderer = new Resvg(svg, {
@@ -254,8 +260,10 @@ export function createOgImageHandler({ type, endpoint }) {
     const id = String(params.id || '').trim();
     if (!/^\d+$/.test(id) || !cleanText(env.OG_SERVICE_TOKEN)) return defaultOg(request, env);
     const startedAt = performance.now();
-    const mark = (stage) => console.log('OG image timing', { type, stage, elapsedMs: Math.round(performance.now() - startedAt) });
-    const returnSvg = new URL(request.url).searchParams.get('format') === 'svg';
+    const mark = (stage, details = {}) => console.log('OG image timing', { type, stage, elapsedMs: Math.round(performance.now() - startedAt), ...details });
+    const imageUrl = new URL(request.url);
+    const returnSvg = imageUrl.searchParams.get('format') === 'svg';
+    const staticFont = returnSvg && imageUrl.searchParams.get('font') === 'static';
     const cache = caches.default;
     const cached = returnSvg ? null : await cache.match(request);
     if (cached) return cached;
@@ -267,7 +275,7 @@ export function createOgImageHandler({ type, endpoint }) {
       mark('images');
       if (!prepared) return defaultOg(request, env);
       if (returnSvg) {
-        const svg = await renderSvg(prepared.data, prepared.images, mark);
+        const svg = await renderSvg(prepared.data, prepared.images, mark, staticFont);
         return new Response(svg, {
           headers: {
             'Content-Type': 'image/svg+xml; charset=utf-8',
