@@ -43,7 +43,7 @@ function icon(name, size = 18, color = '#e4e4e7') {
 
 function background(data, images) {
   return [
-    h('img', { key: 'background', src: images[data.background].src, style: { position: 'absolute', top: '-4%', left: '-4%', width: '108%', height: '108%', objectFit: 'cover', filter: 'blur(8px) brightness(0.62) saturate(1.15)' } }),
+    h('img', { key: 'background', src: images[data.background].src, style: { position: 'absolute', top: '-4%', left: '-4%', width: '108%', height: '108%', objectFit: 'cover' } }),
     h('div', { key: 'overlay', style: { display: 'flex', position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(105deg, rgba(9,11,16,0.18) 0%, rgba(9,11,16,0.58) 58%, rgba(9,11,16,0.88) 100%)' } }),
   ];
 }

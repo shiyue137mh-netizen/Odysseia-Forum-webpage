@@ -8,7 +8,7 @@ import { cleanText, DEFAULT_API_BASE_URL, safeHttpUrl } from './og.js';
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const SCALE = 2;
+const SCALE = 1;
 const BACKGROUNDS = ['apple', 'garden', 'railways', 'rainyday', 'roof', 'space', 'vending_machine'];
 const emojiCache = new Map();
 let wasmPromise;

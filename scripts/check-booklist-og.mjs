@@ -172,7 +172,7 @@ try {
 
   assert.match(html, /<title>《夏夜收藏》· 类脑索引<\/title>/);
   assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。 · 收录 1 个帖子 · 2 次收藏 · 30 次浏览"/);
-  assert.match(html, /property="og:image" content="https:\/\/example\.com\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z"/);
+  assert.match(html, /property="og:image" content="https:\/\/example\.com\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z(?:&|&amp;)r=20260808-1x"/);
   assert.match(html, /property="og:url" content="https:\/\/example\.com\/share\/booklists\/42"/);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');

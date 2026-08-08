@@ -1,5 +1,6 @@
 export const DEFAULT_API_BASE_URL = 'https://forum.shimmerday.top/v1';
 const SITE_NAME = '类脑索引';
+const OG_IMAGE_REVISION = '20260808-1x';
 
 export function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -204,6 +205,7 @@ export function createShareMetadataHandler({
       const imageUrl = imagePath ? new URL(imagePath(resourceId), requestUrl) : null;
       const version = cleanText(data?.updated_at);
       if (imageUrl && version) imageUrl.searchParams.set('v', version);
+      if (imageUrl) imageUrl.searchParams.set('r', OG_IMAGE_REVISION);
       const metadata = buildMetadata(data, requestUrl.href, fallbackImage);
       if (imageUrl) metadata.image = imageUrl.href;
       return rewriteMetadata(
