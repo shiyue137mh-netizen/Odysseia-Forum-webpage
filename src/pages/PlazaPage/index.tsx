@@ -13,8 +13,10 @@ import {
 } from "@/features/discovery/api/discoveryApi";
 import {
   DISCOVERY_RAIL_LIMIT,
+  useDiscoveryRail,
   useDiscoveryRails,
 } from "@/features/discovery/hooks/useDiscoveryRails";
+import { DailyNewCards } from "@/widgets/content-display/DailyNewCards";
 import { PreferenceFilterNotice } from "@/features/preferences/components/PreferenceFilterNotice";
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
@@ -28,8 +30,6 @@ import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import { buildDiscordWebThreadUrl } from "@/shared/lib/discord";
 import {
   CompactBooklistCard,
-  CompactThreadCard,
-  CompactThreadCardSkeleton,
   ThreadRankingPanel,
 } from "@/widgets/content-display/ContentDisplayCards";
 import { BannerCarousel } from "@/widgets/layout/BannerCarousel";
@@ -70,6 +70,7 @@ export function PlazaPage() {
     {},
   );
   const [railOffsets, setRailOffsets] = useState<Record<string, number>>({});
+  const [rankingDays, setRankingDays] = useState<1 | 7 | 30>(7);
 
   const hasActivePreferences = useMemo(() => {
     if (!preferences) return false;
@@ -95,7 +96,8 @@ export function PlazaPage() {
     sortOrder: "desc",
   });
 
-  const railsQuery = useDiscoveryRails(!ignorePreferenceFilter);
+  const railsQuery = useDiscoveryRails(!ignorePreferenceFilter, rankingDays);
+  const dailyCardsQuery = useDiscoveryRail("latest", !ignorePreferenceFilter, 1);
 
   useEffect(() => {
     if (!railsQuery.data) return;
@@ -106,13 +108,11 @@ export function PlazaPage() {
         : threads;
 
     setRailThreadsMap({
-      latest: applyFilter(railsQuery.data.latest || []),
       reaction_surge: applyFilter(railsQuery.data.reaction_surge || []),
       discussion_surge: applyFilter(railsQuery.data.discussion_surge || []),
       collection_surge: applyFilter(railsQuery.data.collection_surge || []),
     });
     setRailOffsets({
-      latest: railsQuery.data.latest?.length || 0,
       reaction_surge: railsQuery.data.reaction_surge?.length || 0,
       discussion_surge: railsQuery.data.discussion_surge?.length || 0,
       collection_surge: railsQuery.data.collection_surge?.length || 0,
@@ -129,7 +129,7 @@ export function PlazaPage() {
         const currentOffset = railOffsets[key] ?? currentList.length;
         let nextThreads = await discoveryApi.getRail(key, {
           limit: DISCOVERY_RAIL_LIMIT,
-          days: 30,
+          days: key === "latest" ? 1 : rankingDays,
           offset: currentOffset,
           apply_preferences: !ignorePreferenceFilter,
         });
@@ -138,7 +138,7 @@ export function PlazaPage() {
         if (nextThreads.length === 0 && currentOffset > 0) {
           nextThreads = await discoveryApi.getRail(key, {
             limit: DISCOVERY_RAIL_LIMIT,
-            days: 30,
+            days: key === "latest" ? 1 : rankingDays,
             offset: 0,
             apply_preferences: !ignorePreferenceFilter,
           });
@@ -169,17 +169,22 @@ export function PlazaPage() {
       ignorePreferenceFilter,
       railOffsets,
       railThreadsMap,
+      rankingDays,
       refreshingKeys,
     ],
   );
 
   const collectMutation = useToggleBooklistCollection();
-  const latestThreads = railThreadsMap.latest || [];
+  const dailyThreads = useMemo(() => {
+    const threads = dailyCardsQuery.data || [];
+    return !ignorePreferenceFilter
+      ? filterThreadsByPreferences(threads, discoveryPreferenceContext)
+      : threads;
+  }, [dailyCardsQuery.data, discoveryPreferenceContext, ignorePreferenceFilter]);
   const reactionThreads = railThreadsMap.reaction_surge || [];
   const discussionThreads = railThreadsMap.discussion_surge || [];
   const collectionThreads = railThreadsMap.collection_surge || [];
-  const latestRankThreads =
-    latestThreads.length > 8 ? latestThreads.slice(8) : latestThreads;
+  const rankingBadge = rankingDays === 1 ? "近 1 天" : `近 ${rankingDays} 天`;
 
   return (
     <div className="flex min-h-screen flex-col animate-in fade-in duration-500">
@@ -257,36 +262,20 @@ export function PlazaPage() {
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
             <h2 className="text-lg font-semibold text-(--od-text-primary)">
-              正在发生
+              每日新卡
             </h2>
             <RailRefreshButton
               label="换一批"
-              onRefresh={() => handleRefreshRail("latest")}
-              isLoading={refreshingKeys.latest}
+              onRefresh={() => void dailyCardsQuery.refetch()}
+              isLoading={dailyCardsQuery.isFetching}
             />
           </div>
 
-          {railsQuery.isLoading ? (
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <CompactThreadCardSkeleton key={index} />
-              ))}
-            </div>
-          ) : latestThreads.length > 0 ? (
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-              {latestThreads.slice(0, 8).map((thread) => (
-                <CompactThreadCard
-                  key={thread.thread_id}
-                  thread={thread}
-                  onOpen={setPreviewThread}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="py-8 text-sm text-(--od-text-tertiary)">
-              暂时没有可展示的新内容。
-            </p>
-          )}
+          <DailyNewCards
+            threads={dailyThreads}
+            loading={dailyCardsQuery.isLoading}
+            onOpen={setPreviewThread}
+          />
         </section>
 
         <section>
@@ -347,13 +336,28 @@ export function PlazaPage() {
         </section>
 
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-(--od-text-primary)">
-            榜单精选
-          </h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-(--od-text-primary)">
+              榜单精选
+            </h2>
+            <div className="od-options-wrap" aria-label="榜单时间范围">
+              {([1, 7, 30] as const).map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  data-active={rankingDays === days}
+                  onClick={() => setRankingDays(days)}
+                  className="od-option-inline min-h-10"
+                >
+                  {days === 1 ? "日榜" : days === 7 ? "周榜" : "月榜"}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {railsQuery.isLoading ? (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {Array.from({ length: 4 }).map((_, index) => (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, index) => (
                 <div
                   key={index}
                   className="h-72 animate-pulse rounded-2xl bg-(--od-surface-input)"
@@ -361,10 +365,10 @@ export function PlazaPage() {
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
               <ThreadRankingPanel
                 title="点赞飙升"
-                badge="近 7 天"
+                badge={rankingBadge}
                 threads={reactionThreads}
                 metric="reaction"
                 refreshing={refreshingKeys.reaction_surge}
@@ -373,7 +377,7 @@ export function PlazaPage() {
               />
               <ThreadRankingPanel
                 title="讨论升温"
-                badge="近 7 天"
+                badge={rankingBadge}
                 threads={discussionThreads}
                 metric="discussion"
                 refreshing={refreshingKeys.discussion_surge}
@@ -382,21 +386,12 @@ export function PlazaPage() {
               />
               <ThreadRankingPanel
                 title="收藏上升"
-                badge="近 30 天"
+                badge={rankingBadge}
                 threads={collectionThreads}
                 metric="collection"
                 refreshing={refreshingKeys.collection_surge}
                 onOpen={setPreviewThread}
                 onRefresh={() => handleRefreshRail("collection_surge")}
-              />
-              <ThreadRankingPanel
-                title="新作速递"
-                badge="刚刚更新"
-                threads={latestRankThreads}
-                metric="latest"
-                refreshing={refreshingKeys.latest}
-                onOpen={setPreviewThread}
-                onRefresh={() => handleRefreshRail("latest")}
               />
             </div>
           )}

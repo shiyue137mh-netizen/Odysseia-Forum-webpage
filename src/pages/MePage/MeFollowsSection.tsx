@@ -3,7 +3,6 @@ import { BellOff, Bookmark, CheckCircle2, RefreshCw } from 'lucide-react';
 import { ThreadListItem } from '@/entities/thread/ThreadListItem';
 import type { Thread } from '@/entities/thread/types';
 import { useListEntranceAnimation } from '@/shared/hooks/useListEntranceAnimation';
-import { FluidDivider } from '@/shared/ui/FluidDivider';
 
 type FollowStatusFilter = 'current' | 'past' | 'all';
 
@@ -57,7 +56,6 @@ export function MeFollowsSection({
 
   return (
     <section className="px-1">
-      <FluidDivider label="Follows" className="mb-8" />
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <div className="flex items-center justify-center gap-2">
           <Bookmark className="h-4 w-4 text-(--od-accent)" />
@@ -71,7 +69,7 @@ export function MeFollowsSection({
             id="follow-channel-filter"
             value={selectedChannel || ''}
             onChange={(event) => onSetChannel(event.target.value || null)}
-            className="w-full rounded-full border border-(--od-shell-line) bg-(--od-surface-input) px-4 py-2 text-sm text-(--od-text-primary) outline-hidden transition-colors hover:bg-(--od-interactive-hover) focus:border-(--od-accent)"
+            className="od-ghost-input min-h-10 w-full px-1 text-sm"
           >
             <option value="">全频道</option>
             {channelOptions.map((channel) => (

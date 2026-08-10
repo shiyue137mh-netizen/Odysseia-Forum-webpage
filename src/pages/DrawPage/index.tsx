@@ -388,7 +388,7 @@ export function DrawPage() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="text-center"
+          className="od-page-heading w-full text-center"
         >
           <h1 className="od-page-title">
             随机抽卡
@@ -402,13 +402,13 @@ export function DrawPage() {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-(--od-text-secondary)"
         >
-          <span className="inline-flex items-center gap-1 rounded-full border border-(--od-border) bg-(--od-surface-input) px-3 py-1.5">
+          <span className="inline-flex items-center gap-1 px-2 py-1.5">
             <BadgeCheck className="h-3.5 w-3.5 text-(--od-accent)" />
             {recipe.includeTags.length || recipe.excludeTags.length
               ? `包含 ${recipe.includeTags.length} · 排除 ${recipe.excludeTags.length}`
               : "未限制标签"}
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-(--od-border) bg-(--od-surface-input) px-3 py-1.5">
+          <span className="inline-flex items-center gap-1 px-2 py-1.5">
             <Layers3 className="h-3.5 w-3.5 text-(--od-accent)" />
             {activeScopeLabel}
           </span>
@@ -425,7 +425,7 @@ export function DrawPage() {
             type="button"
             disabled={isDrawing || !canDraw}
             onClick={() => handleDraw(1)}
-            className="group relative flex items-center gap-3 rounded-2xl border border-(--od-accent)/40 bg-linear-to-br from-(--od-accent)/16 to-(--od-accent)/6 px-8 py-4 text-base font-bold text-(--od-accent) shadow-lg transition-all hover:scale-[1.03] hover:shadow-xl hover:border-(--od-accent)/60 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed sm:px-10 sm:py-5 sm:text-lg"
+            className="group relative flex min-h-11 items-center gap-2 rounded-xl bg-transparent px-5 py-2.5 text-base font-bold text-(--od-accent) transition-colors hover:bg-(--od-accent)/8 hover:text-(--od-accent-hover) active:bg-(--od-accent)/12 disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:text-lg"
           >
             {isDrawing && lastDrawCount === 1 ? (
               <OmicronLoader className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -438,7 +438,7 @@ export function DrawPage() {
             type="button"
             disabled={isDrawing || !canDraw}
             onClick={() => handleDraw(10)}
-            className="group relative flex items-center gap-3 rounded-2xl border border-(--od-border) bg-(--od-surface-input) px-8 py-4 text-base font-semibold text-(--od-text-primary) shadow-md transition-all hover:scale-[1.03] hover:shadow-lg hover:border-(--od-accent)/30 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed sm:px-10 sm:py-5 sm:text-lg"
+            className="group relative flex min-h-11 items-center gap-2 rounded-xl bg-transparent px-5 py-2.5 text-base font-semibold text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary) active:bg-(--od-interactive-strong) disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:text-lg"
           >
             {isDrawing && lastDrawCount === 10 ? (
               <OmicronLoader className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -502,10 +502,10 @@ export function DrawPage() {
                         key={mode}
                         type="button"
                         onClick={() => setRecipe((current) => ({ ...current, scopeMode: mode }))}
-                        className={`rounded-2xl border px-3 py-3 text-sm transition-colors ${
+                        className={`rounded-2xl border-0 px-3 py-3 text-sm transition-colors ${
                           recipe.scopeMode === mode
-                            ? "border-(--od-accent) text-(--od-accent) shadow-xs"
-                            : "border-(--od-border) text-(--od-text-secondary) hover:border-(--od-accent)/50 hover:text-(--od-accent)"
+                            ? "bg-(--od-accent)/10 text-(--od-accent)"
+                            : "bg-transparent text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-accent)"
                         }`}
                       >
                         {label}
@@ -519,7 +519,7 @@ export function DrawPage() {
                     <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">
                       自选频道
                     </p>
-                    <div className="od-chrome-surface flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-2xl p-3">
+                    <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto py-2">
                       {allChannels.map((channel) => {
                         const active = recipe.channelIds.includes(channel.id);
                         return (
@@ -527,10 +527,10 @@ export function DrawPage() {
                             key={channel.id}
                             type="button"
                             onClick={() => toggleRecipeChannel(channel.id)}
-                            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                            className={`rounded-full border-0 px-3 py-1.5 text-xs transition-colors ${
                               active
-                                ? "border-(--od-accent)/50 text-(--od-accent)"
-                                : "border-white/8 text-(--od-text-secondary) hover:border-(--od-accent)/30 hover:text-(--od-accent)"
+                                ? "bg-(--od-accent)/10 text-(--od-accent)"
+                                : "bg-transparent text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-accent)"
                             }`}
                           >
                             {channel.name}

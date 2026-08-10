@@ -16,6 +16,7 @@ import { useImageModeSetting } from "@/shared/hooks/useSettings";
 import { DiscordMarkdownText } from "@/shared/ui/DiscordMarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { LazyImage } from "@/shared/ui/LazyImage";
+import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 
 interface ThreadCardProps {
   thread: Thread;
@@ -29,8 +30,6 @@ interface ThreadCardProps {
   animateIn?: boolean;
   resultPage?: number;
 }
-
-const thumbnailAspectRatioCache = new Map<string, number>();
 
 function ThreadCardImpl({
   thread,
@@ -76,9 +75,6 @@ function ThreadCardImpl({
     [thread.thumbnail_urls, imageMode],
   );
   const [thumbnailSrc, setThumbnailSrc] = useState(initialThumbnail);
-  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
-    () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
-  );
   const articleRef = useRef<HTMLElement>(null);
   const titleViewportRef = useRef<HTMLSpanElement>(null);
   const titleTrackRef = useRef<HTMLSpanElement>(null);
@@ -88,9 +84,6 @@ function ThreadCardImpl({
 
   useEffect(() => {
     setThumbnailSrc(initialThumbnail);
-    setNaturalAspectRatio(
-      thumbnailAspectRatioCache.get(initialThumbnail) || null,
-    );
   }, [initialThumbnail, thread.thread_id]);
 
   useEffect(() => {
@@ -118,8 +111,6 @@ function ThreadCardImpl({
       article?.removeEventListener("contentvisibilityautostatechange", updateTitleShift);
     };
   }, [thread.title, fontSize, searchQuery]);
-
-  const mediaAspectClass = "aspect-3/4";
 
   // 缓存命中直出的页面传 animateIn=false：内容用户已看过，不再重播浮现动画。
   const entranceClass = animateIn
@@ -206,77 +197,25 @@ function ThreadCardImpl({
               </div>
             </div>
 
-            <div className="overflow-hidden">
-              <h3
-                className={`whitespace-nowrap ${mobileTitleClass} text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
-              >
-                <span
-                  ref={titleViewportRef}
-                  className="inline-block max-w-full overflow-hidden align-top"
-                >
-                  <span
-                    ref={titleTrackRef}
-                    style={{
-                      ["--od-marquee-distance" as string]: `${titleShift}px`,
-                      ["--od-marquee-gap" as string]: "1.75rem",
-                      ["--od-marquee-duration" as string]: `${Math.max(5, titleShift / 22)}s`,
-                    }}
-                    className={`od-marquee-track inline-flex items-center font-extrabold leading-snug tracking-[-0.02em] ${
-                      shouldMarquee ? "od-marquee-active" : ""
-                    }`}
-                  >
-                    <span className="shrink-0">
-                      <HighlightText
-                        text={thread.title}
-                        highlight={searchQuery}
-                      />
-                    </span>
-                    {titleShift > 0 && (
-                      <>
-                        <span className="mx-7 shrink-0 text-(--od-text-tertiary)/55">
-                          /
-                        </span>
-                        <span className="shrink-0">
-                          <HighlightText
-                            text={thread.title}
-                            highlight={searchQuery}
-                          />
-                        </span>
-                      </>
-                    )}
-                  </span>
-                </span>
-              </h3>
-            </div>
           </div>
 
-          <div
-            className={`relative w-full overflow-hidden rounded-[1.45rem] border border-(--od-shell-line) bg-(--od-surface-shell) shadow-(--od-shadow-soft) ${mediaAspectClass}`}
-            style={
-              masonry ? { aspectRatio: naturalAspectRatio || 3 / 4 } : undefined
-            }
-          >
-            {thumbnailSrc ? (
-              <LazyImage
-                src={thumbnailSrc}
-                alt={thread.title}
-                className="h-full w-full"
-                threadId={thread.thread_id}
-                channelId={thread.channel_id}
-                index={index}
-                onNaturalSize={(width, height) => {
-                  if (!masonry || width <= 0 || height <= 0) return;
-                  // ponytail: 限制极端长图比例以避免单张图片占据整列；需要完整长图时可改为展开查看。
-                  const ratio = Math.min(1.5, Math.max(0.58, width / height));
-                  thumbnailAspectRatioCache.set(thumbnailSrc, ratio);
-                  setNaturalAspectRatio(ratio);
-                }}
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-[color-mix(in_srgb,var(--od-surface-raised)_15%,transparent)]">
-                <ImageIcon className="h-12 w-12 text-(--od-text-tertiary)/20" />
-              </div>
-            )}
+          <div className="relative aspect-2/3 w-full">
+            <BannerFadeMedia className="overflow-hidden rounded-t-[1.45rem]">
+              {thumbnailSrc ? (
+                <LazyImage
+                  src={thumbnailSrc}
+                  alt={thread.title}
+                  className="h-full w-full transition-transform duration-500 group-hover:scale-[1.015]"
+                  threadId={thread.thread_id}
+                  channelId={thread.channel_id}
+                  index={index}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-(--od-text-tertiary)/20" />
+                </div>
+              )}
+            </BannerFadeMedia>
 
             <div className="absolute right-3 top-3 z-20 flex items-center gap-2 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100">
               <button
@@ -300,7 +239,41 @@ function ThreadCardImpl({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col gap-3 px-1 pt-3 text-(--od-text-primary)">
+          <div className="relative z-10 -mt-10 flex flex-1 flex-col gap-3 px-2 text-(--od-text-primary)">
+            <div className="overflow-hidden">
+              <h3
+                className={`whitespace-nowrap ${mobileTitleClass} text-(--od-text-primary) drop-shadow-[0_2px_6px_rgb(0_0_0_/_0.7)] transition-colors duration-200 group-hover:text-(--od-accent)`}
+              >
+                <span
+                  ref={titleViewportRef}
+                  className="inline-block max-w-full overflow-hidden align-top"
+                >
+                  <span
+                    ref={titleTrackRef}
+                    style={{
+                      ["--od-marquee-distance" as string]: `${titleShift}px`,
+                      ["--od-marquee-gap" as string]: "1.75rem",
+                      ["--od-marquee-duration" as string]: `${Math.max(5, titleShift / 22)}s`,
+                    }}
+                    className={`od-marquee-track inline-flex items-center font-extrabold leading-snug tracking-[-0.02em] ${
+                      shouldMarquee ? "od-marquee-active" : ""
+                    }`}
+                  >
+                    <span className="shrink-0">
+                      <HighlightText text={thread.title} highlight={searchQuery} />
+                    </span>
+                    {titleShift > 0 && (
+                      <>
+                        <span className="mx-7 shrink-0 text-(--od-text-tertiary)/55">/</span>
+                        <span className="shrink-0">
+                          <HighlightText text={thread.title} highlight={searchQuery} />
+                        </span>
+                      </>
+                    )}
+                  </span>
+                </span>
+              </h3>
+            </div>
             <div className="min-h-11">
               {hasExcerpt && (
                 <p

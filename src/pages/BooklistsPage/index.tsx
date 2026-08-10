@@ -95,7 +95,7 @@ export function BooklistsPage() {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-8 p-4 sm:p-6 lg:gap-10 lg:p-8">
       <section>
         <div className="flex flex-col gap-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="od-page-heading flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
             <h1 className="od-page-title">书单</h1>
 
             <button
@@ -120,8 +120,8 @@ export function BooklistsPage() {
                     }}
                     className={`od-pill-chip ${
                       scope === option.key
-                        ? "bg-(--od-accent) text-white"
-                        : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                        ? "bg-(--od-accent)/10 text-(--od-accent)"
+                        : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
                     }`}
                   >
                     {option.label}
@@ -129,13 +129,10 @@ export function BooklistsPage() {
                 ))}
               </div>
 
-              <p className="text-sm leading-6 text-(--od-text-secondary)">
-                你可以先看看公开的，或者翻翻自己整理过、收藏过的那些，再慢慢搜就好，不用急。
-              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] lg:grid-cols-1">
-              <div className="flex items-center gap-2 rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4">
+              <div className="flex min-h-10 items-center gap-2 border-b border-(--od-border) px-1 focus-within:border-(--od-accent)">
                 <Search className="h-4 w-4 text-(--od-text-tertiary)" />
                 <input
                   value={searchInput}
@@ -149,11 +146,11 @@ export function BooklistsPage() {
                     setParams({ keywords: searchInput, page: 1 });
                   }}
                   placeholder="搜索书单标题或简介"
-                  className="h-11 w-full bg-transparent text-sm text-(--od-text-primary) outline-hidden placeholder:text-(--od-text-tertiary)"
+                  className="h-10 w-full bg-transparent text-sm text-(--od-text-primary) outline-hidden placeholder:text-(--od-text-tertiary)"
                 />
               </div>
 
-              <div className="flex items-center gap-2 rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4">
+              <div className="flex min-h-10 items-center gap-2 px-1">
                 <SlidersHorizontal className="h-4 w-4 text-(--od-text-tertiary)" />
                 <Select
                   value={String(sortMethod)}

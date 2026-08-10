@@ -3,7 +3,6 @@ import { BookOpen, RefreshCw } from "lucide-react";
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
 import { BooklistListItem } from "@/entities/booklist/BooklistListItem";
 import type { Booklist } from "@/entities/booklist/types";
-import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { useCardGridClass, useLayoutMode } from "@/shared/hooks/useSettings";
 
 export type BooklistSubTab = "mine" | "collected";
@@ -42,7 +41,6 @@ export function MeBooklistsSection({
 
   return (
     <section className="px-1">
-      <FluidDivider label="Booklists" className="mb-8" />
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <div className="flex items-center gap-2 justify-center">
           <BookOpen className="h-4 w-4 text-(--od-accent)" />
@@ -63,8 +61,8 @@ export function MeBooklistsSection({
           onClick={() => onSetSubTab("mine")}
           className={`od-pill-chip text-xs ${
             subTab === "mine"
-              ? "bg-(--od-accent) text-white font-od-bold"
-              : "text-(--od-text-secondary) font-od-medium"
+              ? "bg-(--od-accent)/10 text-(--od-accent) font-od-bold"
+              : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) font-od-medium"
           }`}
         >
           我的创建
@@ -74,8 +72,8 @@ export function MeBooklistsSection({
           onClick={() => onSetSubTab("collected")}
           className={`od-pill-chip text-xs ${
             subTab === "collected"
-              ? "bg-(--od-accent) text-white font-od-bold"
-              : "text-(--od-text-secondary) font-od-medium"
+              ? "bg-(--od-accent)/10 text-(--od-accent) font-od-bold"
+              : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) font-od-medium"
           }`}
         >
           我的收藏

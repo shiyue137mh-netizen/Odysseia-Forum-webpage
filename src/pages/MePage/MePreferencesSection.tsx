@@ -3,7 +3,6 @@ import { Save, Search } from "lucide-react";
 import { PreferenceTagSelector } from "@/features/preferences/components/PreferenceTagSelector";
 import type { PreferencesFormValue } from "@/features/preferences/lib/preferencesMapper";
 import { AuthorModePicker } from "@/features/search/components/AuthorModePicker";
-import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 
 interface ChannelOption {
@@ -40,7 +39,6 @@ export function MePreferencesSection({
 }: MePreferencesSectionProps) {
   return (
     <section className="px-1">
-      <FluidDivider label="Preferences" className="mb-8" />
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Search className="h-4 w-4 text-(--od-accent)" />
@@ -65,9 +63,6 @@ export function MePreferencesSection({
             <p className="text-sm font-medium text-(--od-text-primary)">
               偏好频道
             </p>
-            <p className="text-sm leading-6 text-(--od-text-secondary)">
-              这些频道会在探索和搜索建议里优先生效，这样你就不会看到你不感兴趣的频道内容被推荐啦。
-            </p>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {channelOptions.map((channel) => {
                 const active = form.preferredChannelIds.includes(channel.id);
@@ -76,10 +71,10 @@ export function MePreferencesSection({
                     key={channel.id}
                     type="button"
                     onClick={() => onToggleChannel(channel.id)}
-                    className={`rounded-2xl border px-4 py-3 text-left text-sm transition-colors ${
+                    className={`rounded-2xl border-0 px-4 py-3 text-left text-sm transition-colors ${
                       active
-                        ? "border-(--od-accent)/40 bg-(--od-accent)/8 text-(--od-text-primary) font-od-medium"
-                        : "border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] text-(--od-text-secondary) font-od-normal"
+                        ? "bg-(--od-accent)/10 text-(--od-accent) font-od-medium"
+                        : "bg-transparent text-(--od-text-secondary) font-od-normal hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
                     }`}
                   >
                     {channel.name}
@@ -129,7 +124,7 @@ export function MePreferencesSection({
                     resultsPerPage: val === "" ? "" : Number(val),
                   }));
                 }}
-                className="w-full rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4 py-3 text-sm text-(--od-text-primary)"
+                className="od-ghost-input min-h-10 w-full px-1 text-sm"
               />
             </label>
           </div>
@@ -239,7 +234,7 @@ export function MePreferencesSection({
                     includeKeywordsText: e.target.value,
                   }));
                 }}
-                className="min-h-[110px] w-full rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4 py-3 text-sm text-(--od-text-primary)"
+                className="od-ghost-input min-h-[110px] w-full px-1 py-3 text-sm"
               />
               <p className="mt-2 text-[11px] leading-relaxed text-(--od-text-tertiary)">
                 支持多组关键词组合：使用逗号 <code className="px-1 text-(--od-accent)">,</code> 分隔表示“且”（AND），使用斜杠 <code className="px-1 text-(--od-accent)">/</code> 分隔表示“或”（OR）。
@@ -268,7 +263,7 @@ export function MePreferencesSection({
                     excludeKeywordsText: e.target.value,
                   }));
                 }}
-                className="min-h-[110px] w-full rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4 py-3 text-sm text-(--od-text-primary)"
+                className="od-ghost-input min-h-[110px] w-full px-1 py-3 text-sm"
               />
               <p className="mt-2 text-[11px] leading-relaxed text-(--od-text-tertiary)">
                 使用逗号、空格或斜杠分隔多个词。包含这些词的帖子将被隐藏。
@@ -278,11 +273,7 @@ export function MePreferencesSection({
             </label>
           </div>
 
-          <div className="rounded-[1.2rem] border border-[color-mix(in_srgb,var(--od-text-secondary)_14%,transparent)] bg-[color-mix(in_srgb,var(--od-surface-input)_56%,transparent)] px-4 py-4 text-sm leading-6 text-(--od-text-secondary)">
-            这些偏好主要影响“发现流”，不会偷偷改你的搜索框，也不会压过你手动选的频道。空搜索、全频道探索和搜索建议会参考它们，但你的主动操作始终优先。
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[color-mix(in_srgb,var(--od-text-secondary)_14%,transparent)] pt-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
             <p className="od-text-meta">
               当前状态：
               {isSyncing ? "同步中" : isDirty ? "有未保存修改" : "已同步"}

@@ -170,7 +170,7 @@ export function AnimatedPagination({
             }
           }}
           aria-label="跳转页码"
-          className="h-8 w-20 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] px-3 text-center text-sm font-medium text-(--od-text-primary) outline-hidden transition-colors focus:border-(--od-accent)"
+          className="od-ghost-input h-8 w-20 px-1 text-center text-sm font-medium"
         />
         <span>页</span>
       </div>}

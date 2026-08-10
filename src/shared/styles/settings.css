@@ -7,8 +7,6 @@
 }
 
 @utility od-setting-subsection {
-  border-top: 1px solid
-    color-mix(in srgb, var(--od-divider-strong) 58%, transparent);
   padding-top: 1rem;
 }
 
@@ -207,7 +205,6 @@
   border-radius: 1rem;
   padding: 0.9rem 0;
   background: transparent;
-  border-top: 1px solid color-mix(in srgb, var(--od-divider) 82%, transparent);
 
   &:hover .od-choice-icon {
     transition:
@@ -240,7 +237,6 @@
   }
 
   &:first-child {
-    border-top: 0;
     padding-top: 0;
   }
 }

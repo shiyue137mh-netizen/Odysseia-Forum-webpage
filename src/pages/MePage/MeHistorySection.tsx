@@ -2,7 +2,6 @@ import { Eye, RefreshCw, Trash2 } from 'lucide-react';
 
 import type { BrowseHistoryItem } from '@/shared/lib/browseHistory';
 import { formatRelativeDateTime } from '@/shared/lib/dateTime';
-import { FluidDivider } from '@/shared/ui/FluidDivider';
 import { LazyImage } from '@/shared/ui/LazyImage';
 
 interface MeHistorySectionProps {
@@ -22,7 +21,6 @@ export function MeHistorySection({
 }: MeHistorySectionProps) {
   return (
     <section id="history-section" className="px-1">
-      <FluidDivider label="History" className="mb-8" />
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
         <div className="flex items-center justify-center gap-2">
           <Eye className="h-4 w-4 text-(--od-accent)" />

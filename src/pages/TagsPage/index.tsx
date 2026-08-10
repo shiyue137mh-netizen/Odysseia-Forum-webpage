@@ -178,7 +178,7 @@ export function TagsPage() {
       <div className="animate-in fade-in duration-500 flex-1 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 lg:gap-10">
           <div>
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="od-page-heading flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <h1 className="od-page-title">标签总览</h1>
               <button
                 type="button"
@@ -266,7 +266,7 @@ export function TagsPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="搜索标签或频道..."
-                    className="w-full rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_70%,transparent)] py-3.5 pl-12 pr-4 text-(--od-text-primary) placeholder:text-(--od-text-tertiary) focus:border-(--od-accent) focus:outline-hidden focus:ring-2 focus:ring-(--od-accent)/16"
+                    className="od-ghost-input min-h-10 w-full pl-10 pr-1 text-(--od-text-primary) placeholder:text-(--od-text-tertiary)"
                   />
                 </div>
               </div>

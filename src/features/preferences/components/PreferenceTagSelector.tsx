@@ -49,7 +49,7 @@ export function PreferenceTagSelector({
     <div className="block space-y-2">
       <span className="block text-sm font-medium text-(--od-text-secondary)">{label}</span>
 
-      <div className="rounded-2xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] p-3">
+      <div className="py-1">
         <div className="flex flex-wrap gap-2">
           {selectedTags.map((tag) => (
             <button
@@ -73,7 +73,7 @@ export function PreferenceTagSelector({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="搜索并选择标签..."
-            className="w-full rounded-xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-shell)_78%,transparent)] px-3 py-2 text-sm text-(--od-text-primary) outline-hidden transition-colors focus:border-(--od-accent)"
+            className="od-ghost-input min-h-10 w-full px-1 text-sm"
           />
 
           <div className="flex max-h-[150px] flex-wrap gap-2 overflow-y-auto">
@@ -83,7 +83,7 @@ export function PreferenceTagSelector({
                   key={tag}
                   type="button"
                   onClick={() => addTag(tag)}
-                  className="rounded-full border border-(--od-shell-line) px-3 py-1 text-xs text-(--od-text-secondary) transition-colors hover:border-(--od-accent)/40 hover:text-(--od-text-primary)"
+                  className="rounded-full border-0 bg-transparent px-3 py-1 text-xs text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
                 >
                   {tag}
                 </button>

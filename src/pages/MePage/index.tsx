@@ -5,14 +5,11 @@ import {
   BookOpen,
   Bookmark,
   Eye,
-  FileText,
-  Heart,
   Settings2,
 } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { FakeCaptchaEntry } from "@/features/easter-eggs/components/FakeCaptchaEntry";
-import type { Thread } from "@/entities/thread/types";
 import {
   useFollowsFeed,
   useUnfollowThread,
@@ -30,7 +27,6 @@ import {
 import { BooklistFormModal } from "@/features/booklists/components/BooklistFormModal";
 import { usePreviewThread } from "@/features/search/hooks/usePreviewThread";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
-import { FluidDivider } from "@/shared/ui/FluidDivider";
 import {
   toPreferencesFormValue,
   toPreferencesUpdatePayload,
@@ -47,7 +43,6 @@ import {
   type MePageTabOption,
 } from "@/pages/MePage/MePageHeader";
 import { MePreferencesSection } from "@/pages/MePage/MePreferencesSection";
-import { MeThreadsSection } from "@/pages/MePage/MeThreadsSection";
 import { useChannels } from "@/shared/hooks/useChannels";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
 import {
@@ -57,7 +52,7 @@ import {
 } from "@/shared/lib/browseHistory";
 import { notifyError, notifySuccess } from "@/shared/lib/notify";
 
-type MeTab = "booklists" | "follows" | "threads" | "history" | "preferences";
+type MeTab = "booklists" | "follows" | "history" | "preferences";
 type FollowStatusFilter = "current" | "past" | "all";
 
 const DEFAULT_FORM: PreferencesFormValue = {
@@ -77,7 +72,6 @@ const DEFAULT_FORM: PreferencesFormValue = {
 const tabOptions: MePageTabOption[] = [
   { key: "booklists", label: "书单", icon: BookOpen },
   { key: "follows", label: "关注", icon: Bookmark },
-  { key: "threads", label: "创建", icon: FileText },
   { key: "history", label: "足迹", icon: Eye },
   { key: "preferences", label: "偏好", icon: Settings2 },
 ];
@@ -86,7 +80,6 @@ function parseTab(value: string | null): MeTab {
   if (
     value === "booklists" ||
     value === "follows" ||
-    value === "threads" ||
     value === "history" ||
     value === "preferences"
   ) {
@@ -195,18 +188,6 @@ export function MePage() {
     channel_ids: selectedFollowChannel ? [selectedFollowChannel] : undefined,
   });
 
-  const createdThreadsQuery = useQuery({
-    queryKey: ["me", "threads", user?.id],
-    enabled: Boolean(user?.id),
-    queryFn: () =>
-      searchApi.search({
-        include_authors: user?.id ? [user.id] : [],
-        sort_method: "created_desc",
-        limit: 36,
-      }),
-    staleTime: 60 * 1000,
-  });
-
   const myBooklistsQuery = useMyBooklistsList();
 
   const collectedBooklistsQuery = useCollectedBooklistsList();
@@ -222,46 +203,11 @@ export function MePage() {
 
   const deleteMutation = useDeleteBooklist();
 
-  const createdThreads = (createdThreadsQuery.data?.results || []) as Thread[];
   const browseHistory = useMemo(
     () => getBrowseHistory(),
     [browseHistoryVersion],
   );
   const followedThreads = followsQuery.data?.results || [];
-  const totalReactions = createdThreads.reduce(
-    (sum, item) => sum + (Number(item.reaction_count) || 0),
-    0,
-  );
-  const totalReplies = createdThreads.reduce(
-    (sum, item) => sum + (Number(item.reply_count) || 0),
-    0,
-  );
-  const totalFollows = followsQuery.data?.total || 0;
-  const totalBooklists = myBooklistsQuery.data?.total || 0;
-
-  const stats = [
-    {
-      label: "我的书单",
-      value: totalBooklists,
-      icon: BookOpen,
-    },
-    {
-      label: "我的关注",
-      value: totalFollows,
-      icon: Bookmark,
-    },
-    {
-      label: "我的帖子",
-      value: createdThreadsQuery.data?.total || 0,
-      icon: FileText,
-    },
-    {
-      label: "累计点赞",
-      value: totalReactions,
-      icon: Heart,
-    },
-  ];
-
   const setTab = (next: MeTab) => {
     const sp = new URLSearchParams(searchParams);
     sp.set("tab", next);
@@ -339,13 +285,14 @@ export function MePage() {
     <>
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 p-4 sm:p-6 lg:gap-14 lg:p-8">
         <section>
-          <FluidDivider label="Me" tone="strong" className="mb-8 lg:mb-10" />
+          <div className="od-page-heading mb-8 lg:mb-10">
+            <h1 className="od-page-title">我的</h1>
+          </div>
           <MePageHeader
             currentTab={tab}
             onOpenProfile={() => navigate(`/u/${user!.id}`)}
             onSelectTab={(nextTab) => setTab(nextTab as MeTab)}
             showProfileButton={Boolean(user?.id)}
-            stats={stats}
             tabOptions={tabOptions}
             user={user}
           />
@@ -411,18 +358,6 @@ export function MePage() {
                 ? unfollowMutation.variables
                 : null
             }
-          />
-        )}
-
-        {tab === "threads" && (
-          <MeThreadsSection
-            isLoading={createdThreadsQuery.isLoading}
-            threads={createdThreads}
-            totalReplies={totalReplies}
-            totalReactions={totalReactions}
-            totalThreads={createdThreadsQuery.data?.total || 0}
-            onPreview={openPreview}
-            onRefresh={() => void createdThreadsQuery.refetch()}
           />
         )}
 

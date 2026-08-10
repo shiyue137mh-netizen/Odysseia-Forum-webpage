@@ -41,7 +41,7 @@ export function AuthorModePicker({
 
   return (
     <div className="space-y-2">
-      <div className="od-chrome-surface flex items-center gap-2 rounded-xl border border-white/6 px-3 py-2 focus-within:border-(--od-accent)">
+      <div className="flex min-h-10 items-center gap-2 border-b border-(--od-border) px-1 focus-within:border-(--od-accent)">
         <Search className="h-4 w-4 shrink-0 text-(--od-text-tertiary)" />
         <input
           value={draft}
@@ -52,7 +52,7 @@ export function AuthorModePicker({
       </div>
 
       {keyword && data?.authors?.length ? (
-        <div className="od-chrome-surface space-y-1 rounded-xl p-1.5">
+        <div className="space-y-1 py-1.5">
           {data.authors.map((author) => {
             const mode = selectedMode(author.id);
             const name = author.display_name || author.name;

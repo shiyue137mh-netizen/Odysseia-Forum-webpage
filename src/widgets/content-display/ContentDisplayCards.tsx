@@ -333,7 +333,7 @@ export function ThreadRankingPanel({
               imageIndex={0}
             />
           ) : (
-            <span className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_70%_25%,color-mix(in_srgb,var(--od-accent)_20%,transparent),transparent_38%),linear-gradient(145deg,var(--od-surface-raised),var(--od-surface-shell))]">
+            <span className="flex h-full w-full items-center justify-center bg-(--od-surface-shell)">
               <ImageIcon className="h-5 w-5 text-(--od-text-tertiary)" />
             </span>
           )}

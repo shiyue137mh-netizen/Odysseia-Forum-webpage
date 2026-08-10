@@ -110,8 +110,8 @@ export function Select({
   const isInline = variant === 'inline';
 
   const triggerClass = isInline
-    ? 'flex items-center gap-1 bg-transparent text-sm text-(--od-text-primary) outline-hidden cursor-pointer'
-    : 'flex w-full items-center justify-between rounded-xl border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_72%,transparent)] px-4 py-2.5 text-sm text-(--od-text-primary) transition-all duration-200 focus:outline-hidden focus:border-(--od-accent)';
+    ? 'flex min-h-10 items-center gap-1 bg-transparent text-sm text-(--od-text-primary) outline-hidden cursor-pointer'
+    : 'od-ghost-input flex min-h-10 w-full items-center justify-between px-1 text-sm';
 
   const panel = (
     <AnimatePresence>

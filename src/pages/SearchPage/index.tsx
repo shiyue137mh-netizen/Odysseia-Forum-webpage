@@ -244,10 +244,10 @@ export function SearchPage() {
   return (
     <div className="flex min-h-full min-w-0 max-w-full flex-col overflow-x-clip">
       <div className="min-w-0 max-w-full flex-1 overflow-x-clip p-4 animate-in fade-in duration-500 sm:p-6 lg:p-8">
-        <div className="mb-6 flex min-w-0 max-w-full flex-col gap-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
-          <div data-tour="search-header" className="flex min-w-0 items-center">
+        <div className="od-page-heading mb-6 flex min-w-0 max-w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div data-tour="search-header" className="flex min-w-0 items-center justify-center text-center sm:justify-start sm:text-left">
             <div className="min-w-0">
-              <h1 className="od-page-title flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1">
+              <h1 className="od-page-title flex min-w-0 max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
                 {query ? (
                   <>
                     <span>搜索:</span>
@@ -291,7 +291,7 @@ export function SearchPage() {
                   "探索社区"
                 )}
               </h1>
-              <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-(--od-text-secondary)">
+              <div className="flex min-w-0 flex-wrap items-center justify-center gap-2 text-sm text-(--od-text-secondary) sm:justify-start">
                 <span>
                   找到 {isThreadTab ? totalResults : booklistTotal} 条结果
                 </span>
@@ -317,18 +317,18 @@ export function SearchPage() {
             </div>
           </div>
 
-          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-2 sm:justify-end sm:[&>*+*]:border-l sm:[&>*+*]:border-(--od-divider)/45 sm:[&>*+*]:pl-3">
             <div
               data-tour="search-type-toggle"
-              className="inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1"
+              className="inline-flex min-h-10 w-full items-center justify-center gap-1 sm:w-auto"
             >
               <button
                 type="button"
                 onClick={() => setParams({ type: "thread" })}
                 className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   params.type === "thread"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                    ? "bg-(--od-accent)/10 text-(--od-accent)"
+                    : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
                 }`}
               >
                 帖子
@@ -338,8 +338,8 @@ export function SearchPage() {
                 onClick={() => setParams({ type: "booklist" })}
                 className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   params.type === "booklist"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                    ? "bg-(--od-accent)/10 text-(--od-accent)"
+                    : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
                 }`}
               >
                 书单
@@ -349,8 +349,8 @@ export function SearchPage() {
                 onClick={() => setParams({ type: "tournament" })}
                 className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                   params.type === "tournament"
-                    ? "bg-(--od-accent) text-white"
-                    : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+                    ? "bg-(--od-accent)/10 text-(--od-accent)"
+                    : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
                 }`}
               >
                 赛事
@@ -358,7 +358,7 @@ export function SearchPage() {
             </div>
 
             {isThreadTab && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] px-3 py-2 text-xs font-medium text-(--od-text-secondary)">
+              <div className="inline-flex min-h-10 items-center gap-2 px-2 text-xs font-medium text-(--od-text-secondary)">
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <Select
                   aria-label="选择排序方式"

@@ -95,11 +95,12 @@
 }
 
 @utility od-inline-action-primary {
-  background: var(--od-accent);
-  color: white;
+  background: color-mix(in srgb, var(--od-accent) 10%, transparent);
+  color: var(--od-accent);
 
   &:hover {
-    background: var(--od-accent-hover);
+    background: color-mix(in srgb, var(--od-accent) 15%, transparent);
+    color: var(--od-accent-hover);
   }
 }
 
@@ -127,8 +128,8 @@
   align-items: center;
   gap: 0.35rem;
   border-radius: 9999px;
-  background: color-mix(in srgb, var(--od-surface-input) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--od-border) 64%, transparent);
+  background: transparent;
+  border: 0;
   color: var(--od-text-secondary);
   padding: 0.3rem 0.7rem;
   font-size: 0.72rem;
@@ -142,6 +143,11 @@
     background: var(--od-interactive-hover);
     color: var(--od-text-primary);
   }
+}
+
+@utility od-page-heading {
+  border-bottom: 1px solid color-mix(in srgb, var(--od-divider) 72%, transparent);
+  padding-bottom: 1rem;
 }
 
 @utility od-fluid-section {

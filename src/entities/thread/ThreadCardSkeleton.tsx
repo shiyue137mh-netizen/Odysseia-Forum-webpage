@@ -13,17 +13,14 @@ export function ThreadCardSkeleton() {
           </div>
         </div>
 
-        <div className="overflow-hidden">
-          <div className="h-5 w-5/6 animate-shimmer rounded bg-linear-to-r from-(--od-bg-tertiary) via-(--od-border-strong) to-(--od-bg-tertiary) bg-size-[200%_100%]" />
-        </div>
-
       </div>
 
-      <div className="aspect-3/4 overflow-hidden rounded-[1.45rem] border border-(--od-shell-line) bg-(--od-surface-shell) shadow-(--od-shadow-soft)">
+      <div className="aspect-2/3 overflow-hidden rounded-t-[1.45rem] [mask-image:linear-gradient(to_bottom,black_0%,black_68%,transparent_96%,transparent_100%)]">
         <div className="h-full w-full animate-shimmer bg-linear-to-r from-(--od-bg-tertiary) via-(--od-bg-secondary) to-(--od-bg-tertiary) bg-size-[200%_100%]" />
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 px-1 pt-3">
+      <div className="relative z-10 -mt-10 flex flex-1 flex-col gap-3 px-2">
+        <div className="h-5 w-5/6 animate-shimmer rounded bg-linear-to-r from-(--od-bg-tertiary) via-(--od-border-strong) to-(--od-bg-tertiary) bg-size-[200%_100%]" />
         <div className="min-h-11 space-y-2">
           <div className="h-3.5 w-full animate-shimmer rounded bg-linear-to-r from-(--od-bg-tertiary) via-(--od-border-strong) to-(--od-bg-tertiary) bg-size-[200%_100%]" />
           <div className="h-3.5 w-11/12 animate-shimmer rounded bg-linear-to-r from-(--od-bg-tertiary) via-(--od-border-strong) to-(--od-bg-tertiary) bg-size-[200%_100%]" />

@@ -109,7 +109,7 @@ export function AtmosphereSettingsSection({
                   type="file"
                   accept="image/*"
                   onChange={(e) => onUploadBackground(e.target.files?.[0] || null)}
-                  className="w-full cursor-pointer rounded-2xl border border-(--od-shell-line) bg-(--od-surface-input) px-3 py-2 text-sm text-(--od-text-primary)"
+                  className="od-ghost-input min-h-10 w-full cursor-pointer px-1 text-sm"
                 />
               </label>
 
@@ -126,7 +126,7 @@ export function AtmosphereSettingsSection({
                       backgroundImageBase64: '',
                     })
                   }
-                  className="w-full rounded-2xl border border-(--od-shell-line) bg-(--od-surface-input) px-3 py-2 text-sm text-(--od-text-primary)"
+                  className="od-ghost-input min-h-10 w-full px-1 text-sm"
                 />
               </label>
             </div>
@@ -206,7 +206,7 @@ export function AtmosphereSettingsSection({
                 />
               </div>
 
-              <div className="flex items-start gap-3 rounded-[1.1rem] border border-(--od-shell-line)/70 bg-[color-mix(in_srgb,var(--od-surface-input)_78%,transparent)] px-4 py-3 text-[0.82rem] leading-[1.55] text-(--od-text-secondary)">
+              <div className="flex items-start gap-3 rounded-[1.1rem] bg-[color-mix(in_srgb,var(--od-surface-input)_42%,transparent)] px-4 py-3 text-[0.82rem] leading-[1.55] text-(--od-text-secondary)">
                 <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-(--od-text-emphasis)" />
                 <p>放心，这个开关只影响页面大背景。弹窗、下拉框这些浮层还是保持实心的，不会看不清。</p>
               </div>

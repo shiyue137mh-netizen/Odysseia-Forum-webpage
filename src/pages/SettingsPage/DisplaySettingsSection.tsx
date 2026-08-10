@@ -65,7 +65,7 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
   } as Thread;
 
   return (
-    <SettingsPageSection title="显示与阅读">
+    <SettingsPageSection title="显示与阅读" showTopBorder={false}>
       <div className="space-y-10">
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <div className="space-y-8" data-tour="layout-image-settings">

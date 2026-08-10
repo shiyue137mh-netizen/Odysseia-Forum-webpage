@@ -55,7 +55,7 @@ export function LayoutModeToggle({
 
   return (
     <div
-      className={`inline-flex items-center gap-1 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] p-1 ${className}`.trim()}
+      className={`inline-flex min-h-10 items-center gap-1 ${className}`.trim()}
     >
       {options.map(({ mode, label, title, ariaLabel, Icon }) => (
         <button
@@ -64,8 +64,8 @@ export function LayoutModeToggle({
           onClick={() => onChange(mode)}
           className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
             value === mode
-              ? "bg-(--od-accent) text-white"
-              : "text-(--od-text-secondary) hover:text-(--od-text-primary)"
+              ? "bg-(--od-accent)/10 text-(--od-accent)"
+              : "text-(--od-text-secondary) hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
           }`}
           aria-label={ariaLabel}
           title={title}
