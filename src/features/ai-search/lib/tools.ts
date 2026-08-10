@@ -4,6 +4,7 @@ import type { Thread } from '@/entities/thread/types';
 import type { Booklist } from '@/entities/booklist/types';
 import type { AISearchDisplayMessage, AISearchToolTraceItem } from '@/features/ai-search/lib/session';
 import { booklistsApi } from '@/features/booklists/api/booklistsApi';
+import { discoveryApi } from '@/features/discovery/api/discoveryApi';
 import { searchApi, type SearchUIRequest } from '@/features/search/api/searchApi';
 import { parseDateRangeToken } from '@/shared/lib/searchTokenizer';
 
@@ -21,7 +22,41 @@ export interface AISearchPendingQuestion {
   options: string[];
 }
 
+export interface AISearchDrawPreferences {
+  channelIds: string[];
+  includeTags: string[];
+  excludeTags: string[];
+}
+
 export const AI_SEARCH_TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'draw_threads',
+      description:
+        '从论坛随机卡池主动抽取帖子。适合用户想要惊喜、随机发现、盲盒式推荐，或明确要求“抽卡”时使用；普通的精确查找仍使用 search_threads。工具会返回实际生效的卡池配方，最终回答需要简短解释抽取数量、卡池范围、包含/排除 Tag 与 Tag 逻辑。抽到的结果会自动显示为横向卡片轨道；需要深入评价某张卡时，再调用 get_resource_details。每轮最多抽两次。',
+      parameters: {
+        type: 'object',
+        properties: {
+          count: { type: 'integer', minimum: 1, maximum: 10, description: '抽取数量，默认 1，最多 10。' },
+          scope: {
+            type: 'string',
+            enum: ['preferences', 'all', 'custom'],
+            description: 'preferences 使用当前用户偏好配方；all 使用全社区卡池；custom 使用 channel_ids 指定频道。默认 preferences。',
+          },
+          channel_ids: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'scope=custom 时必填，只能使用动态上下文中的真实频道 ID。',
+          },
+          include_tags: { type: 'array', items: { type: 'string' }, description: '额外要求包含的真实 Tag。' },
+          exclude_tags: { type: 'array', items: { type: 'string' }, description: '额外排除的 Tag。' },
+          tag_logic: { type: 'string', enum: ['and', 'or'], description: '多个包含 Tag 需要全部满足还是满足任一，默认 and。' },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -206,6 +241,23 @@ const askUserArgsSchema = z.object({
   }
 });
 
+const drawArgsSchema = z.object({
+  count: z.number().int().min(1).max(10).default(1),
+  scope: z.enum(['preferences', 'all', 'custom']).default('preferences'),
+  channel_ids: z.array(z.string().regex(/^\d+$/)).max(8).optional(),
+  include_tags: z.array(z.string().min(1).max(80)).max(8).optional(),
+  exclude_tags: z.array(z.string().min(1).max(80)).max(8).optional(),
+  tag_logic: z.enum(['and', 'or']).default('and'),
+}).strict().superRefine((value, context) => {
+  if (value.scope === 'custom' && !value.channel_ids?.length) {
+    context.addIssue({ code: 'custom', path: ['channel_ids'], message: '自选卡池至少需要一个频道' });
+  }
+  const excluded = new Set(value.exclude_tags || []);
+  if ((value.include_tags || []).some((tag) => excluded.has(tag))) {
+    context.addIssue({ code: 'custom', message: '同一个 Tag 不能同时包含和排除' });
+  }
+});
+
 export function parseAISearchAskUserCall(call: AISearchToolCall): AISearchPendingQuestion {
   if (call.function.name !== 'ask_user') throw new Error('不是 ask_user 工具调用');
   const args = askUserArgsSchema.parse(JSON.parse(call.function.arguments || '{}'));
@@ -319,6 +371,7 @@ export function createAISearchToolRuntime(
   onTrace?: (item: AISearchToolTraceItem) => void,
   signal?: AbortSignal,
   existingResourceIds: { threadIds: string[]; tournamentIds: string[] } = { threadIds: [], tournamentIds: [] },
+  drawPreferences: AISearchDrawPreferences = { channelIds: [], includeTags: [], excludeTags: [] },
 ) {
   const searchedThreads = new Map(existingThreads.map((thread) => [thread.thread_id, thread]));
   const searchedTournaments = new Map<string, Booklist>();
@@ -329,6 +382,8 @@ export function createAISearchToolRuntime(
   let detailThreads = 0;
   let detailTournaments = 0;
   let detailCharacters = 0;
+  let drawCalls = 0;
+  const draws: Array<{ configuration: string; threads: Thread[] }> = [];
   const rememberThread = (thread: Thread) => {
     allowedThreadIds.add(thread.thread_id);
     searchedThreads.delete(thread.thread_id);
@@ -435,6 +490,70 @@ export function createAISearchToolRuntime(
         return JSON.stringify({ total: response.total, results: results.map(compactTournament) });
       }
 
+      if (call.function.name === 'draw_threads') {
+        if (drawCalls >= 2) throw new Error('本轮最多执行两次抽卡');
+        const args = drawArgsSchema.parse(rawArgs);
+        drawCalls += 1;
+        const includeTags = new Set(args.scope === 'preferences' ? drawPreferences.includeTags : []);
+        const excludeTags = new Set(args.scope === 'preferences' ? drawPreferences.excludeTags : []);
+        for (const tag of args.include_tags || []) {
+          includeTags.add(tag);
+          excludeTags.delete(tag);
+        }
+        for (const tag of args.exclude_tags || []) {
+          excludeTags.add(tag);
+          includeTags.delete(tag);
+        }
+        const channelIds = args.scope === 'custom'
+          ? args.channel_ids || []
+          : args.scope === 'preferences'
+            ? drawPreferences.channelIds
+            : [];
+        const scopeLabel = args.scope === 'all'
+          ? '全社区卡池'
+          : args.scope === 'custom'
+            ? `自选 ${channelIds.length} 个频道`
+            : channelIds.length ? `偏好卡池（${channelIds.length} 个频道）` : '偏好卡池（全社区范围）';
+        const configuration = [
+          `${args.count} 抽`,
+          scopeLabel,
+          includeTags.size ? `包含 Tag：${Array.from(includeTags).join('、')}` : '不限包含 Tag',
+          excludeTags.size ? `排除 Tag：${Array.from(excludeTags).join('、')}` : '不额外排除 Tag',
+          `多个包含 Tag：${args.tag_logic === 'or' ? '满足任一' : '全部满足'}`,
+        ].join(' · ');
+        onStatus('searching');
+        onTrace?.({
+          type: 'tool',
+          id: call.id,
+          tool: 'draw_threads',
+          label: '随机抽卡',
+          status: 'running',
+          parameters: configuration,
+        });
+        const results = (await discoveryApi.getRandomThreads({
+          limit: args.count,
+          channel_ids: channelIds,
+          include_tags: Array.from(includeTags),
+          exclude_tags: Array.from(excludeTags),
+          tag_logic: args.tag_logic,
+        })).slice(0, args.count);
+        results.forEach(rememberThread);
+        draws.push({ configuration, threads: results });
+        onTrace?.({
+          type: 'tool',
+          id: call.id,
+          tool: 'draw_threads',
+          label: '随机抽卡',
+          status: 'complete',
+          parameters: configuration,
+          result: `抽到 ${results.length} 张卡`,
+        });
+        return JSON.stringify({
+          configuration,
+          results: results.map(compactThread),
+        });
+      }
+
       if (call.function.name === 'get_resource_details' || call.function.name === 'get_thread_details') {
         const normalizedArgs = call.function.name === 'get_thread_details'
           ? { resources: z.object({ thread_ids: z.array(z.string().regex(/^\d+$/)).min(1).max(3) }).parse(rawArgs).thread_ids.map((id) => ({ type: 'thread' as const, id })) }
@@ -528,6 +647,9 @@ export function createAISearchToolRuntime(
     },
     getThreads() {
       return Array.from(searchedThreads.values()).slice(-36);
+    },
+    getDraws() {
+      return draws.slice(-2);
     },
   };
 }

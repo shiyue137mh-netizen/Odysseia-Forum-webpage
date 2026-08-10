@@ -3,7 +3,6 @@ import {
   Grid,
   Image as ImageIcon,
   ImageOff,
-  Layout,
   List,
   Maximize2,
   Minimize2,
@@ -24,6 +23,7 @@ import { themes } from '@/shared/styles/themes';
 
 import { dangerPinkThemeOption, themeOptions } from './config';
 import { SettingsPageSection } from './SettingsPageSection';
+import { SettingsToggle } from './SettingsToggle';
 
 type DisplaySettingsSectionProps = {
   settings: UserSettings;
@@ -65,19 +65,16 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
   } as Thread;
 
   return (
-    <SettingsPageSection kicker="Visual Hierarchy" title="显示与阅读" icon={Layout}>
+    <SettingsPageSection title="显示与阅读">
       <div className="space-y-10">
         <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
           <div className="space-y-8" data-tour="layout-image-settings">
             <div>
               <h3 className="text-lg font-semibold text-(--od-text-primary)">阅读尺寸</h3>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-                字号和卡片密度会共同影响内容流的阅读节奏。
-              </p>
 
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">Font Size</p>
+                  <p className="mb-2 text-xs font-semibold text-(--od-text-tertiary)">字号</p>
                   <div className="od-options-wrap">
                     {(['small', 'medium', 'large'] as const).map((size) => {
                       const isActive = settings.fontSize === size;
@@ -99,7 +96,7 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
                 </div>
 
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">Card Density</p>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">PC 每行数量</p>
                   <div className="od-options-wrap">
                     {(['compact', 'normal', 'large'] as const).map((size) => {
                       const Icon = size === 'compact' ? Minimize2 : size === 'normal' ? Scan : Maximize2;
@@ -112,7 +109,7 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
                           className="od-option-inline min-w-24 justify-center"
                         >
                           <Icon className="od-choice-icon h-4 w-4" />
-                          <span className="od-choice-title text-sm">{size === 'compact' ? '紧凑' : size === 'normal' ? '标准' : '宽松'}</span>
+                          <span className="od-choice-title text-sm">{size === 'compact' ? '5 张' : size === 'normal' ? '4 张' : '3 张'}</span>
                         </button>
                       );
                     })}
@@ -123,29 +120,23 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
 
             <div>
               <h3 className="text-lg font-semibold text-(--od-text-primary)">文字与图片</h3>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-                选择字体来源，并决定内容卡片是否加载缩略图。
-              </p>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={() => updateSettings({ fontMode: 'system' })} data-active={settings.fontMode === 'system'} className={rowChoiceClass}>
                   <Monitor className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
                   <div className="min-w-0">
                     <p className="od-choice-title text-sm font-medium text-(--od-text-primary)">系统字体</p>
-                    <p className="mt-1 text-xs leading-5 text-(--od-text-tertiary)">最快、最稳，沿用设备阅读习惯</p>
                   </div>
                 </button>
                 <button type="button" onClick={() => updateSettings({ fontMode: 'theme' })} data-active={settings.fontMode === 'theme'} className={rowChoiceClass}>
                   <Type className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
                   <div className="min-w-0">
                     <p className="od-choice-title text-sm font-medium text-(--od-text-primary)">主题字体</p>
-                    <p className="mt-1 text-xs leading-5 text-(--od-text-tertiary)">跟随主题切换字形与气质</p>
                   </div>
                 </button>
                 <button type="button" onClick={() => updateSettings({ imageMode: 'normal' })} data-active={settings.imageMode === 'normal'} className={rowChoiceClass}>
                   <ImageIcon className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
                   <div className="min-w-0">
                     <p className="od-choice-title text-sm font-medium text-(--od-text-primary)">显示图片</p>
-                    <p className="mt-1 text-xs leading-5 text-(--od-text-tertiary)">保留封面和缩略图的氛围感</p>
                   </div>
                 </button>
                 <button type="button" onClick={() => updateSettings({ imageMode: 'off' })} data-active={settings.imageMode === 'off'} className={rowChoiceClass}>
@@ -160,52 +151,77 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
           </div>
 
           <aside className="xl:sticky xl:top-6">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">Live Preview</p>
+            <p className="mb-3 text-xs font-semibold text-(--od-text-tertiary)">效果预览</p>
             <div className="pointer-events-none mx-auto max-w-[16rem]" aria-hidden="true">
-              <ThreadCard thread={previewThread} hideBottomDivider />
+              <ThreadCard thread={previewThread} />
             </div>
           </aside>
         </div>
 
         <div className="border-t border-(--od-shell-line) pt-8">
           <h3 className="text-lg font-semibold text-(--od-text-primary)">布局与浏览</h3>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-            控制默认内容布局、结果加载方式和 Discord 链接打开位置。
-          </p>
           <div className="mt-5 grid gap-6 lg:grid-cols-3">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">Layout</p>
+              <p className="text-xs font-semibold text-(--od-text-tertiary)">默认布局</p>
               <button type="button" onClick={() => updateSettings({ layoutMode: 'grid' })} data-active={settings.layoutMode === 'grid'} className={`${rowChoiceClass} w-full`}>
                 <Grid className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
-                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">网格布局</p><p className="mt-1 text-xs text-(--od-text-tertiary)">适合封面与视觉浏览</p></div>
+                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">网格布局</p></div>
               </button>
               <button type="button" onClick={() => updateSettings({ layoutMode: 'list' })} data-active={settings.layoutMode === 'list'} className={`${rowChoiceClass} w-full`}>
                 <List className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
-                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">列表布局</p><p className="mt-1 text-xs text-(--od-text-tertiary)">适合筛选与连续阅读</p></div>
+                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">列表布局</p></div>
               </button>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">Result Loading</p>
+              <p className="text-xs font-semibold text-(--od-text-tertiary)">加载方式</p>
               <button type="button" onClick={() => updateSettings({ resultPagingMode: 'pagination' })} data-active={settings.resultPagingMode === 'pagination'} className={`${rowChoiceClass} w-full`}>
                 <List className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
-                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">分页浏览</p><p className="mt-1 text-xs text-(--od-text-tertiary)">保留页码，便于回看</p></div>
+                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">分页浏览</p></div>
               </button>
               <button type="button" onClick={() => updateSettings({ resultPagingMode: 'infinite' })} data-active={settings.resultPagingMode === 'infinite'} className={`${rowChoiceClass} w-full`}>
                 <ScrollText className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
-                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">连续滚动</p><p className="mt-1 text-xs text-(--od-text-tertiary)">到底后自动加载更多</p></div>
+                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">连续滚动</p></div>
               </button>
+              <div className="od-setting-row">
+                <div>
+                  <p className="od-choice-title text-sm font-medium text-(--od-text-primary)">无缝浏览缓冲</p>
+                  <p className="mt-1 text-xs leading-5 text-(--od-text-tertiary)">始终保持固定页数的浏览缓冲，图片仍按进入视口懒加载。</p>
+                </div>
+                <SettingsToggle
+                  checked={settings.resultPreloadEnabled}
+                  onToggle={() => updateSettings({ resultPreloadEnabled: !settings.resultPreloadEnabled })}
+                  ariaLabel="切换无缝浏览缓冲"
+                />
+              </div>
+              <div className={settings.resultPreloadEnabled ? '' : 'opacity-45'}>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">保持加载缓冲</p>
+                <div className="od-options-wrap">
+                  {([2, 3, 4] as const).map((pages) => (
+                    <button
+                      key={pages}
+                      type="button"
+                      disabled={!settings.resultPreloadEnabled}
+                      onClick={() => updateSettings({ resultPreloadPages: pages })}
+                      data-active={settings.resultPreloadPages === pages}
+                      className="od-option-inline min-w-20 justify-center"
+                    >
+                      <span className="od-choice-title text-sm">{pages} 页</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-(--od-text-tertiary)">Discord Link</p>
+              <p className="text-xs font-semibold text-(--od-text-tertiary)">打开方式</p>
               <button type="button" onClick={() => updateSettings({ openMode: 'web' })} data-active={settings.openMode === 'web'} className={`${rowChoiceClass} w-full`}>
                 <Globe2 className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
-                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">网页端打开</p><p className="mt-1 text-xs text-(--od-text-tertiary)">兼容性最好</p></div>
+                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">网页端打开</p></div>
               </button>
               <button type="button" onClick={() => updateSettings({ openMode: 'app' })} data-active={settings.openMode === 'app'} className={`${rowChoiceClass} w-full`}>
                 <Smartphone className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
-                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">Discord App</p><p className="mt-1 text-xs text-(--od-text-tertiary)">尝试唤起已安装客户端</p></div>
+                <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">Discord 客户端</p></div>
               </button>
             </div>
           </div>
@@ -213,9 +229,6 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
 
         <div className="border-t border-(--od-shell-line) pt-8">
           <h3 className="text-lg font-semibold text-(--od-text-primary)">主题</h3>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-            每张卡片都展示该主题的背景、内容层和强调色组合。
-          </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visibleThemeOptions.map((option) => {
               const isSelected = settings.theme === option.id;
@@ -229,12 +242,8 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
                   className="od-setting-choice min-w-0 overflow-hidden p-3 text-left"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                    <option.icon className="od-choice-icon mt-0.5 h-4 w-4 shrink-0 text-(--od-text-secondary)" />
                     <div className="min-w-0">
                       <p className="od-choice-title text-sm font-medium text-(--od-text-primary)">{option.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-(--od-text-tertiary)">{option.description}</p>
-                    </div>
                     </div>
                     <div className="flex shrink-0 -space-x-2 pt-0.5" aria-hidden="true">
                       <span className="h-7 w-7 rounded-full" style={{ background: themeColors?.background || 'var(--od-bg)' }} />

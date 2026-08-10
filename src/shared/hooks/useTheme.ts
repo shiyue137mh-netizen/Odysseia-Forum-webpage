@@ -34,6 +34,8 @@ function mapSettingsThemeToKey(
       return 'sakuraDay';
     case 'yozakura-night':
       return 'yozakuraNight';
+    case 'twitter':
+      return 'twitter';
     case 'danger-pink-red':
       return 'dangerPinkRed';
     case 'auto':
@@ -65,6 +67,8 @@ function mapThemeNameToSettings(themeName: ThemeName): UserSettings['theme'] {
       return 'sakura-day';
     case 'yozakuraNight':
       return 'yozakura-night';
+    case 'twitter':
+      return 'twitter';
     case 'dangerPinkRed':
       return 'danger-pink-red';
     default:

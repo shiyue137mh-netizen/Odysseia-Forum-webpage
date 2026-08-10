@@ -5,7 +5,6 @@ import {
     Eye,
     Layers3,
     RotateCcw,
-    Sparkles,
     Tags,
     Wand2,
 } from "lucide-react";
@@ -383,7 +382,7 @@ export function DrawPage() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-0 p-4 sm:p-6 lg:p-8">
       {/* ─── 仪式中心区域 ─── */}
-      <section className="relative flex flex-col items-center justify-center py-12 sm:py-16 lg:py-20">
+      <section className="relative flex flex-col items-center justify-center py-8 sm:py-10 lg:py-12">
         {/* 标题 */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -391,16 +390,9 @@ export function DrawPage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="text-center"
         >
-          <div className="od-editorial-kicker mb-4 justify-center text-(--od-text-tertiary)">
-            <Sparkles className="h-3.5 w-3.5" />
-            Surprise Discovery
-          </div>
-          <h1 className="od-hero-title text-(--od-text-primary)">
+          <h1 className="od-page-title">
             随机抽卡
           </h1>
-          <p className="mt-3 max-w-md mx-auto text-sm leading-6 text-(--od-text-secondary)">
-            让我从数万张帖子里为你挑几张。抽出来的内容像拆小盲盒一样，一张张看会很有意思呢。
-          </p>
         </motion.div>
 
         {/* 状态胶囊 */}

@@ -22,6 +22,7 @@ import { Select } from "@/shared/ui/Select";
 import { useTournamentURLParams } from "@/features/tournaments/hooks/useTournamentURLParams";
 import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
+import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 
 const sortOptions = [
   { value: 1, label: "按参赛数" },
@@ -107,34 +108,36 @@ export function TournamentsPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <section className="relative w-full overflow-hidden bg-(--od-surface-shell)">
+      <section className="relative w-full overflow-hidden">
         <div className="relative h-[min(62vh,660px)] min-h-[360px] sm:min-h-[460px]">
-          {bannerSlides.length > 0 ? (
-            bannerSlides.map((slide, index) => (
-              <img
-                key={slide.id}
-                src={slide.image}
-                alt={slide.title}
-                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-                  index === activeBannerIndex ? "opacity-100" : "opacity-0"
-                }`}
-              />
-            ))
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-(--od-surface-shell)">
-              <Trophy className="h-20 w-20 text-(--od-text-tertiary)/20" />
-            </div>
-          )}
+          <BannerFadeMedia>
+            {bannerSlides.length > 0 ? (
+              bannerSlides.map((slide, index) => (
+                <img
+                  key={slide.id}
+                  src={slide.image}
+                  alt={slide.title}
+                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
+                    index === activeBannerIndex ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              ))
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-(--od-surface-shell)">
+                <Trophy className="h-20 w-20 text-(--od-text-tertiary)/20" />
+              </div>
+            )}
+          </BannerFadeMedia>
 
           <div className="absolute left-4 top-5 z-10 inline-flex items-center gap-2 rounded-full bg-black/30 px-3 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/85 backdrop-blur-md sm:left-6 lg:left-8">
             <Trophy className="h-3.5 w-3.5 text-(--od-accent)" />
-            Tournaments
+            赛事
           </div>
 
           {activeBanner && (
             <div className="absolute bottom-12 left-4 z-10 max-w-[calc(100%-2rem)] text-white drop-shadow-[0_2px_12px_rgb(0_0_0_/_0.75)] sm:left-6 sm:max-w-3xl lg:left-8">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-                Featured Tournament
+                精选赛事
               </p>
               <h2 className="mt-1 line-clamp-2 text-lg font-semibold leading-snug sm:text-2xl">
                 {activeBanner.title}
@@ -183,15 +186,9 @@ export function TournamentsPage() {
 
       <div className="flex flex-col gap-8 p-4 pt-8 sm:p-6 sm:pt-10 lg:gap-10 lg:p-8 lg:pt-12">
         <section className="mx-auto flex w-full max-w-4xl flex-col items-center border-b border-(--od-border) pb-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--od-text-tertiary)">
-            活动赛事
-          </p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-(--od-text-primary) sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-(--od-text-primary) sm:text-4xl">
             赛事区
           </h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-(--od-text-secondary) sm:text-base">
-            这里收纳正在举行或已经归档的活动投稿，方便你从索引页直接浏览参赛作品。
-          </p>
           <div className="mt-5 inline-flex items-center gap-2 text-sm text-(--od-text-secondary)">
             <Medal className="h-4 w-4 text-(--od-accent)" />
             <span>{summaryText}</span>

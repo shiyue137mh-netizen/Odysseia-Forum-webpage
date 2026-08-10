@@ -15,6 +15,7 @@ describe('AI 搜索会话 Payload', () => {
         role: 'assistant',
         content: '',
         hidden: true,
+        reasoning_content: '调用搜索前的推理',
         tool_calls: [{
           id: 'call-1',
           type: 'function',
@@ -41,6 +42,7 @@ describe('AI 搜索会话 Payload', () => {
         role: 'assistant',
         content: null,
         tool_call_id: undefined,
+        reasoning_content: '调用搜索前的推理',
         tool_calls: [{
           id: 'call-1',
           type: 'function',
@@ -51,12 +53,14 @@ describe('AI 搜索会话 Payload', () => {
         role: 'tool',
         content: '{"total":1,"results":[{"thread_id":"123"}]}',
         tool_call_id: 'call-1',
+        reasoning_content: undefined,
         tool_calls: undefined,
       },
       {
         role: 'assistant',
         content: '找到了一个候选。',
         tool_call_id: undefined,
+        reasoning_content: undefined,
         tool_calls: undefined,
       },
     ]);
@@ -121,7 +125,7 @@ describe('AI 搜索会话 Payload', () => {
           arguments: '{"question":"更想看哪种方向？","options":["剧情向","互动向"]}',
         },
       }],
-      reasoning_content: undefined,
+      reasoning_content: '需要先确认方向',
       usage: undefined,
     });
 
@@ -143,5 +147,6 @@ describe('AI 搜索会话 Payload', () => {
       question: '更想看哪种方向？',
       options: ['剧情向', '互动向'],
     });
+    expect(result.turnMessages[0]?.reasoning_content).toBe('需要先确认方向');
   });
 });

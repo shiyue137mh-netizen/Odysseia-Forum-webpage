@@ -6,6 +6,8 @@ export interface UserSettings {
   cardSize: 'compact' | 'normal' | 'large';
   layoutMode: 'grid' | 'list';
   resultPagingMode: 'pagination' | 'infinite';
+  resultPreloadEnabled: boolean;
+  resultPreloadPages: 2 | 3 | 4;
   compactMode: boolean;
   /**
    * 图片加载策略：
@@ -24,6 +26,7 @@ export interface UserSettings {
   | 'everforest'
   | 'sakura-day'
   | 'yozakura-night'
+  | 'twitter'
   | 'danger-pink-red'
   | 'auto';
   glassMode: 'off' | 'on' | 'auto';
@@ -50,7 +53,9 @@ const defaultSettings: UserSettings = {
   fontMode: 'system',
   cardSize: 'normal',
   layoutMode: 'grid',
-  resultPagingMode: 'pagination',
+  resultPagingMode: 'infinite',
+  resultPreloadEnabled: false,
+  resultPreloadPages: 3,
   compactMode: false,
   imageMode: 'normal',
   theme: 'discord-dark',
@@ -99,6 +104,10 @@ export function getUserSettings(): UserSettings {
         parsed.glassBlur = Math.max(0, Math.min(32, parsed.glassBlur));
       }
 
+      if (![2, 3, 4].includes(Number(parsed.resultPreloadPages))) {
+        parsed.resultPreloadPages = 3;
+      }
+
       // 合并默认设置，确保新增的设置项有默认值
       return { ...defaultSettings, ...parsed };
     }
@@ -143,4 +152,3 @@ export const fontSizeMap = {
     meta: 'text-base', // 16px
   },
 };
-

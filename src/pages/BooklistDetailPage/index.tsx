@@ -191,9 +191,7 @@ export function BooklistDetailPage() {
   const confirmUnpublish = () => {
     setShowMore(false);
     if (
-      !window.confirm(
-        "确认解除讨论帖关联？这会删除发布记录，但不会删除书单。",
-      )
+      !window.confirm("确认解除讨论帖关联？这会删除发布记录，但不会删除书单。")
     )
       return;
     unpublishMutation.mutate();
@@ -219,7 +217,7 @@ export function BooklistDetailPage() {
                 <button
                   type="button"
                   onClick={() => navigate(-1)}
-                  className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary)"
+                  className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary) lg:hidden"
                   aria-label="返回"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -275,117 +273,119 @@ export function BooklistDetailPage() {
               <div className="flex w-full min-w-0 flex-col gap-2 lg:w-auto lg:items-end">
                 {isOwner && (
                   <div className="order-1 flex w-full flex-wrap items-center justify-start gap-1 lg:w-auto lg:justify-end">
-                  {publishStatus !== 2 ? (
-                    <button
-                      type="button"
-                      onClick={() => openPublishModal()}
-                      disabled={publishStatus === 1 || publishMutation.isPending}
-                      className="inline-flex h-9 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary) disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {publishStatus === 1 ? (
-                        <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Link2 className="h-3.5 w-3.5" />
-                      )}
-                      {publishStatus === 1
-                        ? "关联中…"
-                        : publishStatus === 3
-                          ? "重试关联"
-                          : "关联讨论帖"}
-                    </button>
-                  ) : null}
-
-                  {isOwner && (
-                    <button
-                      type="button"
-                      onClick={() => setShowAdd(true)}
-                      className="inline-flex h-9 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      添加帖子
-                    </button>
-                  )}
-
-                  {isOwner && (
-                    <>
+                    {publishStatus !== 2 ? (
                       <button
                         type="button"
-                        onClick={() => setShowEdit(true)}
-                        className="inline-flex h-9 items-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
+                        onClick={() => openPublishModal()}
+                        disabled={
+                          publishStatus === 1 || publishMutation.isPending
+                        }
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary) disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <Edit3 className="h-3.5 w-3.5" />
-                        编辑
+                        {publishStatus === 1 ? (
+                          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Link2 className="h-3.5 w-3.5" />
+                        )}
+                        {publishStatus === 1
+                          ? "关联中…"
+                          : publishStatus === 3
+                            ? "重试关联"
+                            : "关联讨论帖"}
                       </button>
-                      <div ref={moreMenuRef} className="relative">
+                    ) : null}
+
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAdd(true)}
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        添加帖子
+                      </button>
+                    )}
+
+                    {isOwner && (
+                      <>
                         <button
                           type="button"
-                          onClick={() => setShowMore((value) => !value)}
+                          onClick={() => setShowEdit(true)}
                           className="inline-flex h-9 items-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
-                          aria-haspopup="menu"
-                          aria-expanded={showMore}
                         >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                          更多
+                          <Edit3 className="h-3.5 w-3.5" />
+                          编辑
                         </button>
-
-                        {showMore && (
-                          <div
-                            role="menu"
-                            className="od-floating-panel-solid absolute right-0 top-11 z-30 w-44 overflow-hidden rounded-xl border border-(--od-border) p-1.5 shadow-xl"
+                        <div ref={moreMenuRef} className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowMore((value) => !value)}
+                            className="inline-flex h-9 items-center gap-1 rounded-full px-2 text-xs font-medium text-(--od-text-secondary) transition-colors hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
+                            aria-haspopup="menu"
+                            aria-expanded={showMore}
                           >
-                            {publishStatus === 2 && (
-                              <button
-                                type="button"
-                                role="menuitem"
-                                onClick={() => openPublishModal(true)}
-                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-text-primary) transition-colors hover:bg-(--od-bg-secondary)"
-                              >
-                                <Link2 className="h-4 w-4" />
-                                更换讨论帖
-                              </button>
-                            )}
-                            <div className="my-1 border-t border-(--od-border)" />
-                            {canUnpublish && (
-                              <button
-                                type="button"
-                                role="menuitem"
-                                onClick={confirmUnpublish}
-                                disabled={unpublishMutation.isPending}
-                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-error) transition-colors hover:bg-[color-mix(in_srgb,var(--od-error)_10%,transparent)] disabled:opacity-50"
-                              >
-                                {unpublishMutation.isPending ? (
-                                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Unlink className="h-4 w-4" />
-                                )}
-                                {unpublishMutation.isPending
-                                  ? "解除中…"
-                                  : "解除关联"}
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              role="menuitem"
-                              onClick={() => {
-                                setShowMore(false);
-                                if (
-                                  !window.confirm(
-                                    `确认删除书单「${booklist.title}」？`,
-                                  )
-                                )
-                                  return;
-                                deleteMutation.mutate(Number(booklistId));
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-error) transition-colors hover:bg-[color-mix(in_srgb,var(--od-error)_10%,transparent)]"
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            更多
+                          </button>
+
+                          {showMore && (
+                            <div
+                              role="menu"
+                              className="od-floating-panel-solid absolute right-0 top-11 z-30 w-44 overflow-hidden rounded-xl border border-(--od-border) p-1.5 shadow-xl"
                             >
-                              <Trash2 className="h-4 w-4" />
-                              删除书单
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
+                              {publishStatus === 2 && (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={() => openPublishModal(true)}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-text-primary) transition-colors hover:bg-(--od-bg-secondary)"
+                                >
+                                  <Link2 className="h-4 w-4" />
+                                  更换讨论帖
+                                </button>
+                              )}
+                              <div className="my-1 border-t border-(--od-border)" />
+                              {canUnpublish && (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={confirmUnpublish}
+                                  disabled={unpublishMutation.isPending}
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-error) transition-colors hover:bg-[color-mix(in_srgb,var(--od-error)_10%,transparent)] disabled:opacity-50"
+                                >
+                                  {unpublishMutation.isPending ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Unlink className="h-4 w-4" />
+                                  )}
+                                  {unpublishMutation.isPending
+                                    ? "解除中…"
+                                    : "解除关联"}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setShowMore(false);
+                                  if (
+                                    !window.confirm(
+                                      `确认删除书单「${booklist.title}」？`,
+                                    )
+                                  )
+                                    return;
+                                  deleteMutation.mutate(Number(booklistId));
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-(--od-error) transition-colors hover:bg-[color-mix(in_srgb,var(--od-error)_10%,transparent)]"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                删除书单
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -441,7 +441,6 @@ export function BooklistDetailPage() {
                       </button>
                     </div>
                   </div>
-
                 </div>
               </div>
             </div>

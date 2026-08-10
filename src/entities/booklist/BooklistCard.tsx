@@ -45,8 +45,6 @@ export function BooklistCard({
       }}
       onClick={() => onOpen(booklist.id)}
     >
-      <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-divider-strong)_60%,transparent),transparent)]" />
-
       {/* 拦截 Tab 焦点进入内部元素，并对辅助技术隐藏内部细节 */}
       <div
         aria-hidden="true"

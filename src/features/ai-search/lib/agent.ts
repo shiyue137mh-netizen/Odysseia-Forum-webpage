@@ -8,6 +8,7 @@ import { buildAISearchSystemMessage } from '@/features/ai-search/lib/prompt';
 import { extractAISearchFollowups } from '@/features/ai-search/lib/responseParser';
 import type {
   AISearchDisplayMessage,
+  AISearchDrawBatch,
   AISearchToolTraceItem,
   AISearchTraceItem,
 } from '@/features/ai-search/lib/session';
@@ -15,6 +16,7 @@ import {
   AI_SEARCH_TOOLS,
   createAISearchToolRuntime,
   parseAISearchAskUserCall,
+  type AISearchDrawPreferences,
   type AISearchStatus,
 } from '@/features/ai-search/lib/tools';
 
@@ -22,6 +24,7 @@ export interface AISearchAgentProgress {
   content: string;
   trace: AISearchTraceItem[];
   threads: Thread[];
+  draws: AISearchDrawBatch[];
 }
 
 function collectHistoryThreads(history: AISearchDisplayMessage[]) {
@@ -71,6 +74,7 @@ export function buildAISearchSessionHistory(history: AISearchDisplayMessage[]): 
         : message.content,
     tool_call_id: message.tool_call_id,
     tool_calls: message.tool_calls,
+    reasoning_content: message.reasoning_content,
   }));
 }
 
@@ -83,6 +87,7 @@ export async function runAISearchAgent({
   context,
   userTaste,
   userMessage,
+  drawPreferences,
   history = [],
   onStatus,
   onProgress,
@@ -96,6 +101,7 @@ export async function runAISearchAgent({
   context: string;
   userTaste: string;
   userMessage?: string;
+  drawPreferences?: AISearchDrawPreferences;
   history?: AISearchDisplayMessage[];
   onStatus: (status: AISearchStatus) => void;
   onProgress?: (progress: AISearchAgentProgress) => void;
@@ -120,6 +126,7 @@ export async function runAISearchAgent({
       content: displayContent,
       trace: trace.map((item) => ({ ...item })),
       threads: runtime?.getThreads() || existingThreads,
+      draws: runtime?.getDraws() || [],
     });
   };
   const appendReasoning = (delta: string) => {
@@ -145,6 +152,7 @@ export async function runAISearchAgent({
     updateToolTrace,
     signal,
     existingResourceIds,
+    drawPreferences,
   );
 
   for (let step = 0; step < 8; step += 1) {
@@ -178,6 +186,7 @@ export async function runAISearchAgent({
         content: assistant.content || '',
         hidden: true,
         tool_calls: assistant.tool_calls,
+        reasoning_content: assistant.reasoning_content,
       });
     }
     if (assistant.usage) {
@@ -208,6 +217,7 @@ export async function runAISearchAgent({
             .join('\n\n'),
           trace,
           threads: runtime.getThreads(),
+          draws: runtime.getDraws(),
           usage: hasUsage ? usage : undefined,
           followups: [],
           turnMessages,
@@ -240,6 +250,7 @@ export async function runAISearchAgent({
           .join('\n\n'),
         trace,
         threads: runtime.getThreads(),
+        draws: runtime.getDraws(),
         usage: hasUsage ? usage : undefined,
         followups: parsedResponse.followups,
         turnMessages,
@@ -265,6 +276,8 @@ export async function runAISearchAgent({
           id: toolCall.id,
           tool: toolCall.function.name === 'search_tournaments'
             ? 'search_tournaments'
+            : toolCall.function.name === 'draw_threads'
+              ? 'draw_threads'
             : toolCall.function.name === 'get_resource_details' || toolCall.function.name === 'get_thread_details'
               ? 'get_resource_details'
               : toolCall.function.name === 'ask_user'
@@ -272,6 +285,8 @@ export async function runAISearchAgent({
                 : 'search_threads',
           label: existing?.label || (toolCall.function.name === 'search_tournaments'
             ? '搜索赛事'
+            : toolCall.function.name === 'draw_threads'
+              ? '随机抽卡'
             : toolCall.function.name === 'ask_user'
               ? '询问用户'
               : toolCall.function.name.includes('details') ? '读取详情' : '搜索'),

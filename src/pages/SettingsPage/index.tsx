@@ -87,7 +87,7 @@ export function SettingsPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 text-(--od-text-primary) sm:p-6 lg:p-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 lg:gap-14">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 lg:gap-10">
         <SettingsPageHeader />
         <DisplaySettingsSection settings={settings} updateSettings={updateSettings} />
 

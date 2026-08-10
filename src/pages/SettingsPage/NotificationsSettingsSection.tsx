@@ -1,5 +1,3 @@
-import { Bell } from 'lucide-react';
-
 import type { UserSettings } from '@/shared/lib/settings';
 
 import { SettingsPageSection } from './SettingsPageSection';
@@ -12,7 +10,7 @@ type NotificationsSettingsSectionProps = {
 
 export function NotificationsSettingsSection({ settings, updateSettings }: NotificationsSettingsSectionProps) {
   return (
-    <SettingsPageSection kicker="Signals" title="通知" icon={Bell}>
+    <SettingsPageSection title="通知">
       <div className="space-y-3">
         <div className="od-setting-row">
           <div>

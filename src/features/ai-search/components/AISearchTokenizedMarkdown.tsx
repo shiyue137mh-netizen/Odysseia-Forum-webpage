@@ -14,12 +14,13 @@ export function AISearchTokenizedMarkdown({
 }) {
   const segments = parseAISearchInlineTokens(text);
   return (
-    <div className="min-w-0 max-w-full text-base leading-8 text-(--od-text-secondary)">
+    <div className="min-w-0 max-w-full text-base leading-8 text-(--od-text-primary)">
       {segments.map((segment, index) => segment.type === 'markdown' ? (
         <MarkdownText
           key={`markdown-${index}`}
           text={segment.content}
-          className="text-base! leading-8 sm:text-base!"
+          className="text-base! leading-8 text-(--od-text-primary)! sm:text-base!"
+          enableTables
           inline
         />
       ) : (

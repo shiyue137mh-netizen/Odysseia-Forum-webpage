@@ -80,4 +80,27 @@ describe('MarkdownText', () => {
     expect(container.querySelector('code.inline-code')).toHaveTextContent('Odysseia');
     expect(container.querySelector('code.inline-code mark')).toBeNull();
   });
+
+  it('按需渲染 Markdown 表格并保留单元格内的行内格式', () => {
+    const { container } = render(
+      <MarkdownText
+        text={'| 名称 | 状态 |\n| --- | --- |\n| **甲** | 完成 |\n| 乙 | 进行中 |'}
+        enableTables
+      />,
+    );
+
+    expect(container.querySelector('.markdown-table-scroll')).toBeInTheDocument();
+    expect(container.querySelectorAll('th')).toHaveLength(2);
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(container.querySelector('td strong')).toHaveTextContent('甲');
+    expect(container.querySelector('.od-md')).not.toHaveClass('inline');
+  });
+
+  it('默认不启用表格解析', () => {
+    const { container } = render(
+      <MarkdownText text={'| 名称 | 状态 |\n| --- | --- |\n| 甲 | 完成 |'} />,
+    );
+
+    expect(container.querySelector('table')).toBeNull();
+  });
 });

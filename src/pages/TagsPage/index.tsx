@@ -1,10 +1,9 @@
 import { useMemo, useState, type MouseEvent } from "react";
-import { Search, Tag as TagIcon, TrendingUp, Hash } from "lucide-react";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { addToken } from "@/shared/lib/searchTokenizer";
 import { useSidebarCollapsedSetting } from "@/shared/hooks/useSettings";
-import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 import { useTagStats } from "@/features/tags/hooks/useTagStats";
 import { useChannels } from "@/shared/hooks/useChannels";
@@ -55,7 +54,7 @@ export function TagsPage() {
   }, [channelsData]);
 
   const selectedChannelName = useMemo(() => {
-    if (selectedChannelId === ALL_CHANNELS_VALUE) return "All Channels";
+    if (selectedChannelId === ALL_CHANNELS_VALUE) return "全部频道";
     return (
       channelOptions.find((channel) => channel.id === selectedChannelId)
         ?.name || `频道 ${selectedChannelId}`
@@ -175,32 +174,12 @@ export function TagsPage() {
     Math.max(...filteredTags.map((tag) => tag.totalCount), 0) || 1;
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden text-(--od-text-primary)">
+    <div className="flex min-h-full flex-col overflow-x-clip text-(--od-text-primary)">
       <div className="animate-in fade-in duration-500 flex-1 p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 lg:gap-14">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 lg:gap-10">
           <div>
-            <FluidDivider
-              label="Tags"
-              tone="strong"
-              className="mb-8 lg:mb-10"
-            />
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--od-surface-soft) text-(--od-accent)">
-                  <TagIcon className="h-5 w-5" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--od-text-tertiary)">
-                    Tag Intelligence
-                  </p>
-                  <div className="space-y-1.5">
-                    <h1 className="od-section-title">标签总览</h1>
-                    <p className="max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-                      这里按标签名称聚合了跨频道热度，先看整体分布，再进入搜索页精准追帖。
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <h1 className="od-page-title">标签总览</h1>
               <button
                 type="button"
                 onClick={() => navigate("/search")}
@@ -211,10 +190,10 @@ export function TagsPage() {
             </div>
 
             <div
-              className="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:mt-10 lg:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-500"
+              className="mt-6 grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2 lg:mt-8 lg:grid-cols-3 animate-in fade-in slide-in-from-top-4 duration-500"
               style={{ animationDelay: "100ms" }}
             >
-              <div className="flex items-start justify-between gap-4 py-2">
+              <div className="py-2">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-(--od-text-secondary)">
                     标签总数
@@ -222,14 +201,10 @@ export function TagsPage() {
                   <p className="text-[2rem] font-semibold tracking-tight text-(--od-text-value)">
                     {totalTags}
                   </p>
-                  <p className="text-xs leading-5 text-(--od-text-tertiary)">
-                    当前范围内去重后的标签数量。
-                  </p>
                 </div>
-                <Hash className="mt-1 h-8 w-8 text-(--od-text-secondary)/26" />
               </div>
 
-              <div className="flex items-start justify-between gap-4 py-2">
+              <div className="py-2">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-(--od-text-secondary)">
                     相关帖子
@@ -237,14 +212,10 @@ export function TagsPage() {
                   <p className="text-[2rem] font-semibold tracking-tight text-(--od-text-value)">
                     {totalThreads}
                   </p>
-                  <p className="text-xs leading-5 text-(--od-text-tertiary)">
-                    被标签覆盖的帖子总量（含虚拟标签）。
-                  </p>
                 </div>
-                <TrendingUp className="mt-1 h-8 w-8 text-(--od-text-secondary)/26" />
               </div>
 
-              <div className="flex items-start justify-between gap-4 py-2 sm:col-span-2 lg:col-span-1">
+              <div className="py-2 sm:col-span-2 lg:col-span-1">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-(--od-text-secondary)">
                     平均帖子 / 标签
@@ -252,29 +223,13 @@ export function TagsPage() {
                   <p className="text-[2rem] font-semibold tracking-tight text-(--od-text-value)">
                     {totalTags > 0 ? Math.round(totalThreads / totalTags) : 0}
                   </p>
-                  <p className="text-xs leading-5 text-(--od-text-tertiary)">
-                    用于快速判断标签池整体活跃度。
-                  </p>
                 </div>
-                <TagIcon className="mt-1 h-8 w-8 text-(--od-text-secondary)/26" />
               </div>
             </div>
           </div>
 
           <section className="px-1">
-            <FluidDivider label="Tag Browser" className="mb-8 lg:mb-10" />
-            <div className="mb-8 flex items-start gap-4 lg:mb-10">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-(--od-surface-soft) text-(--od-accent)">
-                <Search className="h-5 w-5" />
-              </div>
-              <div className="space-y-1.5">
-                <h2 className="od-section-title">筛选标签范围</h2>
-                <p className="max-w-3xl text-sm leading-6 text-(--od-text-secondary)">
-                  支持按频道查看标签池；同名标签会自动聚合展示，每个标签仅显示
-                  Top 3 频道来源。
-                </p>
-              </div>
-            </div>
+            <h2 className="od-section-title mb-5 lg:mb-6">筛选标签范围</h2>
 
             <div
               className="animate-in fade-in slide-in-from-top-4 duration-500"
@@ -288,15 +243,18 @@ export function TagsPage() {
                   </span>
                 </span>
                 <span>同名标签已聚合</span>
-                <span>频道展示 Top {TOP_CHANNEL_SLICE_COUNT}</span>
+                <span>展示前三个频道</span>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
                 <Select
                   value={selectedChannelId}
                   options={[
-                    { value: ALL_CHANNELS_VALUE, label: '全部频道' },
-                    ...channelOptions.map((ch) => ({ value: ch.id, label: ch.name })),
+                    { value: ALL_CHANNELS_VALUE, label: "全部频道" },
+                    ...channelOptions.map((ch) => ({
+                      value: ch.id,
+                      label: ch.name,
+                    })),
                   ]}
                   onChange={(v) => setSelectedChannelId(v)}
                   className="w-full"

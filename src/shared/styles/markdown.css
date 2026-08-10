@@ -168,6 +168,33 @@
     list-style-type: disc;
     padding-left: 20px;
   }
+
+  & .markdown-table-scroll {
+    max-width: 100%;
+    margin: 0.75rem 0;
+    overflow-x: auto;
+  }
+
+  & table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875em;
+  }
+
+  & th,
+  & td {
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--od-border);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  & th {
+    color: var(--od-text-primary);
+    background: var(--od-bg-secondary);
+    font-weight: 700;
+  }
 }
 
 @utility discord-h1 {

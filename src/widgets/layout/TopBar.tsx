@@ -8,9 +8,7 @@ import {
 } from "@/features/search/components/SearchSuggestions";
 import { useSearchAutocomplete } from "@/features/search/hooks/useSearchAutocomplete";
 import { useAuthorProfiles } from "@/features/authors/hooks/useAuthorProfiles";
-import type {
-  TagLogic,
-} from "@/features/search/hooks/useSearchParams";
+import type { TagLogic } from "@/features/search/hooks/useSearchParams";
 import { getSearchTagLogicPreference } from "@/features/search/hooks/useSearchParams";
 import { useSearchURLParams } from "@/features/search/hooks/useSearchParams";
 import { useTopBarFilterState } from "@/features/search/hooks/useTopBarFilterState";
@@ -21,15 +19,14 @@ import { useThemeSettings } from "@/shared/hooks/useSettings";
 import { SearchTokenInput } from "@/shared/ui/SearchTokenInput";
 import { AnimatedIcon } from "@/shared/ui/animation/AnimatedIcon";
 import {
+  ArrowLeft,
   Bell,
-  Compass,
   Eye,
-  Hash,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
-  Settings as SettingsIcon,
   SlidersHorizontal,
-  User,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -38,10 +35,25 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 interface TopBarProps {
   onMenuClick: () => void;
+  onSidebarToggle: () => void;
   sidebarCollapsed?: boolean;
 }
 
-export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
+interface BreadcrumbSegment {
+  label: string;
+  to?: string;
+}
+
+interface BreadcrumbState {
+  fallback: string;
+  segments: BreadcrumbSegment[];
+}
+
+export function TopBar({
+  onMenuClick,
+  onSidebarToggle,
+  sidebarCollapsed = false,
+}: TopBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const isSearchPage = location.pathname === "/search";
@@ -131,14 +143,15 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
     showSuggestions,
   });
 
-  const { toggleTagToken } =
-    useTopBarFilterState({
-      params,
-      updateQueryFromTokenMutation,
-      virtualTagOriginChannelMap,
-    });
+  const { toggleTagToken } = useTopBarFilterState({
+    params,
+    updateQueryFromTokenMutation,
+    virtualTagOriginChannelMap,
+  });
 
-  const authorProfiles = useAuthorProfiles(authorTokens.map((token) => token.value));
+  const authorProfiles = useAuthorProfiles(
+    authorTokens.map((token) => token.value),
+  );
   const authorDetails = useMemo(
     () =>
       Object.fromEntries(
@@ -200,8 +213,9 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
         // 如果输入为空，清空 words 以免 join 时前面多空格
         words.length = 0;
       }
-      const newValue = `${words.length > 0 ? words.join(" ") : ""}${action.value}`.trim();
-      
+      const newValue =
+        `${words.length > 0 ? words.join(" ") : ""}${action.value}`.trim();
+
       applyInputChange(newValue);
       closePanels();
     },
@@ -231,33 +245,101 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
 
   const hasPanelFilters = hasActiveFilters;
 
-  const getBreadcrumb = () => {
+  const getBreadcrumb = (): BreadcrumbState => {
     if (location.pathname === "/settings") {
-      return { icon: SettingsIcon, label: "设置" };
+      return { fallback: "/", segments: [{ label: "设置" }] };
     }
     if (location.pathname === "/me") {
-      return { icon: User, label: "我的" };
+      return { fallback: "/", segments: [{ label: "我的" }] };
     }
     if (location.pathname === "/search") {
       if (activeVirtualTag) {
-        return { icon: Hash, label: activeVirtualTag.name };
+        return {
+          fallback: "/",
+          segments: [
+            { label: "探索", to: "/search" },
+            { label: activeVirtualTag.name },
+          ],
+        };
       }
-      return { icon: Compass, label: "探索" };
+      return { fallback: "/", segments: [{ label: "探索" }] };
     }
     if (location.pathname === "/") {
-      return { icon: Compass, label: "广场" };
+      return { fallback: "/", segments: [{ label: "广场" }] };
     }
-    return null;
+    if (location.pathname === "/ai-search") {
+      return { fallback: "/", segments: [{ label: "AI 搜索" }] };
+    }
+    if (location.pathname === "/draw") {
+      return { fallback: "/", segments: [{ label: "抽卡" }] };
+    }
+    if (location.pathname === "/tags") {
+      return { fallback: "/search", segments: [{ label: "标签" }] };
+    }
+    if (location.pathname === "/booklists") {
+      return { fallback: "/", segments: [{ label: "书单" }] };
+    }
+    if (location.pathname.startsWith("/booklists/")) {
+      return {
+        fallback: "/booklists",
+        segments: [{ label: "书单", to: "/booklists" }, { label: "详情" }],
+      };
+    }
+    if (location.pathname === "/tournaments") {
+      return { fallback: "/", segments: [{ label: "赛事" }] };
+    }
+    if (location.pathname === "/tournaments/mine") {
+      return {
+        fallback: "/tournaments",
+        segments: [
+          { label: "赛事", to: "/tournaments" },
+          { label: "我的赛事" },
+        ],
+      };
+    }
+    if (location.pathname.startsWith("/tournaments/manage/")) {
+      return {
+        fallback: "/tournaments/mine",
+        segments: [
+          { label: "我的赛事", to: "/tournaments/mine" },
+          { label: "管理" },
+        ],
+      };
+    }
+    if (location.pathname.startsWith("/tournaments/")) {
+      return {
+        fallback: "/tournaments",
+        segments: [{ label: "赛事", to: "/tournaments" }, { label: "详情" }],
+      };
+    }
+    if (location.pathname.startsWith("/u/")) {
+      return { fallback: "/search", segments: [{ label: "作者主页" }] };
+    }
+    if (location.pathname.startsWith("/threads/")) {
+      return { fallback: "/search", segments: [{ label: "帖子详情" }] };
+    }
+    return { fallback: "/", segments: [{ label: "页面" }] };
   };
 
   const breadcrumb = getBreadcrumb();
+  const canGoBack = location.pathname !== "/";
+
+  const handleBack = () => {
+    const historyIndex = Number(window.history.state?.idx ?? 0);
+    if (historyIndex > 0) {
+      navigate(-1);
+      return;
+    }
+    navigate(breadcrumb.fallback);
+  };
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-40 flex h-13 shrink-0 items-center justify-between bg-transparent px-3 transition-[left] duration-300 sm:h-17 sm:px-4 ${sidebarCollapsed ? "lg:left-0" : "lg:left-[170px]"
-        }`}
+      className={`fixed left-0 right-0 top-0 z-40 flex h-13 shrink-0 items-center justify-between bg-transparent px-3 transition-[left] duration-300 sm:h-17 sm:px-4 ${
+        sidebarCollapsed ? "lg:left-0" : "lg:left-[170px]"
+      }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-1.5">
         <button
           onClick={onMenuClick}
           className="p-2 text-(--od-text-secondary) transition-colors duration-200 hover:text-(--od-text-primary) lg:hidden"
@@ -271,14 +353,62 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
           />
         </button>
 
-        {breadcrumb && (
-          <div className="hidden items-center gap-2 pl-2 sm:flex">
-            <breadcrumb.icon className="hidden h-4 w-4 text-(--od-text-tertiary) md:block" />
-            <span className="hidden max-w-[100px] truncate text-sm font-semibold text-(--od-text-primary) md:block md:max-w-none">
-              {breadcrumb.label}
-            </span>
-          </div>
+        <button
+          type="button"
+          onClick={onSidebarToggle}
+          className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-(--od-text-tertiary) transition-colors hover:bg-white/6 hover:text-(--od-text-primary) lg:inline-flex"
+          aria-label={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
+          title={sidebarCollapsed ? "展开侧边栏" : "收起侧边栏"}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" />
+          )}
+        </button>
+
+        {canGoBack && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-(--od-text-tertiary) transition-colors hover:bg-white/6 hover:text-(--od-text-primary) lg:inline-flex"
+            aria-label="返回上一页"
+            title="返回上一页"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
         )}
+
+        <nav
+          aria-label="面包屑"
+          className="hidden min-w-0 max-w-44 items-center gap-1 text-sm lg:flex"
+        >
+          {breadcrumb.segments.map((segment, index) => (
+            <div
+              key={`${segment.label}-${index}`}
+              className="flex min-w-0 items-center gap-1"
+            >
+              {index > 0 && (
+                <span className="text-(--od-text-tertiary)" aria-hidden="true">
+                  /
+                </span>
+              )}
+              {segment.to ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(segment.to!)}
+                  className="truncate text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary)"
+                >
+                  {segment.label}
+                </button>
+              ) : (
+                <span className="truncate font-semibold text-(--od-text-primary)">
+                  {segment.label}
+                </span>
+              )}
+            </div>
+          ))}
+        </nav>
       </div>
 
       <div
@@ -326,10 +456,11 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
               <button
                 onClick={toggleFilters}
                 data-tour="search-filters-btn"
-                className={`relative mr-2 shrink-0 p-1.5 transition-colors duration-200 ${showFilters || hasPanelFilters
+                className={`relative mr-2 shrink-0 p-1.5 transition-colors duration-200 ${
+                  showFilters || hasPanelFilters
                     ? "text-(--od-accent)"
                     : "text-(--od-text-tertiary) hover:text-(--od-text-primary)"
-                  }`}
+                }`}
                 aria-label="筛选"
                 title="打开筛选面板"
               >
@@ -348,7 +479,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                className={`${backgroundImageEnabled ? 'od-floating-glass' : 'od-floating-panel-solid'} fixed top-17 inset-x-3 z-50 mt-2 max-h-[calc(100dvh-5.5rem)] overflow-x-hidden overflow-y-auto rounded-2xl border border-(--od-border-strong) shadow-2xl mx-auto w-auto max-w-md sm:absolute sm:top-full sm:inset-x-auto sm:left-auto sm:right-0 sm:mx-0 sm:w-[560px] sm:max-w-none`}
+                className={`${backgroundImageEnabled ? "od-floating-glass" : "od-floating-panel-solid"} fixed top-17 bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.75rem)] inset-x-3 z-50 mt-2 overflow-x-hidden overflow-y-auto rounded-2xl border border-(--od-border-strong) shadow-2xl mx-auto w-auto max-w-md sm:absolute sm:top-full sm:bottom-auto sm:inset-x-auto sm:left-auto sm:right-0 sm:mx-0 sm:max-h-[calc(100dvh-5.5rem)] sm:w-[560px] sm:max-w-none`}
               >
                 {needsFilter && (
                   <div className="flex items-center gap-2 border-b border-white/6 p-2">
@@ -358,10 +489,11 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                         setShowSuggestions(true);
                         setShowFilters(false);
                       }}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${showSuggestions
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        showSuggestions
                           ? "bg-(--od-accent)/20 text-(--od-accent)"
                           : "text-(--od-text-secondary) hover:bg-(--od-bg-tertiary)"
-                        }`}
+                      }`}
                     >
                       搜索建议
                     </button>
@@ -371,10 +503,11 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                         setShowFilters(true);
                         setShowSuggestions(false);
                       }}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${showFilters
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        showFilters
                           ? "bg-(--od-accent)/20 text-(--od-accent)"
                           : "text-(--od-text-secondary) hover:bg-(--od-bg-tertiary)"
-                        }`}
+                      }`}
                     >
                       高级筛选
                     </button>
@@ -396,8 +529,12 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                       setParams({ tagLogic: value })
                     }
                     onToggleTagToken={toggleTagToken}
-                    preferenceExcludeTags={discoveryPreferenceContext?.excludeTags || []}
-                    preferenceIncludeTags={discoveryPreferenceContext?.includeTags || []}
+                    preferenceExcludeTags={
+                      discoveryPreferenceContext?.excludeTags || []
+                    }
+                    preferenceIncludeTags={
+                      discoveryPreferenceContext?.includeTags || []
+                    }
                     tagLogic={params.tagLogic}
                     timeFrom={params.timeFrom}
                     timeTo={params.timeTo}
@@ -412,11 +549,7 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
                     authors={suggestionAuthors}
                     threads={suggestionThreads}
                     booklists={suggestionBooklists}
-                    suggestedTags={
-                      suggestionQuery
-                        ? suggestionTags
-                        : []
-                    }
+                    suggestedTags={suggestionQuery ? suggestionTags : []}
                     history={historyItems}
                     onSelect={handleSuggestionSelect}
                     onRemoveHistory={(item) => {
@@ -439,11 +572,12 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
         <button
           type="button"
           onClick={() => navigate("/me?tab=history")}
-          className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${location.pathname === "/me" &&
-              new URLSearchParams(location.search).get("tab") === "history"
+          className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${
+            location.pathname === "/me" &&
+            new URLSearchParams(location.search).get("tab") === "history"
               ? "text-(--od-accent)"
               : "hover:text-(--od-text-primary)"
-            }`}
+          }`}
           aria-label="打开浏览足迹"
           title="浏览足迹"
         >
@@ -460,10 +594,11 @@ export function TopBar({ onMenuClick, sidebarCollapsed = false }: TopBarProps) {
             aria-label="打开通知中心"
             aria-expanded={notificationOpen}
             onClick={() => setNotificationOpen((prev) => !prev)}
-            className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${notificationOpen
+            className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${
+              notificationOpen
                 ? "text-(--od-accent)"
                 : "hover:text-(--od-text-primary)"
-              }`}
+            }`}
           >
             <AnimatedIcon
               icon={Bell}

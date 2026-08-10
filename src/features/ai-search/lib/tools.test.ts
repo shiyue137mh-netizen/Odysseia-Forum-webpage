@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Booklist } from '@/entities/booklist/types';
 import type { Thread } from '@/entities/thread/types';
 import { booklistsApi } from '@/features/booklists/api/booklistsApi';
+import { discoveryApi } from '@/features/discovery/api/discoveryApi';
 import {
   compactThread,
   compactTournament,
@@ -16,6 +17,9 @@ vi.mock('@/features/booklists/api/booklistsApi', () => ({
 }));
 vi.mock('@/features/search/api/searchApi', () => ({
   searchApi: { search: vi.fn(), getThread: vi.fn() },
+}));
+vi.mock('@/features/discovery/api/discoveryApi', () => ({
+  discoveryApi: { getRandomThreads: vi.fn() },
 }));
 
 describe('AI 搜索工具结果', () => {
@@ -99,5 +103,51 @@ describe('AI 搜索工具结果', () => {
       { role: 'assistant', content: '', hidden: true, tool_calls: [call] },
       { role: 'tool', content: '{"answer":"剧情"}', hidden: true, tool_call_id: 'call-question' },
     ])).toBeNull();
+  });
+
+  it('按用户偏好执行真实随机抽卡并记录生效配方', async () => {
+    const thread = {
+      thread_id: '12345678901234567',
+      channel_id: '22345678901234567',
+      title: '随机作品',
+      author: null,
+      created_at: '2026-08-03T00:00:00Z',
+      reaction_count: 10,
+      reply_count: 2,
+      display_count: 20,
+      collected_flag: false,
+      thumbnail_urls: [],
+      tags: ['剧情'],
+    } as Thread;
+    vi.mocked(discoveryApi.getRandomThreads).mockResolvedValue([thread]);
+    const runtime = createAISearchToolRuntime(
+      () => undefined,
+      [],
+      undefined,
+      undefined,
+      undefined,
+      {
+        channelIds: ['22345678901234567'],
+        includeTags: ['剧情'],
+        excludeTags: ['公告'],
+      },
+    );
+
+    const result = JSON.parse(await runtime.execute({
+      id: 'call-draw',
+      type: 'function',
+      function: { name: 'draw_threads', arguments: '{"count":1,"scope":"preferences","tag_logic":"and"}' },
+    }));
+
+    expect(discoveryApi.getRandomThreads).toHaveBeenCalledWith({
+      limit: 1,
+      channel_ids: ['22345678901234567'],
+      include_tags: ['剧情'],
+      exclude_tags: ['公告'],
+      tag_logic: 'and',
+    });
+    expect(result.configuration).toContain('偏好卡池');
+    expect(runtime.getDraws()).toEqual([{ configuration: result.configuration, threads: [thread] }]);
+    expect(runtime.getThreads()).toContain(thread);
   });
 });

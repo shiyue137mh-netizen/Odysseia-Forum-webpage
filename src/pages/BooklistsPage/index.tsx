@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  BookOpen,
-  Plus,
-  RefreshCw,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Plus, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Select } from "@/shared/ui/Select";
 
@@ -21,7 +15,6 @@ import {
   useUpdateBooklist,
 } from "@/features/booklists/hooks/useBooklistsData";
 import { BooklistFormModal } from "@/features/booklists/components/BooklistFormModal";
-import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { AnimatedPagination } from "@/shared/ui/AnimatedPagination";
 import { useBooklistURLParams } from "@/features/booklists/hooks/useBooklistURLParams";
 import { useCardGridClass, useSettings } from "@/shared/hooks/useSettings";
@@ -99,31 +92,11 @@ export function BooklistsPage() {
   );
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 p-4 sm:p-6 lg:gap-14 lg:p-8">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-8 p-4 sm:p-6 lg:gap-10 lg:p-8">
       <section>
-        <FluidDivider
-          label="Booklists"
-          tone="strong"
-          className="mb-8 lg:mb-10"
-        />
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--od-surface-soft) text-(--od-accent)">
-                <BookOpen className="h-6 w-6" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-(--od-text-tertiary)">
-                  内容整理
-                </p>
-                <div className="space-y-1.5">
-                  <h1 className="od-section-title">书单</h1>
-                  <p className="max-w-2xl text-sm leading-6 text-(--od-text-secondary)">
-                    喜欢的内容可以慢慢收进书单里呀。你可以自己偷偷留着，也可以整理好了再拿出来分享给别人看。
-                  </p>
-                </div>
-              </div>
-            </div>
+            <h1 className="od-page-title">书单</h1>
 
             <button
               type="button"

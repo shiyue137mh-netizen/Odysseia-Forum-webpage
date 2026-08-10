@@ -3,8 +3,8 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { BannerApplicationModal } from '@/features/banner/components/BannerApplicationModal';
 import { parallaxScenes } from '@/shared/config/parallaxScenes';
 import { LazyImage } from '@/shared/ui/LazyImage';
+import { BannerFadeMedia } from '@/shared/ui/BannerFadeMedia';
 
-const WIKI_URL = 'https://wiki.xn--35zx7g.org/';
 const BANNER_LOAD_TIMEOUT_MS = 4500;
 const bannerMediaClass = 'relative aspect-video min-h-[250px] overflow-hidden sm:min-h-0';
 
@@ -112,18 +112,36 @@ export function BannerCarousel({ banners, autoPlayInterval = 5000, onBannerClick
     setIsApplyModalOpen(true);
   };
 
-  const renderFooter = () => (
+  const renderApplicationOverlay = () => (
     <div
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-(--od-border) px-4 py-3"
+      className="absolute inset-x-6 bottom-5 z-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
       onClick={(e) => e.stopPropagation()}
     >
-      <p className="text-xs text-(--od-text-secondary)">
-        想推荐自己的帖子到展示位？提交 Banner 申请后等待审核即可。
+      <p className="min-w-0 truncate justify-self-start text-xs text-white/80">
+        <span className="sm:hidden">想推荐自己的帖子？</span>
+        <span className="hidden sm:inline">想推荐自己的帖子到展示位？提交 Banner 申请后等待审核即可。</span>
       </p>
+      <div className="flex justify-self-center gap-2">
+        {displayBanners.length > 1 && displayBanners.map((_, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCurrentIndex(index);
+            }}
+            className={`h-2 rounded-full transition-all ${index === currentIndex
+              ? 'w-8 bg-white'
+              : 'w-2 bg-white/50 hover:bg-white/75'
+              }`}
+            aria-label={`跳转到第 ${index + 1} 张`}
+          />
+        ))}
+      </div>
       <button
         type="button"
         onClick={openApplyModal}
-        className="inline-flex items-center gap-2 rounded-full bg-(--od-accent) px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-(--od-accent-hover)"
+        className="inline-flex shrink-0 justify-self-end items-center gap-2 text-xs font-semibold text-white transition-colors hover:text-(--od-accent) hover:underline"
       >
         <ImageIcon className="h-4 w-4" />
         申请 Banner
@@ -173,36 +191,42 @@ export function BannerCarousel({ banners, autoPlayInterval = 5000, onBannerClick
     >
       {/* Banner 图片 */}
       <div className={bannerMediaClass} onPointerMove={handleBannerParallax}>
-        <div
-          ref={backgroundLayerRef}
-          className={`absolute inset-0 transition-transform duration-300 ease-out ${foregroundImage ? 'scale-[1.03]' : ''}`}
-        >
-          <LazyImage
-            src={currentBanner.image}
-            alt={currentBanner.title}
-            fallbackSrc={fallbackScene.background}
-            loadTimeoutMs={BANNER_LOAD_TIMEOUT_MS}
-            className="h-full w-full"
-            onFallback={() => setFallbackBannerKey(currentBannerKey)}
-          />
-        </div>
+        <BannerFadeMedia>
+          <div
+            ref={backgroundLayerRef}
+            className={`absolute inset-0 transition-transform duration-300 ease-out ${foregroundImage ? 'scale-[1.03]' : ''}`}
+          >
+            <LazyImage
+              src={currentBanner.image}
+              alt={currentBanner.title}
+              fallbackSrc={fallbackScene.background}
+              loadTimeoutMs={BANNER_LOAD_TIMEOUT_MS}
+              className="h-full w-full"
+              onFallback={() => setFallbackBannerKey(currentBannerKey)}
+            />
+          </div>
+        </BannerFadeMedia>
 
         {foregroundImage && (
-          <img
-            ref={foregroundLayerRef}
-            src={foregroundImage}
-            alt=""
-            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] object-contain object-right-bottom transition-transform duration-300 ease-out"
-          />
+          <BannerFadeMedia>
+            <img
+              ref={foregroundLayerRef}
+              src={foregroundImage}
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full scale-[1.04] object-contain object-right-bottom transition-transform duration-300 ease-out"
+            />
+          </BannerFadeMedia>
         )}
 
         {/* 真实帖子封面保留可读性遮罩，站点视差封面直接展示原色。 */}
         {!foregroundImage && (
-          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
+          <BannerFadeMedia>
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
+          </BannerFadeMedia>
         )}
 
         {/* 内容 */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)]">
+        <div className="absolute bottom-18 left-0 right-0 z-20 p-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.85)] sm:bottom-16">
           <h2 className="mb-2 text-2xl font-bold text-white line-clamp-1">
             {currentBanner.title}
           </h2>
@@ -210,6 +234,8 @@ export function BannerCarousel({ banners, autoPlayInterval = 5000, onBannerClick
             {currentBanner.description}
           </p>
         </div>
+
+        {renderApplicationOverlay()}
       </div>
 
       {/* 导航按钮 */}
@@ -231,40 +257,6 @@ export function BannerCarousel({ banners, autoPlayInterval = 5000, onBannerClick
           </button>
         </>
       )}
-
-      {/* 指示器 */}
-      {displayBanners.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-          {displayBanners.map((_, index) => (
-            <button
-              key={index}
-              onClick={(e) => {
-                e.stopPropagation();
-                setCurrentIndex(index);
-              }}
-              className={`h-2 rounded-full transition-all ${index === currentIndex
-                ? 'w-8 bg-white'
-                : 'w-2 bg-white/50 hover:bg-white/75'
-                }`}
-              aria-label={`跳转到第 ${index + 1} 张`}
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="absolute right-4 top-4 z-10">
-        <a
-          href={WIKI_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center rounded-full border border-white/15 bg-black/35 px-3.5 py-2 text-xs font-semibold tracking-[0.12em] text-white backdrop-blur-md transition-colors hover:bg-black/55"
-          onClick={(e) => e.stopPropagation()}
-        >
-          类脑智识库 Wiki
-        </a>
-      </div>
-
-      {renderFooter()}
 
       <BannerApplicationModal
         isOpen={isApplyModalOpen}

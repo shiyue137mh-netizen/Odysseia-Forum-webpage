@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SearchResponse } from '@/entities/thread/types';
-import { computeNextExcludeIds } from './useSearchResults';
+import {
+  buildResultPageMap,
+  computeBufferedPageTarget,
+  computeNextExcludeIds,
+} from './useSearchResults';
 
 const page = (ids: string[], total: number) =>
   ({
@@ -37,5 +41,32 @@ describe('computeNextExcludeIds', () => {
     expect(
       computeNextExcludeIds([page(['1', '2'], 100), page(['1', '2'], 100)]),
     ).toBeUndefined();
+  });
+});
+
+describe('computeBufferedPageTarget', () => {
+  it('关闭预加载时不主动扩大目标页', () => {
+    expect(computeBufferedPageTarget(2, false, 3)).toBe(2);
+  });
+
+  it('第一页保持三页缓冲时加载到第三页', () => {
+    expect(computeBufferedPageTarget(1, true, 3)).toBe(3);
+  });
+
+  it('浏览到第二页后把目标向前滚动一页', () => {
+    expect(computeBufferedPageTarget(2, true, 3)).toBe(4);
+  });
+});
+
+describe('buildResultPageMap', () => {
+  it('使用实际 API 页归属，而不是按固定 24 条推算', () => {
+    const map = buildResultPageMap([
+      page(['1', '2'], 10),
+      page(['3'], 10),
+    ]);
+
+    expect(map.get('1')).toBe(1);
+    expect(map.get('2')).toBe(1);
+    expect(map.get('3')).toBe(2);
   });
 });

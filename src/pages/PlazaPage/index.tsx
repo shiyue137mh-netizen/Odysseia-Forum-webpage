@@ -220,14 +220,9 @@ export function PlazaPage() {
 
       <header className="flex flex-col gap-4 px-4 pb-2 pt-6 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-(--od-text-primary)">
-              广场
-            </h1>
-            <p className="mt-1 text-sm text-(--od-text-secondary)">
-              新作、书单和社区热榜，都收在这里。
-            </p>
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-(--od-text-primary)">
+            广场
+          </h1>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -296,14 +291,9 @@ export function PlazaPage() {
 
         <section>
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-(--od-text-primary)">
-                书单精选
-              </h2>
-              <p className="mt-1 text-xs text-(--od-text-tertiary)">
-                由大家整理的专题入口
-              </p>
-            </div>
+            <h2 className="text-lg font-semibold text-(--od-text-primary)">
+              书单精选
+            </h2>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -357,14 +347,9 @@ export function PlazaPage() {
         </section>
 
         <section>
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-(--od-text-primary)">
-              榜单精选
-            </h2>
-            <p className="mt-1 text-xs text-(--od-text-tertiary)">
-              上下滚动右侧排行，最靠近中心的内容会显示在左侧。
-            </p>
-          </div>
+          <h2 className="mb-4 text-lg font-semibold text-(--od-text-primary)">
+            榜单精选
+          </h2>
 
           {railsQuery.isLoading ? (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -419,15 +404,10 @@ export function PlazaPage() {
 
         <section>
           <div className="mb-4 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-(--od-text-primary)">
-                <Trophy className="h-5 w-5 text-(--od-accent)" />
-                赛事精选
-              </h2>
-              <p className="mt-1 text-xs text-(--od-text-tertiary)">
-                最近创建的社区赛事
-              </p>
-            </div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-(--od-text-primary)">
+              <Trophy className="h-5 w-5 text-(--od-accent)" />
+              赛事精选
+            </h2>
             <button
               type="button"
               onClick={() => navigate("/tournaments")}

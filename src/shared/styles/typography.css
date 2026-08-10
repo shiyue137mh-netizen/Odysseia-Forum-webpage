@@ -52,3 +52,11 @@
   letter-spacing: -0.02em;
   color: var(--od-text-primary);
 }
+
+@utility od-page-title {
+  font-size: clamp(2rem, 1.65rem + 1.35vw, 3rem);
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--od-text-primary);
+}

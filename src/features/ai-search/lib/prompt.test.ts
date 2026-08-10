@@ -11,6 +11,8 @@ describe('AI 搜索系统提示词', () => {
     expect(message).toContain('不要把用户喜好擅自转换为 include_tags');
     expect(message).toContain('$author:ID$ 必须映射到 search_threads.include_author_ids');
     expect(message).toContain('search_tournaments');
+    expect(message).toContain('draw_threads');
+    expect(message).toContain('随机结果不代表相关度排序');
     expect(message).toContain('get_resource_details');
     expect(message).toContain('ask_user');
     expect(message).toContain('你的 Markdown 回答也可以主动使用同一套 Token 模板');

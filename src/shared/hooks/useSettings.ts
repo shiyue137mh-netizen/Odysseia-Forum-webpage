@@ -29,6 +29,12 @@ export function useResultPagingModeSetting() {
   return useSettingsStore((state) => state.settings.resultPagingMode);
 }
 
+export function useResultPreloadSettings() {
+  const enabled = useSettingsStore((state) => state.settings.resultPreloadEnabled);
+  const pages = useSettingsStore((state) => state.settings.resultPreloadPages);
+  return { enabled, pages };
+}
+
 export function useFontSizeSetting() {
   return useSettingsStore((state) => state.settings.fontSize);
 }
@@ -40,12 +46,12 @@ export function useCardSizeSetting() {
 export function useCardGridClass() {
   const cardSize = useCardSizeSetting();
   if (cardSize === 'large') {
-    return 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    return 'grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3';
   }
   if (cardSize === 'compact') {
-    return 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
+    return 'grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
   }
-  return 'grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+  return 'grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 }
 
 export function useImageModeSetting() {

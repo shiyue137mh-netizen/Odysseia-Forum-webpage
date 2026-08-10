@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useInfiniteQuery, useQuery, type InfiniteData } from '@tanstack/react-query';
+import { useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
 
 import type { SearchResponse, Thread } from '@/entities/thread/types';
 import { searchApi } from '@/features/search/api/searchApi';
@@ -13,7 +13,10 @@ import {
   type SearchParams,
 } from '@/features/search/hooks/useSearchParams';
 import { searchKeys } from '@/features/search/lib/queryKeys';
-import { useResultPagingModeSetting } from '@/shared/hooks/useSettings';
+import {
+  useResultPagingModeSetting,
+  useResultPreloadSettings,
+} from '@/shared/hooks/useSettings';
 
 interface UseSearchResultsOptions {
   params: SearchParams;
@@ -34,7 +37,7 @@ const collectThreadIds = (pages: (SearchResponse | undefined)[]) =>
   );
 
 /**
- * 无限滚动的下一页参数：已加载的全部 thread_id，作为 exclude_thread_ids 传给后端。
+ * 连续滚动和顺序分页的下一页参数：已加载的全部 thread_id，作为 exclude_thread_ids 传给后端。
  * 返回 undefined 表示没有下一页。
  */
 export function computeNextExcludeIds(
@@ -59,6 +62,26 @@ export function computeNextExcludeIds(
   return Array.from(loadedThreadIds);
 }
 
+export function computeBufferedPageTarget(
+  viewedPage: number,
+  enabled: boolean,
+  bufferPages: number,
+) {
+  return viewedPage + (enabled ? Math.max(1, bufferPages) - 1 : 0);
+}
+
+export function buildResultPageMap(
+  pages: (SearchResponse | undefined)[],
+) {
+  const pageMap = new Map<string, number>();
+  pages.forEach((pageData, pageIndex) => {
+    ((pageData?.results || []) as Thread[]).forEach((thread) => {
+      pageMap.set(String(thread.thread_id), pageIndex + 1);
+    });
+  });
+  return pageMap;
+}
+
 export function useSearchResults({ params, preferences }: UseSearchResultsOptions) {
   const {
     query,
@@ -79,6 +102,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
 
   const [ignoreDiscoveryPreferences, setIgnoreDiscoveryPreferences] = useState(false);
   const resultPagingMode = useResultPagingModeSetting();
+  const resultPreload = useResultPreloadSettings();
   const currentPage = Math.max(1, page || 1);
 
   const hasExplicitFilters =
@@ -99,37 +123,29 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   );
 
   const applyPreferences = !ignoreDiscoveryPreferences;
-
-
-  const queryState = useQuery<SearchResponse, Error>({
-    queryKey: searchKeys.results({
-      ...params,
-      applyPreferences,
-      preferenceSignature: discoveryPreferenceContext?.signature,
-      resultPagingMode: 'pagination',
-    }),
-    queryFn: () => {
-      return searchApi.search({
-        query: query || undefined,
-        channel_ids: selectedChannel ? [selectedChannel] : undefined,
-        include_tags: includeTags.length > 0 ? includeTags : undefined,
-        exclude_tags: excludeTags.length > 0 ? excludeTags : undefined,
-        tag_logic: tagLogic,
-        sort_method: sortMethod,
-        sort_order: sortOrder,
-        apply_preferences: applyPreferences,
-        limit: PAGE_SIZE,
-        offset: (currentPage - 1) * PAGE_SIZE,
-        created_after: timeFrom || undefined,
-        created_before: timeTo || undefined,
-        reaction_min: reactionMin,
-        reply_min: replyMin,
-      });
-    },
-    enabled: resultPagingMode === 'pagination',
-    placeholderData: (prev) => prev,
-    staleTime: RESULTS_STALE_TIME,
+  const resultSignature = JSON.stringify([
+    query,
+    selectedChannel,
+    includeTags,
+    excludeTags,
+    includeAuthors,
+    excludeAuthors,
+    tagLogic,
+    sortMethod,
+    sortOrder,
+    timeFrom,
+    timeTo,
+    reactionMin,
+    replyMin,
+    applyPreferences,
+    discoveryPreferenceContext?.signature,
+    resultPagingMode,
+  ]);
+  const [viewedPageState, setViewedPageState] = useState({
+    signature: resultSignature,
+    page: 1,
   });
+
 
   const infiniteQueryState = useInfiniteQuery<SearchResponse, Error, InfiniteData<SearchResponse>, ReturnType<typeof searchKeys.results>, string[]>({
     queryKey: searchKeys.results({
@@ -137,7 +153,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
       page: 1,
       applyPreferences,
       preferenceSignature: discoveryPreferenceContext?.signature,
-      resultPagingMode: 'infinite',
+      resultPagingMode,
     }),
     queryFn: ({ pageParam }) => {
       const excludeThreadIds = pageParam;
@@ -161,23 +177,89 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     },
     initialPageParam: [],
     getNextPageParam: (_lastPage, allPages = []) => computeNextExcludeIds(allPages),
-    enabled: resultPagingMode === 'infinite',
     staleTime: RESULTS_STALE_TIME,
   });
+
+  const loadedPageCount = infiniteQueryState.data?.pages.length || 0;
+  const {
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = infiniteQueryState;
+
+  const viewedPage =
+    resultPagingMode === 'pagination'
+      ? currentPage
+      : viewedPageState.signature === resultSignature
+        ? viewedPageState.page
+        : 1;
+  const requestedPageCount = computeBufferedPageTarget(
+    viewedPage,
+    resultPreload.enabled,
+    resultPreload.pages,
+  );
+
+  useEffect(() => {
+    if (
+      requestedPageCount <= loadedPageCount ||
+      !hasNextPage ||
+      isFetchingNextPage
+    ) {
+      return;
+    }
+
+    void fetchNextPage();
+  }, [
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    loadedPageCount,
+    requestedPageCount,
+  ]);
+
+  const reportViewedPage = useCallback((pageNumber: number) => {
+    const normalizedPage = Math.max(1, Math.floor(pageNumber));
+    setViewedPageState((current) => {
+      if (
+        current.signature === resultSignature &&
+        current.page >= normalizedPage
+      ) {
+        return current;
+      }
+      return {
+        signature: resultSignature,
+        page:
+          current.signature === resultSignature
+            ? Math.max(current.page, normalizedPage)
+            : normalizedPage,
+      };
+    });
+  }, [resultSignature]);
+
+  const requestNextPage = useCallback(() => {
+    if (resultPreload.enabled) {
+      reportViewedPage(Math.max(1, loadedPageCount));
+      return;
+    }
+    void fetchNextPage();
+  }, [fetchNextPage, loadedPageCount, reportViewedPage, resultPreload.enabled]);
 
   const results = useMemo<Thread[]>(() => {
     if (resultPagingMode === 'infinite') {
       return infiniteQueryState.data?.pages.flatMap((pageData) => (pageData?.results || []) as Thread[]) || [];
     }
 
-    return (queryState.data?.results || []) as Thread[];
-  }, [infiniteQueryState.data, queryState.data, resultPagingMode]);
+    return (infiniteQueryState.data?.pages[currentPage - 1]?.results || []) as Thread[];
+  }, [currentPage, infiniteQueryState.data, resultPagingMode]);
+  const pageByThreadId = useMemo(() => {
+    return buildResultPageMap(infiniteQueryState.data?.pages || []);
+  }, [infiniteQueryState.data]);
 
-  const totalResults = Number(
-    resultPagingMode === 'infinite'
-      ? infiniteQueryState.data?.pages[0]?.total || 0
-      : queryState.data?.total || 0,
-  );
+  const totalResults = Number(infiniteQueryState.data?.pages[0]?.total || 0);
+  const isLoadingRequestedPage =
+    resultPagingMode === 'pagination' &&
+    currentPage > loadedPageCount &&
+    (infiniteQueryState.hasNextPage || infiniteQueryState.isFetchingNextPage);
 
   const hasSearchFilters = !!query || hasExplicitFilters;
   const isPreferenceActive = !!discoveryPreferenceContext && applyPreferences;
@@ -193,9 +275,15 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     isPreferenceActive,
     showPreferenceBanner,
     pageSize: PAGE_SIZE,
-    queryState: resultPagingMode === 'infinite' ? infiniteQueryState : queryState,
+    pageByThreadId,
+    queryState: {
+      ...infiniteQueryState,
+      isLoading: infiniteQueryState.isLoading || isLoadingRequestedPage,
+    },
     results,
     resultPagingMode,
+    requestNextPage,
+    reportViewedPage,
     setIgnoreDiscoveryPreferences,
     totalResults,
   };

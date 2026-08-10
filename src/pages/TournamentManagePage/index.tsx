@@ -124,7 +124,7 @@ export function TournamentManagePage() {
             <button
               type="button"
               onClick={() => navigate("/tournaments/mine")}
-              className="mb-5 inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary)"
+              className="mb-5 inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary) lg:hidden"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               返回我的赛事
@@ -232,7 +232,9 @@ export function TournamentManagePage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => removeItemMutation.mutate(String(item.thread_id))}
+                      onClick={() =>
+                        removeItemMutation.mutate(String(item.thread_id))
+                      }
                       className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-(--od-error) transition-colors hover:text-(--od-error)"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -254,7 +256,8 @@ export function TournamentManagePage() {
             <button
               type="button"
               onClick={() => {
-                if (!window.confirm(`确认删除赛事「${tournament.title}」？`)) return;
+                if (!window.confirm(`确认删除赛事「${tournament.title}」？`))
+                  return;
                 deleteMutation.mutate(Number(normalizedBooklistId));
               }}
               className="inline-flex items-center gap-1 rounded-full px-2 py-1.5 text-xs text-(--od-error) transition-colors hover:text-(--od-error)"

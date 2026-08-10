@@ -16,7 +16,7 @@ export interface AISearchReasoningTraceItem {
 export interface AISearchToolTraceItem {
   type: 'tool';
   id: string;
-  tool: 'search_threads' | 'search_tournaments' | 'get_thread_details' | 'get_resource_details' | 'ask_user';
+  tool: 'search_threads' | 'search_tournaments' | 'draw_threads' | 'get_thread_details' | 'get_resource_details' | 'ask_user';
   label: string;
   status: 'running' | 'complete' | 'error';
   parameters: string;
@@ -31,18 +31,25 @@ export interface AISearchUsage {
   total_tokens?: number;
 }
 
+export interface AISearchDrawBatch {
+  configuration: string;
+  threads: Thread[];
+}
+
 export interface AISearchDisplayMessage {
   role: 'user' | 'assistant' | 'tool';
   content: string;
   hidden?: boolean;
   tool_call_id?: string;
   tool_calls?: AISearchToolCall[];
+  reasoning_content?: string;
   createdAt?: number;
   durationMs?: number;
   usage?: AISearchUsage;
   reasoning?: string;
   trace?: AISearchTraceItem[];
   threads?: Thread[];
+  draws?: AISearchDrawBatch[];
   followups?: AISearchFollowup[];
 }
 
@@ -98,6 +105,7 @@ const messageSchema = z.object({
       arguments: z.string().max(20_000),
     }),
   })).max(8).optional(),
+  reasoning_content: z.string().max(100_000).optional(),
   createdAt: z.number().nonnegative().optional(),
   durationMs: z.number().nonnegative().max(86_400_000).optional(),
   usage: z.object({
@@ -114,7 +122,7 @@ const messageSchema = z.object({
     z.object({
       type: z.literal('tool'),
       id: z.string().max(200),
-      tool: z.enum(['search_threads', 'search_tournaments', 'get_thread_details', 'get_resource_details', 'ask_user']),
+      tool: z.enum(['search_threads', 'search_tournaments', 'draw_threads', 'get_thread_details', 'get_resource_details', 'ask_user']),
       label: z.string().max(100),
       status: z.enum(['running', 'complete', 'error']),
       parameters: z.string().max(2_000),
@@ -122,6 +130,10 @@ const messageSchema = z.object({
     }),
   ])).max(32).optional(),
   threads: z.array(threadSchema).max(36).optional(),
+  draws: z.array(z.object({
+    configuration: z.string().max(2_000),
+    threads: z.array(threadSchema).max(10),
+  })).max(2).optional(),
   followups: z.array(z.object({
     direction: z.enum(['broader', 'narrower', 'alternate']),
     text: z.string().min(1).max(80),

@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 
 import type { Thread } from '@/entities/thread/types';
 import type { AISearchTraceItem } from '@/features/ai-search/lib/session';
+import type { AISearchDrawBatch } from '@/features/ai-search/lib/session';
+import { DiscoveryThreadCarousel } from '@/features/discovery/components/DiscoveryThreadCarousel';
 import { AISearchThreadReference } from '@/features/ai-search/components/AISearchThreadReference';
 import { AISearchReasoning } from '@/features/ai-search/components/AISearchReasoning';
 import { AISearchTokenizedMarkdown } from '@/features/ai-search/components/AISearchTokenizedMarkdown';
@@ -14,6 +16,7 @@ export function AISearchResponse({
   reasoning = '',
   trace = [],
   threads,
+  draws = [],
   onPreview,
   channels,
   onTokenSelect,
@@ -23,6 +26,7 @@ export function AISearchResponse({
   reasoning?: string;
   trace?: AISearchTraceItem[];
   threads: Thread[];
+  draws?: AISearchDrawBatch[];
   onPreview: (thread: Thread) => void;
   channels: AISearchMentionChannel[];
   onTokenSelect?: (token: AISearchInlineToken) => void;
@@ -69,6 +73,24 @@ export function AISearchResponse({
           />
         ) : null;
       })}
+      {draws.map((draw, index) => (
+        <section key={`draw-${index}-${draw.threads.map((thread) => thread.thread_id).join('-')}`} className="pt-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-(--od-text-primary)">
+              本次抽卡
+            </p>
+            <p className="text-xs leading-5 text-(--od-text-secondary)">
+              {draw.configuration}
+            </p>
+          </div>
+          <DiscoveryThreadCarousel
+            threads={draw.threads}
+            ariaLabel={`AI 抽卡结果 ${index + 1}，可滚轮或左右滑动`}
+            emptyMessage="这次没有抽到符合配方的帖子。"
+            onOpen={onPreview}
+          />
+        </section>
+      ))}
     </div>
   );
 }

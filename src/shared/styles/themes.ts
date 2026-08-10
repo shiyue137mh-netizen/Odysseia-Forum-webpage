@@ -497,6 +497,42 @@ export const yozakuraNightTheme: Theme = {
   },
 };
 
+export const twitterTheme: Theme = {
+  name: 'Twitter / X',
+  colors: {
+    background: '#000000',
+    backgroundSecondary: '#000000',
+    backgroundTertiary: '#000000',
+    card: '#000000',
+    cardHover: '#000000',
+    textPrimary: '#e8e9ea',
+    textSecondary: '#71767b',
+    textTertiary: '#71767b',
+    textHeading: '#e8e9ea',
+    textLabel: '#1d9bf0',
+    textMeta: '#71767b',
+    textLink: '#1d9bf0',
+    textValue: '#e8e9ea',
+    textEmphasis: '#1d9bf0',
+    accent: '#1d9bf0',
+    accentHover: '#1a8cd8',
+    link: '#1d9bf0',
+    linkHover: '#4aaff5',
+    border: '#2f3336',
+    borderStrong: '#536471',
+    success: '#00ba7c',
+    warning: '#ffd400',
+    error: '#f4212e',
+    info: '#1d9bf0',
+    glassBg: 'rgba(0, 0, 0, 0.72)',
+    glassBorder: 'rgba(232, 233, 234, 0.14)',
+    glassBlur: '16px',
+    surfaceGhost: 'transparent',
+    surfaceGhostHover: 'rgba(232, 233, 234, 0.08)',
+  },
+  typography: discordDarkTheme.typography,
+};
+
 export const dangerPinkRedTheme: Theme = {
   name: 'Danger Pink Red',
   colors: {
@@ -545,6 +581,7 @@ export const themes = {
   everforest: everforestTheme,
   sakuraDay: sakuraDayTheme,
   yozakuraNight: yozakuraNightTheme,
+  twitter: twitterTheme,
   dangerPinkRed: dangerPinkRedTheme,
 } as const;
 

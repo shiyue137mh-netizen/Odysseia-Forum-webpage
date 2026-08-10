@@ -1,4 +1,4 @@
-import { EyeOff, Sparkles } from 'lucide-react';
+import { EyeOff } from 'lucide-react';
 import { useMemo } from 'react';
 
 import type { UserSettings } from '@/shared/lib/settings';
@@ -47,15 +47,12 @@ export function AtmosphereSettingsSection({
   const glassEnabled = settings.glassMode !== 'off';
 
   return (
-    <SettingsPageSection kicker="Backdrop Mood" title="背景与毛玻璃" icon={Sparkles}>
+    <SettingsPageSection title="背景与毛玻璃">
       <div className="space-y-6">
         <div className="od-setting-subsection space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div data-tour="atmosphere-settings">
               <p className="text-[1.1rem] font-semibold tracking-[-0.02em] text-(--od-text-primary)">背景图</p>
-              <p className="mt-2 text-[0.82rem] leading-[1.55] text-(--od-text-secondary)">
-                图片资源和启用状态分开处理。你可以先存一张图，再决定要不要现在打开。
-              </p>
             </div>
             <SettingsToggle
               checked={settings.backgroundImageEnabled}
@@ -71,8 +68,7 @@ export function AtmosphereSettingsSection({
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] lg:items-start">
             <div className="space-y-4">
               <div className="od-setting-panel-soft">
-                <p className="mb-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">Presets</p>
-                <p className="mb-3 text-[0.82rem] leading-[1.55] text-(--od-text-secondary)">先选一张喜欢的底图，再微调透明度和磨砂感。</p>
+                <p className="mb-3 text-[0.72rem] font-semibold text-(--od-text-label)">预设背景</p>
                 <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                   {backgroundPresets.map((preset) => {
                     const isSelected = settings.backgroundImageUrl === preset.previewUrl && settings.backgroundImageEnabled;
@@ -100,7 +96,6 @@ export function AtmosphereSettingsSection({
                           style={{ backgroundImage: `url(${preset.previewUrl})` }}
                         />
                         <span className="text-sm font-medium text-(--od-text-primary)">{preset.label}</span>
-                        <span className="text-[0.72rem] text-(--od-text-tertiary)">{preset.description}</span>
                       </button>
                     );
                   })}
@@ -147,7 +142,7 @@ export function AtmosphereSettingsSection({
                       />
                       <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,color-mix(in_srgb,var(--od-bg)_68%,transparent)_100%)]" />
                       <div className="absolute inset-x-0 bottom-0 p-4">
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-white/70">Preview</p>
+                        <p className="text-[0.72rem] font-semibold text-white/70">预览</p>
                         <p className="mt-1 text-base font-semibold text-white">{settings.backgroundImageEnabled ? '当前背景已启用' : '背景已保存，当前未启用'}</p>
                         <p className="mt-1 text-xs leading-normal text-white/78">透明度 {opacityDraft}% · 磨砂 {blurDraft}px · {currentSourceLabel}</p>
                       </div>
@@ -179,7 +174,7 @@ export function AtmosphereSettingsSection({
               </div>
 
               <div>
-                <p className="mb-2 text-[0.75rem] font-semibold uppercase tracking-[0.18em] text-(--od-text-label)">Glass Strategy</p>
+                <p className="mb-2 text-[0.75rem] font-semibold text-(--od-text-label)">毛玻璃模式</p>
                 <div className="od-options-wrap">
                   {([
                     ['auto', '自动'],

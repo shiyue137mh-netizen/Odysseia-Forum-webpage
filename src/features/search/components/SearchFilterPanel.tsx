@@ -4,6 +4,10 @@ import { Select } from '@/shared/ui/Select';
 import { AuthorModePicker } from '@/features/search/components/AuthorModePicker';
 import type { SearchTagGroup } from '@/features/search/hooks/useSearchAutocomplete';
 import type { TagLogic } from '@/features/search/hooks/useSearchParams';
+import {
+  getNaturalDateRange,
+  type NaturalDatePeriod,
+} from '@/features/search/lib/naturalDateRanges';
 
 interface SearchFilterPanelProps {
   authorTokens: SearchToken[];
@@ -24,31 +28,6 @@ interface SearchFilterPanelProps {
   timeTo: string;
   reactionMin: number | null;
   replyMin: number | null;
-}
-
-function formatLocalDate(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-export function getNaturalDateRange(period: 'today' | 'week' | 'month', now = new Date()) {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-
-  if (period === 'week') {
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-  } else if (period === 'month') {
-    start.setDate(1);
-  }
-
-  const end = new Date(start);
-  if (period === 'today') end.setDate(end.getDate() + 1);
-  if (period === 'week') end.setDate(end.getDate() + 7);
-  if (period === 'month') end.setMonth(end.getMonth() + 1);
-
-  return { from: formatLocalDate(start), to: formatLocalDate(end) };
 }
 
 export function SearchFilterPanel({
@@ -73,10 +52,18 @@ export function SearchFilterPanel({
 }: SearchFilterPanelProps) {
   const hasPreferenceTags = preferenceIncludeTags.length + preferenceExcludeTags.length > 0;
   const dateTokenValue = (from: string, to: string) => from || to ? `${from}..${to}` : null;
-  const selectedPeriod = (['today', 'week', 'month'] as const).find((period) => {
+  const periods: Array<[NaturalDatePeriod, string]> = [
+    ['today', '今天'],
+    ['yesterday', '昨天'],
+    ['week', '本周'],
+    ['lastWeek', '上周'],
+    ['month', '本月'],
+    ['lastMonth', '上月'],
+  ];
+  const selectedPeriod = periods.find(([period]) => {
     const range = getNaturalDateRange(period);
     return range.from === timeFrom && range.to === timeTo;
-  });
+  })?.[0];
   const optionClass = (active: boolean) => `rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
     active
       ? 'border-(--od-accent)/50 text-(--od-accent)'
@@ -101,11 +88,7 @@ export function SearchFilterPanel({
         <div>
           <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-(--od-text-tertiary)">发布时间</p>
           <div className="mb-2 flex flex-wrap gap-2">
-            {([
-              ['today', '今天'],
-              ['week', '本周'],
-              ['month', '本月'],
-            ] as const).map(([period, label]) => (
+            {periods.map(([period, label]) => (
               <button
                 key={period}
                 type="button"
@@ -235,7 +218,7 @@ export function SearchFilterPanel({
               <span>当前还没有保存偏好标签</span>
             )}
           </div>
-          <div className="od-chrome-surface max-h-[260px] space-y-4 overflow-y-auto rounded-2xl p-3">
+          <div className="od-chrome-surface space-y-4 overflow-visible rounded-2xl p-3 sm:max-h-[260px] sm:overflow-y-auto">
             {channelTagGroups.length > 0 ? (
               channelTagGroups.map((group) => (
                 <section key={group.groupId}>

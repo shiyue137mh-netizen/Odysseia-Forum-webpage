@@ -15,9 +15,11 @@ interface ThreadResultsCollectionProps {
   listClassName?: string;
   layoutMode?: LayoutMode;
   animateIn?: boolean;
+  pageByThreadId?: ReadonlyMap<string, number>;
+  onViewedPageChange?: (page: number) => void;
 }
 
-const DEFAULT_GRID_CLASS = 'grid auto-rows-fr grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+const DEFAULT_GRID_CLASS = 'grid auto-rows-fr grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
 const DEFAULT_LIST_CLASS = 'flex flex-col space-y-od-list-gap';
 
 function getMasonryColumnCount(width: number) {
@@ -61,10 +63,12 @@ function ThreadResultsCollectionImpl({
   listClassName = DEFAULT_LIST_CLASS,
   layoutMode: controlledLayoutMode,
   animateIn,
+  pageByThreadId,
+  onViewedPageChange,
 }: ThreadResultsCollectionProps) {
   const fallbackLayoutMode = useLayoutMode();
   const layoutMode = controlledLayoutMode ?? fallbackLayoutMode;
-  const masonryRef = useRef<HTMLDivElement>(null);
+  const collectionRef = useRef<HTMLDivElement>(null);
   const [masonryColumnCount, setMasonryColumnCount] = useState(() =>
     typeof window === 'undefined' ? 5 : getMasonryColumnCount(window.innerWidth),
   );
@@ -73,7 +77,7 @@ function ThreadResultsCollectionImpl({
   const assignmentColumnCountRef = useRef(masonryColumnCount);
 
   useEffect(() => {
-    const element = masonryRef.current;
+    const element = collectionRef.current;
     if (!element || layoutMode !== 'masonry') return;
     const observer = new ResizeObserver(([entry]) => {
       const nextCount = getMasonryColumnCount(entry.contentRect.width);
@@ -84,6 +88,28 @@ function ThreadResultsCollectionImpl({
     observer.observe(element);
     return () => observer.disconnect();
   }, [layoutMode]);
+
+  useEffect(() => {
+    const element = collectionRef.current;
+    if (!element || !pageByThreadId || !onViewedPageChange) return;
+
+    let highestViewedPage = 1;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const page = Number((entry.target as HTMLElement).dataset.resultPage || 1);
+          highestViewedPage = Math.max(highestViewedPage, page);
+        }
+        onViewedPageChange(highestViewedPage);
+      },
+      { threshold: 0.1 },
+    );
+
+    const resultElements = element.querySelectorAll<HTMLElement>('[data-result-page]');
+    resultElements.forEach((resultElement) => observer.observe(resultElement));
+    return () => observer.disconnect();
+  }, [layoutMode, onViewedPageChange, pageByThreadId, threads]);
 
   const masonryColumns = useMemo(() => {
     if (assignmentColumnCountRef.current !== masonryColumnCount) {
@@ -123,7 +149,7 @@ function ThreadResultsCollectionImpl({
 
   if (layoutMode === 'masonry') {
     return (
-      <div ref={masonryRef} className="flex items-start gap-6">
+      <div ref={collectionRef} className="flex items-start gap-6">
         {masonryColumns.map((column, columnIndex) => (
           <div
             key={columnIndex}
@@ -143,7 +169,7 @@ function ThreadResultsCollectionImpl({
                   onAuthorClick={onAuthorClick}
                   onPreview={onPreview}
                   animateIn={animateIn}
-                  hideBottomDivider
+                  resultPage={pageByThreadId?.get(thread.thread_id)}
                   masonry
                 />
               </MasonryItem>
@@ -155,7 +181,7 @@ function ThreadResultsCollectionImpl({
   }
 
   return (
-    <div className={layoutMode === 'list' ? listClassName : gridClassName}>
+    <div ref={collectionRef} className={layoutMode === 'list' ? listClassName : gridClassName}>
       {threads.map((thread, index) =>
         layoutMode === 'list' ? (
           <ThreadListItem
@@ -167,6 +193,7 @@ function ThreadResultsCollectionImpl({
             onAuthorClick={onAuthorClick}
             onPreview={onPreview}
             animateIn={animateIn}
+            resultPage={pageByThreadId?.get(thread.thread_id)}
           />
         ) : (
           <ThreadCard
@@ -178,6 +205,7 @@ function ThreadResultsCollectionImpl({
             onAuthorClick={onAuthorClick}
             onPreview={onPreview}
             animateIn={animateIn}
+            resultPage={pageByThreadId?.get(thread.thread_id)}
           />
         ),
       )}

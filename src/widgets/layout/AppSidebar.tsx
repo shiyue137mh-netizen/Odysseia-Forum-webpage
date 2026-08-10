@@ -139,11 +139,10 @@ export function AppSidebar() {
 
       <div className="od-sidebar-nav scrollbar-invisible flex-1 overflow-y-auto px-3 py-2">
         <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between px-2">
+          <div className="mb-2 px-2">
             <h2 className="text-xs font-semibold uppercase tracking-wider text-(--od-text-tertiary)">
               主导航
             </h2>
-            <ThemeToggle />
           </div>
           <div className="space-y-0.5">
             <Link
@@ -269,6 +268,8 @@ export function AppSidebar() {
               />
               <span className="truncate">关于</span>
             </button>
+
+            <ThemeToggle variant="sidebar" />
 
             {import.meta.env.VITE_API_MOCKING === 'true' && (
               <Link

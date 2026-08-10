@@ -24,6 +24,10 @@ import {
 } from "@/shared/lib/searchHistory";
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
+import {
+  buildYesterdayPopularQuery,
+  YESTERDAY_POPULAR_LABEL,
+} from "@/features/search/lib/searchPresets";
 
 export type SearchSuggestionAction =
   | { type: "append"; value: string }
@@ -131,6 +135,13 @@ export function SearchSuggestions({
         booklistId: number;
         icon: typeof BookOpen;
         itemCount?: number;
+      }
+    | {
+        key: string;
+        type: "preset";
+        display: string;
+        query: string;
+        icon: typeof Flame;
       };
 
   const queryText = tokenizeSearchPayload(currentQuery).text;
@@ -171,6 +182,13 @@ export function SearchSuggestions({
         flatItems.push(...historyItems);
       }
 
+      const presetItem: SuggestionItem = {
+        key: "preset-yesterday-popular",
+        type: "preset",
+        display: YESTERDAY_POPULAR_LABEL,
+        query: buildYesterdayPopularQuery(),
+        icon: Flame,
+      };
       const tagSource = suggestedTags.length > 0 ? suggestedTags : randomTags;
       const popularTags: SuggestionItem[] = tagSource
         .slice(0, 5)
@@ -182,14 +200,12 @@ export function SearchSuggestions({
           icon: Flame,
         }));
 
-      if (popularTags.length > 0) {
-        sectionedGroups.push({
-          title: "猜你想搜",
-          icon: Flame,
-          items: popularTags,
-        });
-        flatItems.push(...popularTags);
-      }
+      sectionedGroups.push({
+        title: "猜你想搜",
+        icon: Flame,
+        items: [presetItem, ...popularTags],
+      });
+      flatItems.push(presetItem, ...popularTags);
     } else {
       const relevantAuthors: SuggestionItem[] = authors
         .slice(0, 5)
@@ -351,6 +367,11 @@ export function SearchSuggestions({
 
     if (item.type === "history") {
       onSelect({ type: "apply_history", item: item.historyItem });
+      return;
+    }
+
+    if (item.type === "preset") {
+      onSelect({ type: "replace_query", value: item.query, submit: true });
       return;
     }
 

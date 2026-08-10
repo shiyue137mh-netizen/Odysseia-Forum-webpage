@@ -1,5 +1,3 @@
-import { SlidersHorizontal } from 'lucide-react';
-
 import { DangerousThemeUnlockButton } from '@/features/easter-eggs/components/DangerousThemeUnlockButton';
 
 import { SettingsPageSection } from './SettingsPageSection';
@@ -10,7 +8,7 @@ type AdvancedSettingsSectionProps = {
 
 export function AdvancedSettingsSection({ onResetSettings }: AdvancedSettingsSectionProps) {
   return (
-    <SettingsPageSection kicker="Safety" title="高级" icon={SlidersHorizontal}>
+    <SettingsPageSection title="高级">
       <div className="space-y-3">
         <DangerousThemeUnlockButton />
         <button

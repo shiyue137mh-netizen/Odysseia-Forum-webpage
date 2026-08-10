@@ -26,6 +26,8 @@ interface ThreadListItemProps {
   booklistComment?: string | null;
   index?: number;
   animateIn?: boolean;
+  resultPage?: number;
+  hideBottomDivider?: boolean;
 }
 
 function ThreadListItemImpl({
@@ -37,6 +39,8 @@ function ThreadListItemImpl({
   booklistComment,
   index = 0,
   animateIn = true,
+  resultPage,
+  hideBottomDivider = false,
 }: ThreadListItemProps) {
   const {
     fontSizes,
@@ -67,11 +71,14 @@ function ThreadListItemImpl({
 
   return (
     <article
+      data-result-page={resultPage}
       className={`group relative w-full cursor-pointer py-3 text-(--od-text-primary) [content-visibility:auto] [contain-intrinsic-size:auto_200px] transition-colors duration-200${entranceClass}`}
       style={animateIn ? { animationDelay } : undefined}
       onClick={() => onPreview?.(thread)}
     >
-      <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-divider-strong)_60%,transparent),transparent)]" />
+      {!hideBottomDivider && (
+        <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-divider-strong)_60%,transparent),transparent)]" />
+      )}
 
       <div className="flex items-start gap-3 md:gap-5">
         <div className="w-16 shrink-0 md:w-54 lg:w-58">

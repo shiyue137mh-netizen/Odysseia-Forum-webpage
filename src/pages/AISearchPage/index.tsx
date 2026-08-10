@@ -20,6 +20,7 @@ import {
 } from '@/features/ai-search/lib/session';
 import { formatAISearchDuration, formatAISearchTimestamp } from '@/features/ai-search/lib/time';
 import { useUserPreferences } from '@/features/preferences/hooks/useUserPreferences';
+import { getDiscoveryPreferenceContext } from '@/features/preferences/lib/discoveryPreferences';
 import { usePreviewThread } from '@/features/search/hooks/usePreviewThread';
 import { useChannels } from '@/shared/hooks/useChannels';
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
@@ -85,6 +86,7 @@ export function AISearchPage() {
   const [editDraft, setEditDraft] = useState('');
   const [settingsTab, setSettingsTab] = useState<'api' | 'prompt'>('api');
   const [followupsVisible, setFollowupsVisible] = useState(false);
+  const [showConversationMascot, setShowConversationMascot] = useState(false);
   const [customQuestionAnswer, setCustomQuestionAnswer] = useState('');
   const settingsDialogRef = useRef<HTMLDialogElement>(null);
   const conversationScrollRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,14 @@ export function AISearchPage() {
     () => buildAISearchContext({ user, preferences, channels: channelsQuery.data?.apiData }),
     [channelsQuery.data?.apiData, preferences, user],
   );
+  const drawPreferences = useMemo(() => {
+    const preference = getDiscoveryPreferenceContext(preferences);
+    return {
+      channelIds: preference?.preferredChannelIds || [],
+      includeTags: preference?.includeTags || [],
+      excludeTags: preference?.excludeTags || [],
+    };
+  }, [preferences]);
   const mentionChannels = useMemo<AISearchMentionChannel[]>(() => {
     const apiChannels = new Map(
       (channelsQuery.data?.apiData || []).map((channel) => [channel.channel_id, channel]),
@@ -187,6 +197,12 @@ export function AISearchPage() {
     return () => window.clearInterval(timer);
   }, [liveResponse]);
 
+  useEffect(() => {
+    if (isRunning || messages.length === 0 || !showConversationMascot) return;
+    const timer = window.setTimeout(() => setShowConversationMascot(false), 3_000);
+    return () => window.clearTimeout(timer);
+  }, [isRunning, messages.length, showConversationMascot]);
+
   const mascotEmotion: Record<typeof status, string> = {
     idle: 'hi',
     thinking: 'write',
@@ -196,6 +212,7 @@ export function AISearchPage() {
     error: 'error',
   };
   const effectiveStatus = isRunning && status === 'idle' ? 'thinking' : status;
+  const showMascot = messages.length === 0 || isRunning || showConversationMascot;
   const statusText: Partial<Record<typeof status, string>> = {
     thinking: '正在理解你的需求……',
     searching: '正在调整条件搜索候选作品……',
@@ -269,9 +286,10 @@ export function AISearchPage() {
     const startedAt = Date.now();
     const controller = new AbortController();
     if (!registerAISearchController(conversationId, controller)) return;
+    setShowConversationMascot(true);
     setConversationRunning(conversationId, true);
     setStatus('thinking');
-    const initialProgress = { conversationId, startedAt, content: '', trace: [], threads: [] };
+    const initialProgress = { conversationId, startedAt, content: '', trace: [], threads: [], draws: [] };
     liveResponsesRef.current.set(conversationId, initialProgress);
     setLiveResponse(initialProgress);
     try {
@@ -284,6 +302,7 @@ export function AISearchPage() {
         context,
         userTaste: settings.userTaste,
         userMessage,
+        drawPreferences,
         history,
         onStatus: (nextStatus) => {
           if (useAISearchConversationStore.getState().activeConversationId === conversationId) {
@@ -310,6 +329,7 @@ export function AISearchPage() {
             reasoning: result.reasoning,
             trace: result.trace,
             threads: result.threads,
+            draws: result.draws,
             durationMs: Date.now() - startedAt,
             usage: result.usage,
             followups: result.followups,
@@ -336,6 +356,7 @@ export function AISearchPage() {
             .join('\n\n'),
           trace: interruptedTrace,
           threads: progress?.threads || [],
+          draws: progress?.draws || [],
           durationMs: Date.now() - startedAt,
         });
         setStatus('idle');
@@ -505,45 +526,52 @@ export function AISearchPage() {
       </header>
 
       <section className="relative mx-auto min-h-0 w-full max-w-4xl flex-1 overflow-visible py-4 sm:py-6">
-        <motion.div
-          layout
-          className={`pointer-events-none z-10 flex flex-col items-center text-center ${messages.length === 0 ? 'h-full justify-center pb-6' : 'absolute inset-x-0 -top-12'}`}
-          transition={{ type: 'spring', stiffness: 180, damping: 24 }}
-        >
-          <motion.img
-            layout
-            src={MASCOT_IMAGES[mascotEmotion[effectiveStatus]] || MASCOT_IMAGES.hi}
-            alt="类脑娘正面对话立绘"
-            className={`${messages.length === 0 ? 'h-52 w-52 sm:h-64 sm:w-64 lg:h-72 lg:w-72' : 'h-24 w-24 sm:h-30 sm:w-30'} object-contain drop-shadow-xl`}
-            draggable={false}
-          />
-          <div className={`${messages.length === 0 ? 'mt-5' : 'mt-1'} max-w-xl space-y-2`}>
-            <h1 className={`${messages.length === 0 ? 'text-2xl sm:text-3xl' : 'text-lg sm:text-xl'} ${isRunning ? 'animate-ai-text-shine bg-linear-to-r from-(--od-text-tertiary) via-(--od-text-heading) to-(--od-text-tertiary) bg-size-[200%_100%] bg-clip-text text-transparent' : 'text-(--od-text-heading)'} font-semibold tracking-tight`}>
-              {messages.length === 0 ? '想找些什么？' : statusText[effectiveStatus] || '我把结果整理好啦'}
-            </h1>
-            {messages.length === 0 && (
-              <p className="text-sm leading-7 text-(--od-text-secondary) sm:text-base">
-                告诉我你想看的作品，我会尝试调整关键词、筛选候选内容，再把值得打开的结果整理给你。
-              </p>
-            )}
-          </div>
-        </motion.div>
+        <AnimatePresence initial={false}>
+          {showMascot && (
+            <motion.div
+              layout
+              initial={messages.length === 0 ? false : { opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              className={`pointer-events-none z-10 flex flex-col items-center text-center ${messages.length === 0 ? 'h-full justify-center pb-6' : 'absolute inset-x-0 top-0 sm:-top-12'}`}
+              transition={{ type: 'spring', stiffness: 180, damping: 24 }}
+            >
+              <motion.img
+                layout
+                src={MASCOT_IMAGES[mascotEmotion[effectiveStatus]] || MASCOT_IMAGES.hi}
+                alt="类脑娘正面对话立绘"
+                className={`${messages.length === 0 ? 'h-52 w-52 sm:h-64 sm:w-64 lg:h-72 lg:w-72' : 'h-18 w-18 sm:h-30 sm:w-30'} object-contain drop-shadow-xl`}
+                draggable={false}
+              />
+              <div className={`${messages.length === 0 ? 'mt-5' : 'mt-1'} max-w-xl space-y-2`}>
+                <h1 className={`${messages.length === 0 ? 'text-2xl sm:text-3xl' : 'text-base sm:text-xl'} ${isRunning ? 'animate-ai-text-shine bg-linear-to-r from-(--od-text-tertiary) via-(--od-text-heading) to-(--od-text-tertiary) bg-size-[200%_100%] bg-clip-text text-transparent' : 'text-(--od-text-heading)'} font-semibold tracking-tight`}>
+                  {messages.length === 0 ? '想找些什么？' : statusText[effectiveStatus] || '我把结果整理好啦'}
+                </h1>
+                {messages.length === 0 && (
+                  <p className="text-sm leading-7 text-(--od-text-secondary) sm:text-base">
+                    告诉我你想看的作品，我会尝试调整关键词、筛选候选内容，再把值得打开的结果整理给你。
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {messages.length > 0 && (
           <div
             ref={conversationScrollRef}
             className="scrollbar-invisible absolute inset-0 overflow-y-auto overscroll-contain"
-            style={{
-              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, transparent 6.5rem, black 10rem, black 100%)',
-              maskImage: 'linear-gradient(to bottom, transparent 0, transparent 6.5rem, black 10rem, black 100%)',
-            }}
+            style={showMascot ? {
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0, transparent 4.5rem, black 8rem, black 100%)',
+              maskImage: 'linear-gradient(to bottom, transparent 0, transparent 4.5rem, black 8rem, black 100%)',
+            } : undefined}
           >
-            <div className="mx-auto w-full max-w-3xl space-y-10 pb-8 pt-40 text-left">
+            <div className={`mx-auto w-full max-w-3xl space-y-10 pb-8 text-left transition-[padding] duration-300 ${showMascot ? 'pt-32 sm:pt-40' : 'pt-4'}`}>
               {messages.map((message, index) => (
                 message.hidden || message.role === 'tool' ? null : (
                 <div
                   key={`${message.role}-${index}`}
-                  className={`group flex flex-col space-y-2 ${message.role === 'user' ? 'ml-auto max-w-[85%] items-end text-right sm:max-w-[70%]' : 'items-start'}`}
+                  className={`${message.role === 'user' ? 'group ml-auto max-w-[85%] items-end text-right sm:max-w-[70%]' : 'items-start'} flex flex-col space-y-2`}
                 >
                   <div className={`flex items-center gap-1 ${message.role === 'user' ? 'justify-end' : ''}`}>
                     {message.role === 'user' &&
@@ -619,6 +647,7 @@ export function AISearchPage() {
                         reasoning={message.reasoning}
                         trace={message.trace}
                         threads={message.threads || []}
+                        draws={message.draws || []}
                         onPreview={openPreview}
                         channels={mentionChannels}
                         onTokenSelect={handleResponseTokenSelect}
@@ -668,6 +697,7 @@ export function AISearchPage() {
                     content={liveResponse.content}
                     trace={liveResponse.trace}
                     threads={liveResponse.threads}
+                    draws={liveResponse.draws}
                     onPreview={openPreview}
                     channels={mentionChannels}
                     onTokenSelect={handleResponseTokenSelect}

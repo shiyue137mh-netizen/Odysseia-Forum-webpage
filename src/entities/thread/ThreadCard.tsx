@@ -12,10 +12,7 @@ import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentity
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
 import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
-import {
-  useCardSizeSetting,
-  useImageModeSetting,
-} from "@/shared/hooks/useSettings";
+import { useImageModeSetting } from "@/shared/hooks/useSettings";
 import { DiscordMarkdownText } from "@/shared/ui/DiscordMarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { LazyImage } from "@/shared/ui/LazyImage";
@@ -28,9 +25,9 @@ interface ThreadCardProps {
   onPreview?: (thread: Thread) => void;
   booklistComment?: string | null;
   index?: number;
-  hideBottomDivider?: boolean;
   masonry?: boolean;
   animateIn?: boolean;
+  resultPage?: number;
 }
 
 const thumbnailAspectRatioCache = new Map<string, number>();
@@ -43,9 +40,9 @@ function ThreadCardImpl({
   onPreview,
   booklistComment,
   index = 0,
-  hideBottomDivider = false,
   masonry = false,
   animateIn = true,
+  resultPage,
 }: ThreadCardProps) {
   const ariaLabel = `帖子：${thread.title}。作者：${thread.author?.display_name || thread.author?.name || "未知"}。${thread.reply_count}条回复，${thread.reaction_count}个点赞。标签：${thread.tags.join(", ")}`;
 
@@ -66,8 +63,12 @@ function ThreadCardImpl({
     hasExcerpt,
     animationDelay,
   } = useThreadCardModel(thread, index);
-  const cardSize = useCardSizeSetting();
   const imageMode = useImageModeSetting();
+  const mobileTitleClass = {
+    small: "text-xs sm:text-sm",
+    medium: "text-sm sm:text-lg",
+    large: "text-lg sm:text-2xl",
+  }[fontSize];
 
   // 与 ThreadListItem 保持一致：设置里关掉图片后，网格视图同样不应加载缩略图。
   const initialThumbnail = useMemo(
@@ -118,12 +119,7 @@ function ThreadCardImpl({
     };
   }, [thread.title, fontSize, searchQuery]);
 
-  const mediaAspectClass =
-    cardSize === "compact"
-      ? "aspect-3/4"
-      : cardSize === "large"
-        ? "aspect-5/7"
-        : "aspect-3/4";
+  const mediaAspectClass = "aspect-3/4";
 
   // 缓存命中直出的页面传 animateIn=false：内容用户已看过，不再重播浮现动画。
   const entranceClass = animateIn
@@ -134,11 +130,12 @@ function ThreadCardImpl({
     <>
       <article
         ref={articleRef}
+        data-result-page={resultPage}
         role="button"
         aria-label={ariaLabel}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={`group flex w-full cursor-pointer flex-col rounded-[1.45rem] [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
+        className={`group flex w-full cursor-pointer flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
           animationDelay: animateIn ? animationDelay : undefined,
           WebkitTapHighlightColor: "transparent",
@@ -187,15 +184,15 @@ function ThreadCardImpl({
                   />
                   <ThreadTournamentBadges thread={thread} variant="icon" />
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-(--od-text-tertiary)">
+                <div className="mt-0.5 flex h-4 min-w-0 flex-nowrap items-center gap-x-2 overflow-hidden text-[10px] text-(--od-text-tertiary)">
                   <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
                     <Calendar className="h-3 w-3 shrink-0" />
                     <span>{createdTime}</span>
                   </span>
                   {lastActiveTime && (
-                    <span className="inline-flex min-w-0 items-center gap-1">
+                    <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap" title={`活跃 ${lastActiveTime}`}>
                       <Clock3 className="h-3 w-3 shrink-0" />
-                      <span>活跃 {lastActiveTime}</span>
+                      <span className="truncate">活跃 {lastActiveTime}</span>
                     </span>
                   )}
                 </div>
@@ -211,7 +208,7 @@ function ThreadCardImpl({
 
             <div className="overflow-hidden">
               <h3
-                className={`whitespace-nowrap ${fontSizes.title} text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
+                className={`whitespace-nowrap ${mobileTitleClass} text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
               >
                 <span
                   ref={titleViewportRef}
@@ -329,9 +326,6 @@ function ThreadCardImpl({
 
             <ThreadStatsRow thread={thread} variant="card" />
 
-            {!hideBottomDivider && (
-              <div className="h-px w-full bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-border-strong)_36%,transparent),transparent)]" />
-            )}
           </div>
         </div>
       </article>

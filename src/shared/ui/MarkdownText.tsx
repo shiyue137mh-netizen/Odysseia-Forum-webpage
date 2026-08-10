@@ -7,6 +7,7 @@ interface MarkdownTextProps {
   highlight?: string;
   className?: string;
   inline?: boolean;
+  enableTables?: boolean;
 }
 
 interface PendingExternalLink {
@@ -56,7 +57,52 @@ function buildSafeAnchor(label: string, rawUrl: string): string {
  * - > 引用
  * - 换行 => <br/>
  */
-function parseMarkdown(text: string): string {
+function splitTableRow(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim());
+}
+
+function extractMarkdownTables(html: string): { html: string; tables: string[] } {
+  const lines = html.split('\n');
+  const tables: string[] = [];
+  const output: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = splitTableRow(lines[index]);
+    const divider = index + 1 < lines.length ? splitTableRow(lines[index + 1]) : [];
+    const isTable = header.length > 1 && divider.length === header.length &&
+      divider.every((cell) => /^:?-{3,}:?$/.test(cell));
+
+    if (!isTable) {
+      output.push(lines[index]);
+      continue;
+    }
+
+    const rows: string[][] = [];
+    index += 2;
+    while (index < lines.length) {
+      const row = splitTableRow(lines[index]);
+      if (!lines[index].includes('|') || row.length !== header.length) break;
+      rows.push(row);
+      index += 1;
+    }
+    index -= 1;
+
+    const token = `ODMARKDOWNTABLE${tables.length}TOKEN`;
+    tables.push(
+      `<div class="markdown-table-scroll"><table><thead><tr>${header.map((cell) => `<th>${cell}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`,
+    );
+    output.push(token);
+  }
+
+  return { html: output.join('\n'), tables };
+}
+
+function parseMarkdown(text: string, enableTables = false): string {
   if (!text) return '';
 
   const codeBlocks: string[] = [];
@@ -95,7 +141,16 @@ function parseMarkdown(text: string): string {
   });
 
   html = html.replace(/^> (.*)$/gim, '<blockquote class="discord-quote">$1</blockquote>');
+
+  const extractedTables = enableTables
+    ? extractMarkdownTables(html)
+    : { html, tables: [] as string[] };
+  html = extractedTables.html;
   html = html.replace(/\n/g, '<br />');
+
+  for (const [index, table] of extractedTables.tables.entries()) {
+    html = html.replace(new RegExp(escapeRegExp(`ODMARKDOWNTABLE${index}TOKEN`), 'g'), table);
+  }
 
   for (const [index, block] of codeBlocks.entries()) {
     html = html.replace(new RegExp(escapeRegExp(`ODCODEBLOCK${index}TOKEN`), 'g'), block);
@@ -137,11 +192,18 @@ function highlightHtmlText(html: string, highlight: string): string {
   return template.innerHTML;
 }
 
-export function MarkdownText({ text, highlight = '', className = '', inline = false }: MarkdownTextProps) {
+export function MarkdownText({
+  text,
+  highlight = '',
+  className = '',
+  inline = false,
+  enableTables = false,
+}: MarkdownTextProps) {
   const html = useMemo(
-    () => highlightHtmlText(parseMarkdown(text), highlight),
-    [highlight, text],
+    () => highlightHtmlText(parseMarkdown(text, enableTables), highlight),
+    [enableTables, highlight, text],
   );
+  const rendersTable = enableTables && html.includes('markdown-table-scroll');
   const [pendingExternalLink, setPendingExternalLink] = useState<PendingExternalLink | null>(null);
 
   const handleClickCapture = (event: React.MouseEvent<HTMLElement>) => {
@@ -184,7 +246,7 @@ export function MarkdownText({ text, highlight = '', className = '', inline = fa
   return (
     <>
       <div
-        className={`od-md min-w-0 max-w-full text-xs leading-relaxed text-(--od-text-secondary) [overflow-wrap:anywhere] [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto sm:text-sm ${inline ? 'inline' : ''} ${className}`}
+        className={`od-md min-w-0 max-w-full text-xs leading-relaxed text-(--od-text-secondary) [overflow-wrap:anywhere] [&_code]:break-all [&_pre]:max-w-full [&_pre]:overflow-x-auto sm:text-sm ${inline && !rendersTable ? 'inline' : ''} ${className}`}
         onClickCapture={handleClickCapture}
         dangerouslySetInnerHTML={{ __html: html }}
       />

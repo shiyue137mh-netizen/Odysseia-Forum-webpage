@@ -73,6 +73,45 @@ describe('AI 搜索会话历史', () => {
     expect(loadAISearchConversationState().conversations[0]?.messages[0]?.followups).toHaveLength(3);
   });
 
+  it('恢复工具续轮的原始思考内容与抽卡轨道', () => {
+    const thread = {
+      thread_id: '12345678901234567',
+      channel_id: '22345678901234567',
+      title: '随机作品',
+      created_at: '2026-08-11T00:00:00Z',
+      reaction_count: 1,
+      reply_count: 2,
+      thumbnail_urls: [],
+      tags: [],
+    };
+    window.localStorage.setItem(AI_SEARCH_CONVERSATIONS_KEY, JSON.stringify({
+      activeConversationId: 'conversation-1',
+      unreadConversationIds: [],
+      conversations: [{
+        id: 'conversation-1',
+        title: '抽一张卡',
+        createdAt: 1,
+        updatedAt: 2,
+        messages: [{
+          role: 'assistant',
+          content: '',
+          hidden: true,
+          reasoning_content: '先按偏好卡池抽取',
+          tool_calls: [{
+            id: 'draw-1',
+            type: 'function',
+            function: { name: 'draw_threads', arguments: '{"count":1}' },
+          }],
+          draws: [{ configuration: '1 抽 · 偏好卡池', threads: [thread] }],
+        }],
+      }],
+    }));
+
+    const message = loadAISearchConversationState().conversations[0]?.messages[0];
+    expect(message?.reasoning_content).toBe('先按偏好卡池抽取');
+    expect(message?.draws?.[0]?.threads[0]?.thread_id).toBe(thread.thread_id);
+  });
+
   it('允许跨页面通过会话 ID 终止运行中的请求', () => {
     const controller = new AbortController();
     expect(registerAISearchController('conversation-1', controller)).toBe(true);

@@ -1,24 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import { withViewTransition } from '@/shared/lib/viewTransition';
+import { withViewTransition } from "@/shared/lib/viewTransition";
 
-import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
-import { APP_VERSION } from '@/shared/config/appInfo';
-import { parallaxScenes } from '@/shared/config/parallaxScenes';
-import { useDeviceOrientationParallax } from '@/shared/hooks/useDeviceOrientationParallax';
-import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
+import forumIcon from "@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png";
+import { APP_VERSION } from "@/shared/config/appInfo";
+import { parallaxScenes } from "@/shared/config/parallaxScenes";
+import { useDeviceOrientationParallax } from "@/shared/hooks/useDeviceOrientationParallax";
+import { WordLogoStatic } from "@/shared/ui/loaders/WordLogoStatic";
 
-const GITHUB_REPO_URL = 'https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage';
-const BACKEND_REPO_URL = 'https://github.com/starowo/Odysseia-Forum';
+const GITHUB_REPO_URL =
+  "https://github.com/shiyue137mh-netizen/Odysseia-Forum-webpage";
+const BACKEND_REPO_URL = "https://github.com/starowo/Odysseia-Forum";
 const ISSUES_URL = `${GITHUB_REPO_URL}/issues`;
 const CONTRIBUTORS_URL = `${GITHUB_REPO_URL}/graphs/contributors`;
 const FRONTEND_CONTRIBUTORS_API =
-  'https://api.github.com/repos/shiyue137mh-netizen/Odysseia-Forum-webpage/contributors?per_page=100';
+  "https://api.github.com/repos/shiyue137mh-netizen/Odysseia-Forum-webpage/contributors?per_page=100";
 const BACKEND_CONTRIBUTORS_API =
-  'https://api.github.com/repos/starowo/Odysseia-Forum/contributors?per_page=100';
-const WIKI_URL = 'https://wiki.xn--35zx7g.org/';
+  "https://api.github.com/repos/starowo/Odysseia-Forum/contributors?per_page=100";
+const WIKI_URL = "https://wiki.xn--35zx7g.org/";
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -39,8 +40,26 @@ function GitHubIcon({ className }: { className?: string }) {
 
 function BugIcon({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="m8 2 1.88 1.88" /><path d="M14.12 3.88 16 2" /><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" /><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" /><path d="M12 20v-9" /><path d="M6.53 9C4.6 8.8 3 7.1 3 5" /><path d="M6 13H2" /><path d="M3 21c0-2.1 1.7-3.9 3.8-4" /><path d="M20.97 5c0 2.1-1.6 3.8-3.53 4" /><path d="M18 13h4" /><path d="M21 21c0-2.1-1.8-3.8-3.8-4" />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m8 2 1.88 1.88" />
+      <path d="M14.12 3.88 16 2" />
+      <path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1" />
+      <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" />
+      <path d="M12 20v-9" />
+      <path d="M6.53 9C4.6 8.8 3 7.1 3 5" />
+      <path d="M6 13H2" />
+      <path d="M3 21c0-2.1 1.7-3.9 3.8-4" />
+      <path d="M20.97 5c0 2.1-1.6 3.8-3.53 4" />
+      <path d="M18 13h4" />
+      <path d="M21 21c0-2.1-1.8-3.8-3.8-4" />
     </svg>
   );
 }
@@ -56,7 +75,9 @@ interface GithubContributor {
 
 export function AboutPage() {
   const navigate = useNavigate();
-  const [scene] = useState(() => parallaxScenes[Math.floor(Math.random() * parallaxScenes.length)]!);
+  const [scene] = useState(
+    () => parallaxScenes[Math.floor(Math.random() * parallaxScenes.length)]!,
+  );
   const hasSpawnedRef = useRef(false);
   const backgroundLayerRef = useRef<HTMLImageElement>(null);
   const foregroundLayerRef = useRef<HTMLImageElement>(null);
@@ -68,7 +89,7 @@ export function AboutPage() {
   useDeviceOrientationParallax(parallaxTargetRef);
 
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let frameId = 0;
     let currentX = 0;
@@ -93,7 +114,7 @@ export function AboutPage() {
   }, []);
 
   const handleParallaxMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'mouse') return;
+    if (event.pointerType !== "mouse") return;
     parallaxTargetRef.current = {
       x: (event.clientX / window.innerWidth) * 2 - 1,
       y: (event.clientY / window.innerHeight) * 2 - 1,
@@ -111,17 +132,17 @@ export function AboutPage() {
     // 模拟眨眼效果：闭-睁-闭-睁
     const sequence = async () => {
       setIsSharpening(true); // 先进入模糊
-      setIsWakingUp(true);   // 闭眼
+      setIsWakingUp(true); // 闭眼
 
-      await new Promise(r => setTimeout(r, 600));
-      setIsWakingUp(false);  // 第一次睁眼
-      await new Promise(r => setTimeout(r, 300));
-      setIsWakingUp(true);   // 再次闭眼
-      await new Promise(r => setTimeout(r, 500));
-      setIsWakingUp(false);  // 最终睁眼
+      await new Promise((r) => setTimeout(r, 600));
+      setIsWakingUp(false); // 第一次睁眼
+      await new Promise((r) => setTimeout(r, 300));
+      setIsWakingUp(true); // 再次闭眼
+      await new Promise((r) => setTimeout(r, 500));
+      setIsWakingUp(false); // 最终睁眼
 
       // 睁眼后逐渐变清晰
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise((r) => setTimeout(r, 400));
       setIsSharpening(false);
     };
 
@@ -133,15 +154,15 @@ export function AboutPage() {
   const handleSpawnNeko = () => {
     if (hasSpawnedRef.current) return;
 
-    if (document.getElementById('oneko')) {
+    if (document.getElementById("oneko")) {
       hasSpawnedRef.current = true;
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = '/oneko/oneko.js';
+    const script = document.createElement("script");
+    script.src = "/oneko/oneko.js";
     script.async = true;
-    script.dataset.cat = '/oneko/oneko.gif';
+    script.dataset.cat = "/oneko/oneko.gif";
     document.body.appendChild(script);
     hasSpawnedRef.current = true;
   };
@@ -154,11 +175,11 @@ export function AboutPage() {
       if (window.history.length > 1) {
         navigate(-1);
       } else {
-        navigate('/', { replace: true });
+        navigate("/", { replace: true });
       }
     };
 
-    withViewTransition(goBack, 'wipe-down');
+    withViewTransition(goBack, "wipe-down");
   };
 
   useEffect(() => {
@@ -167,22 +188,24 @@ export function AboutPage() {
     const loadContributors = async () => {
       try {
         const fetchRepo = async (url: string) => {
-          const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
+          const res = await fetch(url, {
+            headers: { Accept: "application/vnd.github+json" },
+          });
           if (!res.ok) return [];
           return (await res.json()) as GithubContributor[];
         };
 
         const [frontendData, backendData] = await Promise.all([
           fetchRepo(FRONTEND_CONTRIBUTORS_API),
-          fetchRepo(BACKEND_CONTRIBUTORS_API)
+          fetchRepo(BACKEND_CONTRIBUTORS_API),
         ]);
 
         if (!isActive) return;
 
         // 合并并去重
         const merged = new Map<number, GithubContributor>();
-        [...frontendData, ...backendData].forEach(c => {
-          if (c.type === 'Bot' || c.login.toLowerCase().includes('bot')) return;
+        [...frontendData, ...backendData].forEach((c) => {
+          if (c.type === "Bot" || c.login.toLowerCase().includes("bot")) return;
           if (merged.has(c.id)) {
             const existing = merged.get(c.id)!;
             existing.contributions += c.contributions;
@@ -191,12 +214,17 @@ export function AboutPage() {
           }
         });
 
-        const sorted = Array.from(merged.values()).sort((a, b) => b.contributions - a.contributions);
+        const sorted = Array.from(merged.values()).sort(
+          (a, b) => b.contributions - a.contributions,
+        );
 
-        if (sorted.length === 0 && (frontendData.length > 0 || backendData.length > 0)) {
-           // 如果合并后为空但原始数据有，说明可能是 API 限制或其他问题，但不标记错误
+        if (
+          sorted.length === 0 &&
+          (frontendData.length > 0 || backendData.length > 0)
+        ) {
+          // 如果合并后为空但原始数据有，说明可能是 API 限制或其他问题，但不标记错误
         } else if (sorted.length === 0) {
-           throw new Error('No contributors found');
+          throw new Error("No contributors found");
         }
 
         setContributors(sorted);
@@ -215,25 +243,23 @@ export function AboutPage() {
   }, []);
 
   return (
-    <div
-      className={`relative overflow-hidden ${isUiHidden ? 'h-screen' : 'min-h-screen'}`}
-    >
+    <div className="relative h-dvh overflow-hidden">
       {/* 苏醒遮罩：上眼睑 */}
       <div
         className={`fixed inset-x-0 top-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-1000 ease-in-out ${
-          isWakingUp ? 'translate-y-0' : '-translate-y-full'
+          isWakingUp ? "translate-y-0" : "-translate-y-full"
         }`}
       />
       {/* 苏醒遮罩：下眼睑 */}
       <div
         className={`fixed inset-x-0 bottom-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-1000 ease-in-out ${
-          isWakingUp ? 'translate-y-0' : 'translate-y-full'
+          isWakingUp ? "translate-y-0" : "translate-y-full"
         }`}
       />
 
       <div
         className={`absolute inset-0 cursor-crosshair transition-[filter] duration-[3500ms] ease-out ${
-          isSharpening ? 'blur-xl' : 'blur-0'
+          isSharpening ? "blur-xl" : "blur-0"
         }`}
         onPointerMove={handleParallaxMove}
         onPointerLeave={() => {
@@ -248,16 +274,22 @@ export function AboutPage() {
           src={scene.background}
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-          style={{ transform: 'scale(1.08)', willChange: 'transform' }}
+          style={{ transform: "scale(1.08)", willChange: "transform" }}
         />
         <img
           ref={foregroundLayerRef}
           src={scene.foreground}
           alt=""
           className={`pointer-events-none absolute inset-0 h-full w-full ${
-            scene.foregroundFit === 'contain' ? 'object-contain object-right-bottom' : 'object-cover object-top'
+            scene.foregroundFit === "contain"
+              ? "object-contain object-right-bottom"
+              : "object-cover object-top"
           }`}
-          style={{ transform: 'translate3d(40px, 50px, 0) scale(1.00)', transformOrigin: 'right bottom', willChange: 'transform' }}
+          style={{
+            transform: "translate3d(40px, 50px, 0) scale(1.00)",
+            transformOrigin: "right bottom",
+            willChange: "transform",
+          }}
         />
       </div>
       <div className="pointer-events-none absolute inset-0 bg-black/14" />
@@ -269,7 +301,11 @@ export function AboutPage() {
         className="absolute bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/80 backdrop-blur-md transition-all hover:bg-black/60 hover:text-white"
         title={isUiHidden ? "显示界面" : "隐藏界面看背景"}
       >
-        {isUiHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+        {isUiHidden ? (
+          <EyeOff className="h-5 w-5" />
+        ) : (
+          <Eye className="h-5 w-5" />
+        )}
       </button>
 
       {isUiHidden && (
@@ -281,13 +317,15 @@ export function AboutPage() {
       )}
 
       <div
-        className={`relative z-10 flex min-h-screen items-center justify-center px-4 py-8 md:px-8 transition-all duration-700 ${
-          isUiHidden || isSharpening ? 'pointer-events-none translate-y-8 opacity-0 blur-sm' : 'translate-y-0 opacity-100 blur-0'
+        className={`relative z-10 flex h-full min-h-0 items-center justify-center px-4 py-8 md:px-8 transition-all duration-700 ${
+          isUiHidden || isSharpening
+            ? "pointer-events-none translate-y-8 opacity-0 blur-sm"
+            : "translate-y-0 opacity-100 blur-0"
         }`}
       >
         <div className="mx-auto w-full max-w-3xl">
           <div className="w-full">
-            <div className="rounded-2xl border border-(--od-border-strong)/60 bg-[color-mix(in_oklab,var(--od-bg-secondary)_58%,transparent)] p-6 shadow-2xl backdrop-blur-lg md:p-7">
+            <div className="scrollbar-invisible max-h-[calc(100dvh-4rem)] overflow-y-auto rounded-2xl border border-(--od-border-strong)/60 bg-[color-mix(in_oklab,var(--od-bg-secondary)_58%,transparent)] p-6 shadow-2xl backdrop-blur-lg md:p-7">
               <div className="mb-5 flex items-center justify-center md:justify-center">
                 <button
                   type="button"
@@ -313,7 +351,9 @@ export function AboutPage() {
               </div>
 
               <div className="mb-5 flex flex-col items-center justify-center gap-2">
-                <span className="text-2xl font-bold tracking-[0.2em] text-(--od-text-primary)">类脑</span>
+                <span className="text-2xl font-bold tracking-[0.2em] text-(--od-text-primary)">
+                  类脑
+                </span>
                 <WordLogoStatic className="h-4.5 text-(--od-text-primary)" />
               </div>
 
@@ -371,7 +411,9 @@ export function AboutPage() {
                 <p className="text-[13px] text-(--od-text-secondary)">
                   Web v{APP_VERSION} · Backend by Starowo
                 </p>
-                <p className="mt-1 text-xs text-(--od-text-tertiary)">致力于人工智能知识与技术的无尽探求</p>
+                <p className="mt-1 text-xs text-(--od-text-tertiary)">
+                  致力于人工智能知识与技术的无尽探求
+                </p>
               </div>
 
               <div className="mt-8 border-t border-(--od-border-strong)/18 pt-7 text-center">
@@ -423,7 +465,10 @@ export function AboutPage() {
                   ) : (
                     <div className="flex flex-wrap justify-center gap-2.5 sm:gap-3">
                       {Array.from({ length: 12 }).map((_, index) => (
-                        <div key={index} className="flex flex-col items-center gap-1.5">
+                        <div
+                          key={index}
+                          className="flex flex-col items-center gap-1.5"
+                        >
                           <div className="h-12 w-12 animate-pulse rounded-full bg-(--od-bg-tertiary) sm:h-14 sm:w-14" />
                           <div className="h-2.5 w-12 animate-pulse rounded bg-(--od-bg-tertiary)" />
                         </div>

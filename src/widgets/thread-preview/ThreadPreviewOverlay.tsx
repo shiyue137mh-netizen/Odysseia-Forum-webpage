@@ -1,11 +1,11 @@
 import {
+  BookOpen,
   Calendar,
   Clock3,
   Eye,
   Hash,
   MessageCircle,
   ThumbsUp,
-  User,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -75,12 +75,24 @@ export function ThreadPreviewOverlay({
     }
   }, []);
 
-  // 切换帖子时重置滚动位置
+  // 打开或切换帖子时预先露出一部分正文；这只是初始位置，用户仍可滑回图片顶部。
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [thread.thread_id]);
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+    scrollElement.scrollTop = 0;
+    if (!thread.thumbnail_urls?.length) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = Math.min(180, Math.max(96, scrollElement.clientHeight * 0.18));
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      scrollElement.scrollTo({
+        top: target,
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [thread.thread_id, thread.thumbnail_urls?.length]);
 
   useEffect(
     () => () => {
@@ -213,97 +225,80 @@ export function ThreadPreviewOverlay({
         } od-floating-panel-solid`}
       >
         {/* Header */}
-        <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex flex-1 items-start gap-3">
+        <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-3 sm:px-6">
+          <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-2">
+            <button
+              ref={closeButtonRef}
+              type="button"
+              onClick={handleClose}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-(--od-text-tertiary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+              aria-label="关闭帖子详情"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex min-w-0 max-w-full items-center justify-self-center gap-2">
               <AuthorIdentityLink
                 author={thread.author}
                 currentThreadId={thread.thread_id}
+                showName={false}
                 avatarClassName="h-10 w-10"
-                nameClassName="font-bold text-(--od-text-primary)"
-                className="max-w-full"
+                className="shrink-0"
                 onNavigate={({ id }) => {
                   handleClose();
                   navigate(`/u/${id}`);
                 }}
               />
+              <div className="min-w-0">
+                <AuthorIdentityLink
+                  author={thread.author}
+                  currentThreadId={thread.thread_id}
+                  showAvatar={false}
+                  nameClassName="max-w-36 font-bold text-(--od-text-primary) sm:max-w-56"
+                  className="max-w-full"
+                  onNavigate={({ id }) => {
+                    handleClose();
+                    navigate(`/u/${id}`);
+                  }}
+                />
+                <div className="mt-1 flex min-w-0 items-center gap-2 overflow-hidden text-[10px] text-(--od-text-tertiary) sm:text-xs">
+                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap" title={fullTime}>
+                    <Calendar className="h-3.5 w-3.5 shrink-0" />
+                    {createdTime}
+                  </span>
+                  {lastActiveTime && (
+                    <span className="inline-flex min-w-0 items-center gap-1 whitespace-nowrap" title={`活跃于 ${lastActiveTime}`}>
+                      <Clock3 className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">活跃 {lastActiveTime}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2">
-              <ThreadStatusBadges
-                isFollowing={thread.collected_flag}
-                hasUpdate={thread.has_update}
-                variant="detail"
-              />
+
+            <div className="flex w-22 items-center justify-end gap-2 justify-self-end">
               <button
                 type="button"
                 onClick={() => setQuickAddOpen(true)}
-                className="rounded-full px-2 py-1 text-xs text-(--od-text-tertiary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+                aria-label="加入书单"
                 title="加入书单"
               >
-                +书单
+                <BookOpen className="h-4 w-4" />
               </button>
               {!hideExternalButton && (
                 <ThreadActions
                   threadId={thread.thread_id}
                   channelId={thread.channel_id}
                   guildId={thread.guild_id}
-                  size="sm"
+                  size="md"
                   alwaysVisible={true}
                   externalUrlOverride={externalUrlOverride}
+                  className="h-10 [&_a]:h-10 [&_a]:w-10"
                 />
               )}
-              <button
-                ref={closeButtonRef}
-                type="button"
-                onClick={handleClose}
-                className="rounded-full p-2 text-(--od-text-tertiary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
-                aria-label="关闭帖子详情"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
           </div>
-
-          <div className="mt-3 grid gap-2 text-xs text-(--od-text-tertiary)">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="inline-flex items-center gap-1" title={fullTime}>
-                <Calendar className="h-3.5 w-3.5" />
-                发布于 {createdTime}
-              </span>
-              {lastActiveTime && (
-                <span className="inline-flex items-center gap-1">
-                  <Clock3 className="h-3.5 w-3.5" />
-                  活跃于 {lastActiveTime}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span className="inline-flex items-center gap-1">
-                <MessageCircle className="h-3.5 w-3.5" />
-                {thread.reply_count}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <ThumbsUp className="h-3.5 w-3.5" />
-                {thread.reaction_count}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Eye className="h-3.5 w-3.5" />
-                {thread.display_count}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <User className="h-3.5 w-3.5" />
-                ID: {thread.thread_id}
-              </span>
-            </div>
-          </div>
-
-          {/* Title */}
-          <h2
-            id="thread-preview-title"
-            className="mt-4 min-w-0 max-w-full text-xl font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) [overflow-wrap:anywhere]"
-          >
-            <HighlightText text={thread.title} highlight={searchHighlight} />
-          </h2>
         </div>
 
         {/* Scrollable Content */}
@@ -330,10 +325,50 @@ export function ThreadPreviewOverlay({
           <div
             className={`od-floating-glass relative z-10 min-h-full min-w-0 max-w-full px-4 pb-6 pt-6 backdrop-blur-[var(--od-glass-blur)] backdrop-saturate-125 sm:px-6 ${images.length > 0 ? "-mt-12 rounded-t-[1.5rem] shadow-[0_-12px_30px_rgba(0,0,0,0.22)]" : ""}`}
           >
+            <h2
+              id="thread-preview-title"
+              className="min-w-0 max-w-full text-xl font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) [overflow-wrap:anywhere]"
+            >
+              <HighlightText text={thread.title} highlight={searchHighlight} />
+            </h2>
+
+            <div className="mb-6 mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-(--od-text-tertiary)">
+              <ThreadStatusBadges
+                isFollowing={thread.collected_flag}
+                hasUpdate={thread.has_update}
+                variant="detail"
+              />
+              <span className="inline-flex items-center gap-1">
+                <MessageCircle className="h-3.5 w-3.5" />
+                {thread.reply_count}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <ThumbsUp className="h-3.5 w-3.5" />
+                {thread.reaction_count}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" />
+                {thread.display_count}
+              </span>
+            </div>
+
+            {/* Content Excerpt (Full) - Flat, no background */}
+            {thread.first_message_excerpt && (
+              <div
+                className={`mb-6 min-w-0 max-w-full [overflow-wrap:anywhere] ${fontSizes.content} text-(--od-text-primary)`}
+              >
+                <MarkdownText
+                  text={thread.first_message_excerpt}
+                  highlight={searchHighlight}
+                  className="!text-(--od-text-primary)"
+                />
+              </div>
+            )}
+
             {/* Tags */}
-            {thread.tags && thread.tags.length > 0 && (
+            {(thread.tags?.length || virtualOnlyTags.length > 0) && (
               <div className="mb-6 flex flex-wrap gap-2">
-                {thread.tags.map((tag) => (
+                {thread.tags?.map((tag) => (
                   <button
                     type="button"
                     key={tag}
@@ -345,10 +380,6 @@ export function ThreadPreviewOverlay({
                     {tag}
                   </button>
                 ))}
-              </div>
-            )}
-            {virtualOnlyTags.length > 0 && (
-              <div className="mb-6 flex flex-wrap gap-2">
                 {virtualOnlyTags.map((tag) => (
                   <button
                     type="button"
@@ -361,15 +392,6 @@ export function ThreadPreviewOverlay({
                     {tag}
                   </button>
                 ))}
-              </div>
-            )}
-
-            {/* Content Excerpt (Full) - Flat, no background */}
-            {thread.first_message_excerpt && (
-              <div
-                className={`mb-6 min-w-0 max-w-full [overflow-wrap:anywhere] ${fontSizes.content} text-(--od-text-secondary)`}
-              >
-                <MarkdownText text={thread.first_message_excerpt} highlight={searchHighlight} />
               </div>
             )}
 

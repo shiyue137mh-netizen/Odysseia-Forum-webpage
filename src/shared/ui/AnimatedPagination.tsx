@@ -13,6 +13,7 @@ interface AnimatedPaginationProps {
   onChange: (page: number) => void;
   maxVisible?: number;
   totalItems?: number;
+  sequential?: boolean;
 }
 
 export function AnimatedPagination({
@@ -21,6 +22,7 @@ export function AnimatedPagination({
   onChange,
   maxVisible = 5,
   totalItems,
+  sequential = false,
 }: AnimatedPaginationProps) {
   const [jumpValue, setJumpValue] = useState(String(currentPage));
 
@@ -83,7 +85,7 @@ export function AnimatedPagination({
         </button>
 
         {/* 轮播页码区域 */}
-        <div className="relative mx-2 flex h-12 items-center justify-center gap-1 overflow-hidden px-2 sm:gap-2">
+        {!sequential && <div className="relative mx-2 flex h-12 items-center justify-center gap-1 overflow-hidden px-2 sm:gap-2">
           <AnimatePresence mode="popLayout">
             {visiblePages.map((page) => {
               const isActive = page === currentPage;
@@ -118,7 +120,13 @@ export function AnimatedPagination({
               );
             })}
           </AnimatePresence>
-        </div>
+        </div>}
+
+        {sequential && (
+          <div className="flex h-12 min-w-16 items-center justify-center text-sm font-bold text-(--od-accent)">
+            第 {currentPage} 页
+          </div>
+        )}
 
         {/* 下一页 */}
         <button
@@ -133,7 +141,7 @@ export function AnimatedPagination({
         </button>
 
         {/* 最后一页 */}
-        <button
+        {!sequential && <button
           type="button"
           onClick={() => onChange(totalPages)}
           disabled={currentPage === totalPages}
@@ -142,12 +150,12 @@ export function AnimatedPagination({
         >
           <span className="hidden sm:inline">最后一页</span>
           <ChevronsRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </button>
+        </button>}
       </div>
       <div className="text-xs font-medium tracking-wide text-(--od-text-tertiary)">
         第 {currentPage} / {totalPages} 页 {totalItems !== undefined && `· 共 ${totalItems} 条`}
       </div>
-      <div className="flex items-center gap-2 text-xs text-(--od-text-secondary)">
+      {!sequential && <div className="flex items-center gap-2 text-xs text-(--od-text-secondary)">
         <span>跳转到</span>
         <input
           type="number"
@@ -165,7 +173,7 @@ export function AnimatedPagination({
           className="h-8 w-20 rounded-full border border-(--od-shell-line) bg-[color-mix(in_srgb,var(--od-surface-input)_76%,transparent)] px-3 text-center text-sm font-medium text-(--od-text-primary) outline-hidden transition-colors focus:border-(--od-accent)"
         />
         <span>页</span>
-      </div>
+      </div>}
     </div>
   );
 }

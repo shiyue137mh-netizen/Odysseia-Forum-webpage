@@ -34,14 +34,16 @@ import {
   parseSearchQuery,
   tokenizeSearchPayload,
 } from "@/shared/lib/searchTokenizer";
-import { FluidDivider } from "@/shared/ui/FluidDivider";
 import { Select } from "@/shared/ui/Select";
 import { AnimatedPagination } from "@/shared/ui/AnimatedPagination";
+import {
+  buildYesterdayPopularQuery,
+  YESTERDAY_POPULAR_LABEL,
+} from "@/features/search/lib/searchPresets";
 import { scrollPageToTop } from "@/shared/lib/pageScroll";
 import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import {
   ArrowUpDown,
-  Compass,
   MoveDown,
   MoveUp,
   Search,
@@ -94,6 +96,9 @@ export function SearchPage() {
     infiniteQueryState,
     results,
     pageSize,
+    pageByThreadId,
+    requestNextPage,
+    reportViewedPage,
     setIgnoreDiscoveryPreferences,
     totalResults,
   } = useSearchResults({ params, preferences });
@@ -116,7 +121,11 @@ export function SearchPage() {
   const booklistTotalPages = Math.max(1, Math.ceil(booklistTotal / booklistPageSize));
   const searchTotalPages = Math.max(1, Math.ceil(totalResults / pageSize));
   const isInfiniteMode = resultPagingMode === "infinite";
-  const loadMoreRef = useInfiniteScrollTrigger(infiniteQueryState, {
+  const loadMoreRef = useInfiniteScrollTrigger({
+    hasNextPage: infiniteQueryState.hasNextPage,
+    isFetchingNextPage: infiniteQueryState.isFetchingNextPage,
+    fetchNextPage: requestNextPage,
+  }, {
     rootMargin: "360px",
     enabled: isInfiniteMode,
   });
@@ -166,8 +175,7 @@ export function SearchPage() {
   );
 
   const gridClass = useCardGridClass();
-  const threadGridClass =
-    "grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4";
+  const threadGridClass = gridClass;
   const selectedChannelName =
     channelsData?.channels.find((channel) => channel.id === selectedChannel)
       ?.name || null;
@@ -236,14 +244,10 @@ export function SearchPage() {
   return (
     <div className="flex min-h-full min-w-0 max-w-full flex-col overflow-x-clip">
       <div className="min-w-0 max-w-full flex-1 overflow-x-clip p-4 animate-in fade-in duration-500 sm:p-6 lg:p-8">
-        <FluidDivider label="Search" tone="strong" className="mb-6" />
         <div className="mb-6 flex min-w-0 max-w-full flex-col gap-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
-          <div data-tour="search-header" className="flex min-w-0 items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--od-surface-soft) text-(--od-accent)">
-              <Compass className="h-6 w-6" />
-            </div>
+          <div data-tour="search-header" className="flex min-w-0 items-center">
             <div className="min-w-0">
-              <h1 className="flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-2xl font-bold tracking-tight text-(--od-text-primary)">
+              <h1 className="od-page-title flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1">
                 {query ? (
                   <>
                     <span>搜索:</span>
@@ -416,6 +420,19 @@ export function SearchPage() {
           </div>
         </div>
 
+        {isThreadTab && (
+          <div className="mb-5 flex items-center gap-2 px-1 text-xs text-(--od-text-tertiary)">
+            <span>不知道搜什么？</span>
+            <button
+              type="button"
+              onClick={() => setParams({ query: buildYesterdayPopularQuery(), page: 1 })}
+              className="text-(--od-accent) transition-colors hover:text-(--od-text-primary) hover:underline"
+            >
+              {YESTERDAY_POPULAR_LABEL}
+            </button>
+          </div>
+        )}
+
         {isThreadTab && discoveryPreferenceContext && (
           <section className="mb-7 px-1">
             <PreferenceFilterNotice
@@ -452,7 +469,7 @@ export function SearchPage() {
                   <ThreadListItemSkeleton key={index} />
                 ) : layoutMode === "masonry" ? (
                   <div key={index} className="mb-4 break-inside-avoid">
-                    <ThreadCardSkeleton hideBottomDivider />
+                    <ThreadCardSkeleton />
                   </div>
                 ) : (
                   <ThreadCardSkeleton key={index} />
@@ -489,6 +506,8 @@ export function SearchPage() {
                 listClassName="flex flex-col space-y-od-list-gap pb-4"
                 layoutMode={layoutMode}
                 animateIn={animateIn}
+                pageByThreadId={isInfiniteMode ? pageByThreadId : undefined}
+                onViewedPageChange={isInfiniteMode ? reportViewedPage : undefined}
               />
 
               {isInfiniteMode ? (
@@ -508,6 +527,7 @@ export function SearchPage() {
                   totalPages={searchTotalPages}
                   totalItems={totalResults}
                   onChange={(page) => setParams({ page })}
+                  sequential
                 />
               )}
             </div>
