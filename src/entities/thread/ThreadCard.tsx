@@ -31,6 +31,8 @@ interface ThreadCardProps {
   resultPage?: number;
 }
 
+const thumbnailAspectRatioCache = new Map<string, number>();
+
 function ThreadCardImpl({
   thread,
   onTagClick,
@@ -75,6 +77,9 @@ function ThreadCardImpl({
     [thread.thumbnail_urls, imageMode],
   );
   const [thumbnailSrc, setThumbnailSrc] = useState(initialThumbnail);
+  const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
+    () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
+  );
   const articleRef = useRef<HTMLElement>(null);
   const titleViewportRef = useRef<HTMLSpanElement>(null);
   const titleTrackRef = useRef<HTMLSpanElement>(null);
@@ -84,6 +89,9 @@ function ThreadCardImpl({
 
   useEffect(() => {
     setThumbnailSrc(initialThumbnail);
+    setNaturalAspectRatio(
+      thumbnailAspectRatioCache.get(initialThumbnail) || null,
+    );
   }, [initialThumbnail, thread.thread_id]);
 
   useEffect(() => {
@@ -199,7 +207,10 @@ function ThreadCardImpl({
 
           </div>
 
-          <div className="relative aspect-2/3 w-full">
+          <div
+            className={`relative w-full ${masonry ? "" : "aspect-2/3"}`}
+            style={masonry ? { aspectRatio: naturalAspectRatio || 2 / 3 } : undefined}
+          >
             <BannerFadeMedia className="overflow-hidden rounded-t-[1.45rem]">
               {thumbnailSrc ? (
                 <LazyImage
@@ -209,6 +220,13 @@ function ThreadCardImpl({
                   threadId={thread.thread_id}
                   channelId={thread.channel_id}
                   index={index}
+                  onNaturalSize={(width, height) => {
+                    if (!masonry || width <= 0 || height <= 0) return;
+                    // ponytail: 瀑布流按图片自然比例排布，但限制极端长图，避免单卡占满整列。
+                    const ratio = Math.min(1.5, Math.max(0.5, width / height));
+                    thumbnailAspectRatioCache.set(thumbnailSrc, ratio);
+                    setNaturalAspectRatio(ratio);
+                  }}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
