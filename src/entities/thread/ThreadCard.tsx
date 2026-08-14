@@ -237,9 +237,12 @@ function ThreadCardImpl({
           </div>
 
           <div className="relative z-10 -mt-10 flex flex-1 flex-col gap-3 px-2 text-(--od-text-primary)">
-            <div data-thread-preview className="cursor-pointer overflow-hidden">
+            <div
+              data-thread-preview
+              className={`flex min-h-[2lh] cursor-pointer items-end overflow-hidden ${mobileTitleClass} leading-snug`}
+            >
               <h3
-                className={`line-clamp-2 min-h-[2lh] ${mobileTitleClass} font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
+                className="line-clamp-2 font-extrabold tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)"
               >
                 <HighlightText text={thread.title} highlight={searchQuery} />
               </h3>
