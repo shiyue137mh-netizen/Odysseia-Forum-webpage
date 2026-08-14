@@ -1,4 +1,4 @@
-import { BellOff, Bookmark, CheckCircle2, RefreshCw } from 'lucide-react';
+import { BellOff, Bookmark, CheckCircle2, RefreshCw, Search } from 'lucide-react';
 
 import { ThreadListItem } from '@/entities/thread/ThreadListItem';
 import type { Thread } from '@/entities/thread/types';
@@ -18,10 +18,12 @@ interface MeFollowsSectionProps {
   isError: boolean;
   isLoading: boolean;
   selectedChannel?: string | null;
+  searchQuery: string;
   threads: Thread[];
   onClearChannel: () => void;
   onPreview: (thread: Thread) => void;
   onRefresh: () => void;
+  onSearchQueryChange: (value: string) => void;
   onSetChannel: (channelId: string | null) => void;
   onSetFollowStatus: (status: FollowStatusFilter) => void;
   onUnfollow: (thread: Thread) => void;
@@ -35,10 +37,12 @@ export function MeFollowsSection({
   isError,
   isLoading,
   selectedChannel,
+  searchQuery,
   threads,
   onClearChannel,
   onPreview,
   onRefresh,
+  onSearchQueryChange,
   onSetChannel,
   onSetFollowStatus,
   onUnfollow,
@@ -62,6 +66,20 @@ export function MeFollowsSection({
           <h2 className="od-text-title">我的关注</h2>
         </div>
         <div className="w-full max-w-xs">
+          <label htmlFor="follow-search" className="sr-only">
+            搜索已加载的关注内容
+          </label>
+          <div className="mb-3 flex min-h-10 items-center gap-2 border-b border-(--od-shell-line) px-1">
+            <Search className="h-4 w-4 shrink-0 text-(--od-text-tertiary)" />
+            <input
+              id="follow-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => onSearchQueryChange(event.target.value)}
+              placeholder="搜索当前已加载的关注"
+              className="min-w-0 flex-1 !bg-transparent py-2 text-sm text-(--od-text-primary) outline-hidden placeholder:text-(--od-text-tertiary)"
+            />
+          </div>
           <label htmlFor="follow-channel-filter" className="sr-only">
             频道筛选
           </label>
@@ -129,7 +147,9 @@ export function MeFollowsSection({
       ) : !hasAnyResults ? (
         <p className="od-text-body">{emptyMessage}</p>
       ) : threads.length === 0 ? (
-        <p className="od-text-body">{emptyMessage}</p>
+        <p className="od-text-body">
+          {searchQuery.trim() ? '当前已加载的关注内容里没有匹配结果。' : emptyMessage}
+        </p>
       ) : (
         <div className="flex flex-col space-y-od-list-gap">
           {threads.map((thread, index) => {

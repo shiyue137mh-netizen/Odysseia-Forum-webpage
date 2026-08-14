@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
@@ -10,28 +10,22 @@ import { showMascotToast } from '@/features/mascot/lib/mascotToast';
 import { notifySuccess } from '@/shared/lib/notify';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
 import ruleImage from '@/assets/images/background/rule.png';
-import { parallaxScenes } from '@/shared/config/parallaxScenes';
-import { useDeviceOrientationParallax } from '@/shared/hooks/useDeviceOrientationParallax';
 import { WordLoader } from '@/shared/ui/loaders/WordLoader';
 import { ImageViewer } from '@/shared/ui/ImageViewer';
 import { useImageViewerStore } from '@/shared/store/useImageViewerStore';
+import { AuthSceneBackground } from './AuthSceneBackground';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [scene] = useState(() => parallaxScenes[Math.floor(Math.random() * parallaxScenes.length)]!);
   const { isAuthenticated } = useAuth();
   const refreshAuth = useRefreshAuth();
   const openImageViewer = useImageViewerStore((state) => state.open);
-  const backgroundLayerRef = useRef<HTMLImageElement>(null);
-  const foregroundLayerRef = useRef<HTMLImageElement>(null);
-  const parallaxTargetRef = useRef({ x: 0, y: 0 });
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(true);
   const [isSharpening, setIsSharpening] = useState(true);
   const [isLoginCardReady, setIsLoginCardReady] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [hasAcceptedRules, setHasAcceptedRules] = useState(false);
-  useDeviceOrientationParallax(parallaxTargetRef);
 
   const loadingWordStyle: CSSProperties & { '--od-text-primary': string } = {
     '--od-text-primary': 'color-mix(in oklab, var(--od-accent) 78%, white 22%)',
@@ -41,39 +35,6 @@ export function LoginPage() {
     const timerId = window.setTimeout(() => setIsLoginCardReady(true), 10_000);
     return () => window.clearTimeout(timerId);
   }, []);
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    let frameId = 0;
-    let currentX = 0;
-    let currentY = 0;
-
-    const render = () => {
-      currentX += (parallaxTargetRef.current.x - currentX) * 0.05;
-      currentY += (parallaxTargetRef.current.y - currentY) * 0.05;
-
-      if (backgroundLayerRef.current) {
-        backgroundLayerRef.current.style.transform = `translate3d(${(-currentX * 12).toFixed(2)}px, ${(-currentY * 12).toFixed(2)}px, 0) scale(1.08)`;
-      }
-      if (foregroundLayerRef.current) {
-        foregroundLayerRef.current.style.transform = `translate3d(${(-currentX * 34).toFixed(2)}px, ${(-currentY * 26).toFixed(2)}px, 0) scale(1.06)`;
-      }
-
-      frameId = requestAnimationFrame(render);
-    };
-
-    frameId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(frameId);
-  }, []);
-
-  const handleParallaxMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== 'mouse') return;
-    parallaxTargetRef.current = {
-      x: (event.clientX / window.innerWidth) * 2 - 1,
-      y: (event.clientY / window.innerHeight) * 2 - 1,
-    };
-  };
 
   // 苏醒序列动画：进入页面时自动触发
   useEffect(() => {
@@ -175,33 +136,8 @@ export function LoginPage() {
         }`}
       />
 
-      {/* 双层视差背景 */}
-      <div
-        className={`absolute inset-0 cursor-crosshair transition-[filter] duration-[3500ms] ease-out ${
-          isSharpening ? 'blur-xl' : 'blur-0'
-        }`}
-        onPointerMove={handleParallaxMove}
-        onPointerLeave={() => {
-          parallaxTargetRef.current = { x: 0, y: 0 };
-        }}
-        onClick={() => {
-          if (isUiHidden) setIsUiHidden(false);
-        }}
-      >
-        <img
-          ref={backgroundLayerRef}
-          src={scene.background}
-          alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
-          style={{ transform: 'scale(1.08)', willChange: 'transform' }}
-        />
-        <img
-          ref={foregroundLayerRef}
-          src={scene.foreground}
-          alt=""
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
-          style={{ transform: 'scale(1.06)', willChange: 'transform' }}
-        />
+      <div className={`absolute inset-0 transition-[filter] duration-[3500ms] ease-out ${isSharpening ? 'blur-xl' : 'blur-0'}`}>
+        <AuthSceneBackground onClick={() => isUiHidden && setIsUiHidden(false)} />
       </div>
 
       {/* 背景压暗层 (z-10) */}

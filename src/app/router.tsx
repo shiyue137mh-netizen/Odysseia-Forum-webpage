@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { ProtectedRoute } from '@/app/providers/ProtectedRoute';
+import { RequiredSetupGate } from '@/app/providers/RequiredSetupGate';
 import { RootLayout } from '@/widgets/layout/RootLayout';
 import { OmicronLoader } from '@/shared/ui/loaders/OmicronLoader';
 
@@ -13,6 +14,10 @@ const lazyPage = <K extends string>(
 
 const LoginPage = lazyPage(() => import('@/pages/AuthPage/LoginPage'), 'LoginPage');
 const CallbackPage = lazyPage(() => import('@/pages/AuthPage/CallbackPage'), 'CallbackPage');
+const RequiredSetupPage = lazyPage(
+  () => import('@/pages/AuthPage/RequiredSetupPage'),
+  'RequiredSetupPage',
+);
 const SearchPage = lazyPage(() => import('@/pages/SearchPage'), 'SearchPage');
 const AISearchPage = lazyPage(() => import('@/pages/AISearchPage'), 'AISearchPage');
 const PlazaPage = lazyPage(() => import('@/pages/PlazaPage'), 'PlazaPage');
@@ -144,12 +149,21 @@ export const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <RootLayout />,
+        path: 'setup',
+        element: withSuspense(<RequiredSetupPage />),
+      },
+      {
+        element: <RequiredSetupGate />,
         children: [
-          ...appChildren,
           {
-            path: '*',
-            element: withSuspense(<NotFoundPage />),
+            element: <RootLayout />,
+            children: [
+              ...appChildren,
+              {
+                path: '*',
+                element: withSuspense(<NotFoundPage />),
+              },
+            ],
           },
         ],
       },

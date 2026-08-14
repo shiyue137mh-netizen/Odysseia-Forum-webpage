@@ -23,6 +23,9 @@ describe('AI 搜索系统提示词', () => {
     expect(message).toContain('不要把非剧情资源强行总结成剧情');
     expect(message).toContain('tone:');
     expect(message).toContain('不要输出 matches 或 caveat');
+    expect(message).toContain('严禁输出 <thread thread_id="..." reason="..." />');
+    expect(message).toContain('keyword_logic=or');
+    expect(message).toContain('本轮精选了几篇');
     expect(message).toContain('<followups>');
     expect(message).toContain('direction: broader');
     expect(message).toContain('必须模拟用户继续对你提出要求');

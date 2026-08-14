@@ -13,6 +13,11 @@ export interface AISearchReasoningTraceItem {
   content: string;
 }
 
+export interface AISearchTextTraceItem {
+  type: 'text';
+  content: string;
+}
+
 export interface AISearchToolTraceItem {
   type: 'tool';
   id: string;
@@ -23,7 +28,7 @@ export interface AISearchToolTraceItem {
   result?: string;
 }
 
-export type AISearchTraceItem = AISearchReasoningTraceItem | AISearchToolTraceItem;
+export type AISearchTraceItem = AISearchReasoningTraceItem | AISearchTextTraceItem | AISearchToolTraceItem;
 
 export interface AISearchUsage {
   prompt_tokens?: number;
@@ -117,6 +122,10 @@ const messageSchema = z.object({
   trace: z.array(z.discriminatedUnion('type', [
     z.object({
       type: z.literal('reasoning'),
+      content: z.string().max(100_000),
+    }),
+    z.object({
+      type: z.literal('text'),
       content: z.string().max(100_000),
     }),
     z.object({

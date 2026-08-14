@@ -85,13 +85,18 @@ const ProfilePage = lazy(() => import("@/pages/UserProfilePage"));
 - 一次请求能够分类拉取到相关的 **作者 (authors)**、**帖子 (threads)** 和 **书单 (booklists)**，并交由 `SearchSuggestions` 智能分类渲染。
 - 这些建议会基于用户的当前偏好 (`apply_preferences`) 进行筛选，并在输入框焦点激活时实时呈现给用户。
 
-## 6. 交互式引导系统 (Onboarding Tour)
+## 6. 首次配置与页面引导
 
-由于系统功能日益复杂，为了降低新用户门槛，前端引入了全局式的交互引导系统（`src/features/onboarding/`），取代了以往通过个别页面（如 `SearchPage` 的独立弹窗）来实现的局域提示逻辑。
+首次账号配置和页面功能教学是两条独立流程，不能再混用同一套步骤：
+
+- Required Setup：登录回调后、进入主布局前完成频道范围、排除 Tag 和 Discord 跳转方式配置，不可跳过。
+- Page Tour：进入主页面后介绍导航和页面功能，可以跳过，也可以结束当前引导。
+
+Required Setup 只拦截真正的新用户。判定条件是偏好记录不存在，且本机旧版 onboarding 的 `completedTutorialIds` 不包含 `initial_setup`。后者是存量用户迁移兼容：已经完成旧引导的用户不能因为缺少新版偏好记录而被强制重新配置。
 
 ### 6.1 OnboardingManager 与状态控制
 
-整个向导系统由 `OnboardingManager` 充当驱动中心，挂载于 `RootLayout`。
+页面教学由 `OnboardingManager` 充当驱动中心，挂载于 `RootLayout`。
 它监听路由变动与 DOM 树的可用情况。当用户达到特定场景并且之前尚未完成对应教程时，通过 Zustand Store (`useOnboardingStore`) 自动分发 `activeTutorial` 并弹出气泡提示。
 状态控制将自动把已完成的 `completedTutorialIds` 持久化记录至 `localStorage`。
 

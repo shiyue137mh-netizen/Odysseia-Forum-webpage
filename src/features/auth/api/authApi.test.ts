@@ -81,15 +81,20 @@ describe("authApi.checkAuth", () => {
     expect(setUseAuthHeader).toHaveBeenCalledWith(true);
   });
 
-  it("cookie 与 Bearer 双双失败时返回未登录且不抛错", async () => {
+  it("cookie 请求失败且没有本地 token 时保留网络错误", async () => {
+    mockedGet.mockRejectedValueOnce(new Error("network down"));
+    mockedGetToken.mockReturnValueOnce(null);
+
+    await expect(authApi.checkAuth()).rejects.toThrow("network down");
+  });
+
+  it("cookie 与 Bearer 双双失败时保留真实错误", async () => {
     mockedGet
       .mockRejectedValueOnce(new Error("network down"))
       .mockRejectedValueOnce(new Error("token expired"));
     mockedGetToken.mockReturnValueOnce("stale-token");
 
-    const result = await authApi.checkAuth();
-
-    expect(result).toEqual({ loggedIn: false });
+    await expect(authApi.checkAuth()).rejects.toThrow("token expired");
     expect(setUseAuthHeader).not.toHaveBeenCalled();
   });
 });

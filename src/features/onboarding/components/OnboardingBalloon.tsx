@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { MASCOT_IMAGES } from '@/features/mascot/assets';
 import { useOnboardingStore } from '../store/useOnboardingStore';
-import { PreferenceOnboardingControls } from './PreferenceOnboardingControls';
 
 export function OnboardingBalloon() {
-  const { activeTutorial, stepIndex, nextStep, skipTutorial, skipAllTutorials } = useOnboardingStore();
+  const { activeTutorial, stepIndex, nextStep, prevStep, skipTutorial, skipAllTutorials } = useOnboardingStore();
   const [coords, setCoords] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const step = activeTutorial?.steps[stepIndex];
@@ -24,9 +23,18 @@ export function OnboardingBalloon() {
       return;
     }
 
+    const el = document.querySelector<HTMLElement>(step.target);
+    if (!el) {
+      setCoords(null);
+      return;
+    }
+
+    el.scrollIntoView({ block: 'center' });
+
+    let frame = 0;
     const updateCoords = () => {
-      const el = document.querySelector(step.target!);
-      if (el) {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
         const rect = el.getBoundingClientRect();
         setCoords({
           top: rect.top,
@@ -34,22 +42,22 @@ export function OnboardingBalloon() {
           width: rect.width,
           height: rect.height,
         });
-        // 自动滚动到目标，稍微偏移一点点
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } else {
-        // 如果元素没找到，清除坐标，气泡会降级到居中显示
-        setCoords(null);
-      }
+      });
     };
 
-    // 初始执行
+    const observer = new ResizeObserver(updateCoords);
+    observer.observe(el);
+    window.addEventListener('resize', updateCoords);
+    window.addEventListener('scroll', updateCoords, true);
     updateCoords();
-    
-    // 定时轮询，防止某些动态渲染的组件还没加载出来
-    const timer = setInterval(updateCoords, 500);
-    
-    return () => clearInterval(timer);
-  }, [step, windowSize]);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
+  }, [step]);
 
   if (!activeTutorial || !step) return null;
 
@@ -146,22 +154,20 @@ export function OnboardingBalloon() {
 
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none">
-      {/* 遮罩层 (SVG Mask 实现高亮) */}
-      <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ 
-            opacity: 1,
-            clipPath: coords && !isCenter
-              ? `path('M0,0 H${windowSize.width} V${windowSize.height} H0 Z M${coords.left - 6},${coords.top - 6} V${coords.top + coords.height + 6} H${coords.left + coords.width + 6} V${coords.top - 6} Z')`
-              : 'none'
+      {coords && !isCenter ? (
+        <div
+          className="absolute rounded-xl pointer-events-none"
+          style={{
+            top: coords.top - 6,
+            left: coords.left - 6,
+            width: coords.width + 12,
+            height: coords.height + 12,
+            boxShadow: '0 0 0 9999px rgb(0 0 0 / 0.65)',
           }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
-          className={`absolute inset-0 bg-black/65 ${coords ? 'pointer-events-auto' : 'pointer-events-none opacity-0'} backdrop-blur-[2px]`}
-          onClick={() => !coords && skipTutorial()}
         />
-      </AnimatePresence>
+      ) : (
+        <div className="pointer-events-auto absolute inset-0 bg-black/65" onClick={skipTutorial} />
+      )}
 
       {/* 引导内容容器 */}
       <motion.div
@@ -179,8 +185,7 @@ export function OnboardingBalloon() {
         className={`absolute pointer-events-auto flex min-h-0 ${isCompactViewport ? 'flex-col' : 'flex-col-reverse'} items-center w-[calc(100vw-2rem)] max-w-[340px] sm:max-w-[340px] ${isMobile ? 'max-w-[300px]' : ''}`}
         style={{
           ...balloonStyle,
-          viewTransitionName: 'onboarding-balloon'
-        } as any}
+        }}
       >
         <div className="relative group w-full">
           {/* 看板娘图片 (探头动效) */}
@@ -219,11 +224,18 @@ export function OnboardingBalloon() {
               <p className={`text-(--od-text-secondary) ${isMobile ? 'text-[11px]' : 'text-xs sm:text-sm'} mb-4 leading-relaxed sm:mb-5`}>
                 {step.content}
               </p>
-
-              <PreferenceOnboardingControls stepId={step.id} />
             </div>
 
             <div className="mt-4 flex shrink-0 items-center justify-between gap-4 border-t border-white/10 pt-4 sm:gap-6">
+              <div className="flex items-center gap-1">
+              {stepIndex > 0 && (
+                <button
+                  onClick={prevStep}
+                  className="px-2 py-1 text-[10px] text-(--od-text-secondary) transition-colors hover:text-(--od-text-primary) sm:text-xs"
+                >
+                  上一步
+                </button>
+              )}
               {isFirstStepOfFirstTutorial ? (
                 <button
                   onClick={skipAllTutorials}
@@ -239,6 +251,7 @@ export function OnboardingBalloon() {
                   结束引导
                 </button>
               )}
+              </div>
               <button
                 onClick={nextStep}
                 className={`od-button-primary flex-1 sm:flex-none ${isMobile ? 'min-w-[70px] px-3 py-1.5 text-[11px]' : 'min-w-[80px] sm:min-w-[100px] px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm'} rounded-xl sm:rounded-2xl font-bold shadow-xl shadow-(--od-accent)/25 active:scale-95 transition-transform`}

@@ -39,21 +39,6 @@ export const ALL_TUTORIAL_IDS = [
   'ai_search_guide'
 ];
 
-function runOnboardingTransition(execute: () => void) {
-  if (!document.startViewTransition) {
-    execute();
-    return;
-  }
-
-  document.documentElement.dataset.odViewTransition = 'onboarding';
-  const transition = document.startViewTransition(execute);
-  transition.finished.finally(() => {
-    if (document.documentElement.dataset.odViewTransition === 'onboarding') {
-      delete document.documentElement.dataset.odViewTransition;
-    }
-  });
-}
-
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set, get) => ({
@@ -67,25 +52,19 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       nextStep: () => {
         const { activeTutorial, stepIndex } = get();
-        
-        const execute = () => {
-          if (activeTutorial && stepIndex < activeTutorial.steps.length - 1) {
-            const nextIndex = stepIndex + 1;
-            set({ stepIndex: nextIndex });
-            activeTutorial.steps[nextIndex].action?.();
-          } else {
-            get().completeTutorial();
-          }
-        };
-
-        runOnboardingTransition(execute);
+        if (activeTutorial && stepIndex < activeTutorial.steps.length - 1) {
+          const nextIndex = stepIndex + 1;
+          set({ stepIndex: nextIndex });
+          activeTutorial.steps[nextIndex].action?.();
+        } else {
+          get().completeTutorial();
+        }
       },
 
       prevStep: () => {
         const { stepIndex } = get();
         if (stepIndex > 0) {
-          const execute = () => set({ stepIndex: stepIndex - 1 });
-          runOnboardingTransition(execute);
+          set({ stepIndex: stepIndex - 1 });
         }
       },
 

@@ -67,6 +67,11 @@ export const AI_SEARCH_TOOLS = [
         type: 'object',
         properties: {
           keywords: { type: 'string', description: '自然语言搜索关键词。逗号表示同时包含的概念，斜杠可表达同义或任选概念；搜索不理想时改用同义词、上位词或相关表达。只有 Tag 条件而不需要正文关键词时可以省略。' },
+          keyword_logic: {
+            type: 'string',
+            enum: ['and', 'or'],
+            description: '多个关键词概念是全部命中(and)还是任意命中(or)。同义词和替代方向用 or，必须同时出现的独立概念才用 and。',
+          },
           channel_ids: {
             type: 'array',
             items: { type: 'string' },
@@ -195,6 +200,7 @@ const dateBeforeSchema = z.string().refine((value) => parseDateRangeToken(`..${v
 
 const searchArgsSchema = z.object({
   keywords: z.string().max(300).optional(),
+  keyword_logic: z.enum(['and', 'or']).optional(),
   channel_ids: z.array(z.string().regex(/^\d+$/)).max(8).optional(),
   include_tags: z.array(z.string().min(1).max(80)).max(8).optional(),
   exclude_tags: z.array(z.string().min(1).max(80)).max(8).optional(),
@@ -316,7 +322,7 @@ const sortLabels: Record<NonNullable<z.infer<typeof searchArgsSchema>['sort']>, 
 
 function summarizeSearchArgs(args: z.infer<typeof searchArgsSchema>) {
   const parts = [
-    args.keywords && `关键词：${args.keywords}`,
+    args.keywords && `关键词（${args.keyword_logic === 'or' ? 'OR' : 'AND'}）：${args.keywords}`,
     args.channel_ids?.length && `频道：${args.channel_ids.join('、')}`,
     args.include_tags?.length && `包含 Tag：${args.include_tags.join('、')}`,
     args.exclude_tags?.length && `排除 Tag：${args.exclude_tags.join('、')}`,
@@ -332,6 +338,13 @@ function summarizeSearchArgs(args: z.infer<typeof searchArgsSchema>) {
     args.search_by_collection && '仅搜索我的收藏',
   ].filter(Boolean);
   return parts.join(' · ') || '使用当前频道与偏好搜索';
+}
+
+function normalizeSearchKeywords(keywords?: string, logic?: 'and' | 'or') {
+  if (!keywords || !logic) return keywords;
+  const terms = keywords.split(/[,，/、]+/).map((item) => item.trim()).filter(Boolean);
+  if (terms.length <= 1) return keywords.trim();
+  return terms.join(logic === 'or' ? '/' : ',');
 }
 
 export function compactThread(thread: Thread) {
@@ -413,7 +426,7 @@ export function createAISearchToolRuntime(
           parameters: summarizeSearchArgs(args),
         });
         const response = await searchApi.search({
-          query: args.keywords,
+          query: normalizeSearchKeywords(args.keywords, args.keyword_logic),
           channel_ids: args.channel_ids,
           include_tags: args.include_tags,
           exclude_tags: args.exclude_tags,

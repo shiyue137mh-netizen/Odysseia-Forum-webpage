@@ -29,6 +29,11 @@ describe('AI 搜索输出解析', () => {
     expect(parseAIResponse(text, new Set(['123']))).toEqual([{ type: 'markdown', content: text }]);
   });
 
+  it('属性式自闭合 thread 不会被误识别为帖子卡片', () => {
+    const text = '<thread thread_id="123" reason="不应使用这种格式" />';
+    expect(parseAIResponse(text, new Set(['123']))).toEqual([{ type: 'markdown', content: text }]);
+  });
+
   it('兼容模型常见的 XML 子节点格式', () => {
     const segments = parseAIResponse(
       '<thread>\n<threadId>123</threadId>\n<reason>符合需求</reason>\n<matches>\n- "奇幻"\n- "男性向"\n</matches>\n</thread>',

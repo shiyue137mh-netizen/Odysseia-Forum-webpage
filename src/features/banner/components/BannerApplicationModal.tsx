@@ -7,6 +7,7 @@ import { bannerApi } from '@/features/banner/api/bannerApi';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
 import { extractErrorMessage, notifySuccess } from '@/shared/lib/notify';
+import { useChannels } from '@/shared/hooks/useChannels';
 
 const bannerSchema = z.object({
     thread_id: z.string().min(17, '帖子ID必须是17-20位数字').max(20, '帖子ID必须是17-20位数字').regex(/^\d+$/, '帖子ID必须是纯数字'),
@@ -23,6 +24,7 @@ interface BannerApplicationModalProps {
 
 export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationModalProps) {
     const { user } = useAuth();
+    const channelsQuery = useChannels();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const {
@@ -167,15 +169,24 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
                             </label>
                             <select
                                 {...register('target_scope')}
+                                disabled={channelsQuery.isLoading}
                                 className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"
                             >
-                                <option value="global">全频道 (Global)</option>
-                                {/* 这里未来可以扩展具体频道的选择 */}
+                                <option value="global">全频道</option>
+                                {channelsQuery.data?.source === 'api' && channelsQuery.data.channels.map((channel) => (
+                                    <option key={channel.id} value={channel.id}>{channel.name}</option>
+                                ))}
                             </select>
                             {errors.target_scope && (
                                 <p className="text-xs text-(--od-error)">{errors.target_scope.message}</p>
                             )}
-                            <p className="text-xs text-(--od-text-tertiary)">全频道最多3个，单频道最多5个</p>
+                            <p className="text-xs text-(--od-text-tertiary)">
+                                {channelsQuery.isLoading
+                                    ? '正在读取可申请频道…'
+                                    : channelsQuery.data?.source === 'api'
+                                        ? '全频道最多3个，单频道最多5个'
+                                        : '频道列表读取失败，目前只能申请全频道展示'}
+                            </p>
                         </div>
 
                         {/* Actions */}

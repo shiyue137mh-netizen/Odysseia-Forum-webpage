@@ -171,7 +171,7 @@ export function RootLayout() {
           <main
             id="main-scroll-container"
             tabIndex={-1}
-            className="relative z-10 h-full overflow-y-auto scroll-smooth pb-20 md:pb-0 focus:outline-hidden flex flex-col"
+            className="relative z-10 h-full overflow-y-auto scroll-smooth pb-20 md:pb-0 focus:outline-hidden flex flex-col [--od-scrollbar-track:var(--od-bg-tertiary)]"
           >
             <Outlet />
             {/* 防止网速跟不上按 Tab 导致焦点滑出主区域 */}

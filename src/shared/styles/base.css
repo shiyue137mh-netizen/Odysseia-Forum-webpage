@@ -162,7 +162,7 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: var(--od-bg-secondary);
+    background: var(--od-scrollbar-track, var(--od-bg-secondary));
   }
 
   *::-webkit-scrollbar-thumb {
@@ -176,7 +176,7 @@
 
   * {
     scrollbar-width: thin;
-    scrollbar-color: var(--od-border-strong) var(--od-bg-secondary);
+    scrollbar-color: var(--od-border-strong) var(--od-scrollbar-track, var(--od-bg-secondary));
   }
 
   html[data-od-wallpaper='on'] *::-webkit-scrollbar-track,
@@ -220,12 +220,6 @@
 
   /* 允许点击穿透，防止动画期间页面“由于正在播放动画”而无法交互 */
   pointer-events: none;
-}
-
-html[data-od-view-transition='onboarding']::view-transition-group(root),
-html[data-od-view-transition='onboarding']::view-transition-group(onboarding-balloon) {
-  animation-duration: 180ms;
-  animation-timing-function: ease-out;
 }
 
 /* 1. Circle Reveal */

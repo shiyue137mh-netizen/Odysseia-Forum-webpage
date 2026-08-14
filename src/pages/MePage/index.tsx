@@ -111,6 +111,7 @@ export function MePage() {
   const [showCreateBooklist, setShowCreateBooklist] = useState(false);
   const [editingBooklist, setEditingBooklist] = useState<Booklist | null>(null);
   const [browseHistoryVersion, setBrowseHistoryVersion] = useState(0);
+  const [followSearchQuery, setFollowSearchQuery] = useState("");
 
   const {
     preferences,
@@ -207,7 +208,27 @@ export function MePage() {
     () => getBrowseHistory(),
     [browseHistoryVersion],
   );
-  const followedThreads = followsQuery.data?.results || [];
+  const filteredFollowedThreads = useMemo(() => {
+    const followedThreads = followsQuery.data?.results || [];
+    const query = followSearchQuery.trim().toLocaleLowerCase();
+    if (!query) return followedThreads;
+    return followedThreads.filter((thread) => {
+      const author = thread.author;
+      const searchableText = [
+        thread.title,
+        thread.first_message_excerpt,
+        author?.display_name,
+        author?.global_name,
+        author?.name,
+        ...(thread.tags || []),
+        ...(thread.virtual_tags || []),
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .toLocaleLowerCase();
+      return searchableText.includes(query);
+    });
+  }, [followSearchQuery, followsQuery.data?.results]);
   const setTab = (next: MeTab) => {
     const sp = new URLSearchParams(searchParams);
     sp.set("tab", next);
@@ -339,7 +360,9 @@ export function MePage() {
             isError={followsQuery.isError}
             isLoading={followsQuery.isLoading}
             selectedChannel={selectedFollowChannel}
-            threads={followedThreads}
+            searchQuery={followSearchQuery}
+            threads={filteredFollowedThreads}
+            onSearchQueryChange={setFollowSearchQuery}
             onClearChannel={() => {
               const nextParams = new URLSearchParams(searchParams);
               nextParams.delete("channel");

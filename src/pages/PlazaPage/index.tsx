@@ -86,7 +86,8 @@ export function PlazaPage() {
     [preferences],
   );
 
-  const bannersQuery = usePlazaBanners();
+  const bannerChannelIds = discoveryPreferenceContext?.preferredChannelIds || [];
+  const bannersQuery = usePlazaBanners(bannerChannelIds);
   const booklistsQuery = usePlazaFeaturedBooklists();
 
   const tournamentsQuery = useTournamentsList({

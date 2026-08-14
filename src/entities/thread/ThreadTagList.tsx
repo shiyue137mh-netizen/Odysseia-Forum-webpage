@@ -52,12 +52,13 @@ export function ThreadTagList({
           </span>
         )}
         {virtualOnlyTags.slice(0, 2).map((tag) => (
-          <span
+          <button
             key={`vt-${tag}`}
+            onClick={handleTagClick(tag)}
             className="rounded-md border border-cyan-200/20 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-500"
           >
             ~{tag}
-          </span>
+          </button>
         ))}
       </div>
     );
@@ -82,9 +83,13 @@ export function ThreadTagList({
         <span>+{thread.tags.length - 4}</span>
       )}
       {virtualOnlyTags.slice(0, 2).map((tag) => (
-        <span key={`vt-${tag}`} className="text-(--od-text-emphasis)">
+        <button
+          key={`vt-${tag}`}
+          onClick={handleTagClick(tag)}
+          className="text-(--od-text-emphasis) transition-colors hover:text-(--od-text-primary)"
+        >
           ~{tag}
-        </span>
+        </button>
       ))}
     </div>
   );

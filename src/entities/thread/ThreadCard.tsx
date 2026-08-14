@@ -81,11 +81,6 @@ function ThreadCardImpl({
     () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
   );
   const articleRef = useRef<HTMLElement>(null);
-  const titleViewportRef = useRef<HTMLSpanElement>(null);
-  const titleTrackRef = useRef<HTMLSpanElement>(null);
-  const [titleShift, setTitleShift] = useState(0);
-  const [isTitleHovered, setIsTitleHovered] = useState(false);
-  const shouldMarquee = isTitleHovered && titleShift > 0;
 
   useEffect(() => {
     setThumbnailSrc(initialThumbnail);
@@ -101,25 +96,6 @@ function ThreadCardImpl({
     });
   }, [thread.thread_id, imageMode]);
 
-  useEffect(() => {
-    const updateTitleShift = () => {
-      const viewportWidth = titleViewportRef.current?.clientWidth || 0;
-      const trackWidth = titleTrackRef.current?.scrollWidth || 0;
-      setTitleShift(Math.max(trackWidth - viewportWidth + 12, 0));
-    };
-
-    updateTitleShift();
-    window.addEventListener("resize", updateTitleShift);
-    // 卡片带 content-visibility:auto，屏外首挂时 layout 被跳过、scrollWidth
-    // 读到 0；等浏览器把它渲染出来时（进入视口）借这个事件补一次测量。
-    const article = articleRef.current;
-    article?.addEventListener("contentvisibilityautostatechange", updateTitleShift);
-    return () => {
-      window.removeEventListener("resize", updateTitleShift);
-      article?.removeEventListener("contentvisibilityautostatechange", updateTitleShift);
-    };
-  }, [thread.title, fontSize, searchQuery]);
-
   // 缓存命中直出的页面传 animateIn=false：内容用户已看过，不再重播浮现动画。
   const entranceClass = animateIn
     ? " animate-in fade-in slide-in-from-bottom-2 duration-700 fill-mode-both"
@@ -134,7 +110,7 @@ function ThreadCardImpl({
         aria-label={ariaLabel}
         tabIndex={0}
         onKeyDown={handleKeyDown}
-        className={`group flex w-full cursor-pointer flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
+        className={`group flex w-full flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
           animationDelay: animateIn ? animationDelay : undefined,
           WebkitTapHighlightColor: "transparent",
@@ -143,9 +119,11 @@ function ThreadCardImpl({
           if (!(e.target as HTMLElement).closest("button, a"))
             e.preventDefault();
         }}
-        onMouseEnter={() => setIsTitleHovered(true)}
-        onMouseLeave={() => setIsTitleHovered(false)}
-        onClick={() => onPreview?.(thread)}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("[data-thread-preview]")) {
+            onPreview?.(thread);
+          }
+        }}
       >
         {/* 拦截 Tab 焦点进入内部元素，并对辅助技术隐藏内部细节 */}
         <div
@@ -208,6 +186,7 @@ function ThreadCardImpl({
           </div>
 
           <div
+            data-thread-preview
             className={`relative w-full ${masonry ? "" : "aspect-2/3"}`}
             style={masonry ? { aspectRatio: naturalAspectRatio || 2 / 3 } : undefined}
           >
@@ -258,44 +237,18 @@ function ThreadCardImpl({
           </div>
 
           <div className="relative z-10 -mt-10 flex flex-1 flex-col gap-3 px-2 text-(--od-text-primary)">
-            <div className="overflow-hidden">
+            <div data-thread-preview className="cursor-pointer overflow-hidden">
               <h3
-                className={`whitespace-nowrap ${mobileTitleClass} text-(--od-text-primary) drop-shadow-[0_2px_6px_rgb(0_0_0_/_0.7)] transition-colors duration-200 group-hover:text-(--od-accent)`}
+                className={`line-clamp-2 ${mobileTitleClass} font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
               >
-                <span
-                  ref={titleViewportRef}
-                  className="inline-block max-w-full overflow-hidden align-top"
-                >
-                  <span
-                    ref={titleTrackRef}
-                    style={{
-                      ["--od-marquee-distance" as string]: `${titleShift}px`,
-                      ["--od-marquee-gap" as string]: "1.75rem",
-                      ["--od-marquee-duration" as string]: `${Math.max(5, titleShift / 22)}s`,
-                    }}
-                    className={`od-marquee-track inline-flex items-center font-extrabold leading-snug tracking-[-0.02em] ${
-                      shouldMarquee ? "od-marquee-active" : ""
-                    }`}
-                  >
-                    <span className="shrink-0">
-                      <HighlightText text={thread.title} highlight={searchQuery} />
-                    </span>
-                    {titleShift > 0 && (
-                      <>
-                        <span className="mx-7 shrink-0 text-(--od-text-tertiary)/55">/</span>
-                        <span className="shrink-0">
-                          <HighlightText text={thread.title} highlight={searchQuery} />
-                        </span>
-                      </>
-                    )}
-                  </span>
-                </span>
+                <HighlightText text={thread.title} highlight={searchQuery} />
               </h3>
             </div>
             <div className="min-h-11">
               {hasExcerpt && (
                 <p
-                  className={`${fontSizes.content} line-clamp-2 leading-relaxed text-(--od-text-secondary) transition-colors duration-200 group-hover:text-[color-mix(in_srgb,var(--od-text-secondary)_72%,var(--od-text-primary))]`}
+                  data-thread-preview
+                  className={`${fontSizes.content} line-clamp-2 cursor-pointer leading-relaxed text-(--od-text-secondary) transition-colors duration-200 group-hover:text-[color-mix(in_srgb,var(--od-text-secondary)_72%,var(--od-text-primary))]`}
                 >
                   <DiscordMarkdownText
                     text={thread.first_message_excerpt || ""}

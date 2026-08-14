@@ -181,6 +181,10 @@ export async function runAISearchAgent({
       reasoning_content: assistant.reasoning_content,
     });
     if (assistant.tool_calls?.length) {
+      const intermediateText = assistant.content?.trim();
+      if (intermediateText) {
+        trace.push({ type: 'text', content: intermediateText.slice(0, 100_000) });
+      }
       turnMessages.push({
         role: 'assistant',
         content: assistant.content || '',

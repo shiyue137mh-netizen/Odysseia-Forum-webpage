@@ -59,6 +59,18 @@ function ReasoningDetails({
             );
           }
 
+          if (item.type === 'text') {
+            return (
+              <div key={`text-${index}`} className="space-y-1.5">
+                <div className="flex items-center gap-2 font-medium text-(--od-text-secondary)">
+                  <FileText className="h-3.5 w-3.5 text-(--od-accent)" />
+                  <span>中途正文</span>
+                </div>
+                <p className="whitespace-pre-wrap text-(--od-text-secondary)">{item.content}</p>
+              </div>
+            );
+          }
+
           const ToolIcon = item.tool === 'search_threads' || item.tool === 'search_tournaments'
             ? Search
             : FileText;

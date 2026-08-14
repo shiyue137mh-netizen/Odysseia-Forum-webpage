@@ -468,3 +468,11 @@ curl -s \
 - 在作者数据接口接通前引入 Satori/Resvg。
 
 先完成书单最小闭环，再依据真实故障和使用量决定是否扩展。
+
+## 14. 未来独立 Vercel PNG PoC（暂缓）
+
+当前不实施，也不修改生产部署。用户尚未准备 Vercel 账号，生产继续使用 Cloudflare Pages 的 HTMLRewriter 和现有图片 URL。
+
+未来验证时，把 `playground/og-satori` 作为独立 Vercel Node.js 项目，不把 Satori、Resvg 和字体依赖重新装回主前端。第一轮只实现一个 Thread PNG 路由，并分别记录冷启动、字体读取、Satori 排版、Resvg 栅格化和总响应时间；只有 CPU、响应时间和中文字体效果都可接受，才考虑让 Cloudflare 生成的 OG metadata 指向该 PNG。
+
+图片 URL 需要携带 `updated_at` 或等价版本参数以控制平台缓存。PoC 成功之前，不扩展作者、书单等更多模板，也不改变现有生产回退路径。

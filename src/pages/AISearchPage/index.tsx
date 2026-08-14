@@ -1057,7 +1057,7 @@ export function AISearchPage() {
 
               <label className="block space-y-2">
                 <span className="flex items-center justify-between gap-3 text-sm font-medium">
-                  看板娘系统提示词
+                  看板娘人格与回答方式
                   <button
                     type="button"
                     onClick={() => updateDraft('systemPrompt', DEFAULT_AI_SEARCH_SYSTEM_PROMPT)}
@@ -1075,6 +1075,7 @@ export function AISearchPage() {
                   className="w-full resize-y rounded-xl border border-(--od-shell-line) bg-(--od-surface-input) px-3 py-2.5 text-sm leading-6 outline-hidden transition-colors focus:border-(--od-accent)"
                 />
                 <span className="block text-right text-[11px] text-(--od-text-tertiary)">
+                  这里只调整人格和回答风格；工具权限、搜索规则与帖子引用格式由应用固定管理。{' '}
                   {draftSettings.systemPrompt.length}/4000
                 </span>
               </label>

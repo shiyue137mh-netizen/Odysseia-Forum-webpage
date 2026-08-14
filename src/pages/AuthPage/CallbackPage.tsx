@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '@/features/auth/api/authApi';
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
-import { notifySuccess } from '@/shared/lib/notify';
+import { extractErrorMessage, notifySuccess } from '@/shared/lib/notify';
 import { LOGIN_REDIRECT_STORAGE_KEY, sanitizeInternalRedirect } from '@/shared/lib/navigationSafety';
 import { OmicronLoader } from '@/shared/ui/loaders/OmicronLoader';
 
@@ -49,11 +49,28 @@ export function CallbackPage() {
 
       if (cancelled) return;
 
-      const authState = await queryClient.fetchQuery({
-        queryKey: ['auth'],
-        queryFn: authApi.checkAuth,
-        staleTime: 0,
-      });
+      let authState;
+      try {
+        authState = await queryClient.fetchQuery({
+          queryKey: ['auth'],
+          queryFn: authApi.checkAuth,
+          staleTime: 0,
+        });
+      } catch (authError) {
+        if (cancelled) return;
+        showMascotToast({
+          id: 'auth-callback-network-error',
+          emotion: 'error',
+          eyebrow: 'Connection Failed',
+          title: '没能连接登录服务',
+          message: extractErrorMessage(authError, '无法确认登录状态，请检查网络后重试。'),
+          actionLabel: '返回登录页',
+          onAction: () => navigate('/login', { replace: true }),
+          duration: 8000,
+        });
+        navigate('/login', { replace: true });
+        return;
+      }
 
       if (cancelled) return;
 

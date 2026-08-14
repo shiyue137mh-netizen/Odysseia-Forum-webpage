@@ -71,7 +71,7 @@ describe('AI 搜索会话 Payload', () => {
     vi.mocked(createChatCompletion)
       .mockResolvedValueOnce({
         role: 'assistant',
-        content: null,
+        content: '我先确认一下搜索方向。',
         tool_calls: [{
           id: 'ask-invalid',
           type: 'function',
@@ -104,6 +104,7 @@ describe('AI 搜索会话 Payload', () => {
     });
 
     expect(result.answer).toBe('我先按剧情方向搜索。');
+    expect(result.trace[0]).toEqual({ type: 'text', content: '我先确认一下搜索方向。' });
     expect(result.pendingQuestion).toBeNull();
     expect(secondRequestMessages[secondRequestMessages.length - 1]).toEqual({
       role: 'tool',

@@ -227,7 +227,7 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
           </div>
         </div>
 
-        <div className="border-t border-(--od-shell-line) pt-8">
+        <div id="appearance-settings" className="scroll-mt-6 border-t border-(--od-shell-line) pt-8">
           <h3 className="text-lg font-semibold text-(--od-text-primary)">主题</h3>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {visibleThemeOptions.map((option) => {

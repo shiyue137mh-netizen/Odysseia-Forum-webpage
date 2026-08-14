@@ -207,6 +207,29 @@ export function SearchSuggestions({
       });
       flatItems.push(presetItem, ...popularTags);
     } else {
+      const relevantTags: SuggestionItem[] = availableTags
+        .filter(
+          (tag) =>
+            !existingTagNames.includes(tag) &&
+            tag.toLowerCase().includes(queryLower),
+        )
+        .slice(0, 5)
+        .map((tag, index) => ({
+          key: `tag-${tag}-${index}`,
+          type: "tag",
+          display: tag,
+          value: tag,
+          icon: Hash,
+        }));
+      if (relevantTags.length > 0) {
+        sectionedGroups.push({
+          title: "相关标签",
+          icon: Hash,
+          items: relevantTags,
+        });
+        flatItems.push(...relevantTags);
+      }
+
       const relevantAuthors: SuggestionItem[] = authors
         .slice(0, 5)
         .map((author, index) => ({
@@ -261,29 +284,6 @@ export function SearchSuggestions({
           items: directBooklists,
         });
         flatItems.push(...directBooklists);
-      }
-
-      const relevantTags: SuggestionItem[] = availableTags
-        .filter(
-          (tag) =>
-            !existingTagNames.includes(tag) &&
-            tag.toLowerCase().includes(queryLower),
-        )
-        .slice(0, 5)
-        .map((tag, index) => ({
-          key: `tag-${tag}-${index}`,
-          type: "tag",
-          display: tag,
-          value: tag,
-          icon: Hash,
-        }));
-      if (relevantTags.length > 0) {
-        sectionedGroups.push({
-          title: "相关标签",
-          icon: Hash,
-          items: relevantTags,
-        });
-        flatItems.push(...relevantTags);
       }
 
       const relevantChannels: SuggestionItem[] = channels

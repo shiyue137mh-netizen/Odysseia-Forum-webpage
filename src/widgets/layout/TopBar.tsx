@@ -339,7 +339,7 @@ export function TopBar({
         sidebarCollapsed ? "lg:left-0" : "lg:left-[170px]"
       }`}
     >
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 shrink-0 items-center gap-1.5">
         <button
           onClick={onMenuClick}
           className="p-2 text-(--od-text-secondary) transition-colors duration-200 hover:text-(--od-text-primary) lg:hidden"
@@ -412,7 +412,7 @@ export function TopBar({
       </div>
 
       <div
-        className="od-topbar-actions flex flex-1 items-center justify-end gap-2 md:gap-3"
+        className="od-topbar-actions flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-3"
         ref={searchContainerRef}
       >
         <div className="relative min-w-0 flex-1 max-w-[560px]">

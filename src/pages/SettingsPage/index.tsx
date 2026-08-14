@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { useSettings } from '@/shared/hooks/useSettings';
 import { resetUserSettings } from '@/shared/lib/settings';
@@ -11,6 +12,7 @@ import { SettingsPageHeader } from './SettingsPageHeader';
 import { VersionSettingsSection } from './VersionSettingsSection';
 
 export function SettingsPage() {
+  const location = useLocation();
   const { settings, updateSettings } = useSettings();
   const [opacityDraft, setOpacityDraft] = useState(Math.round(settings.backgroundImageOpacity * 100));
   const [blurDraft, setBlurDraft] = useState(Math.round(settings.glassBlur));
@@ -22,6 +24,14 @@ export function SettingsPage() {
   useEffect(() => {
     setBlurDraft(Math.round(settings.glassBlur));
   }, [settings.glassBlur]);
+
+  useEffect(() => {
+    if (location.hash !== '#appearance-settings') return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById('appearance-settings')?.scrollIntoView({ block: 'start' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash]);
 
   const handleUploadBackground = (file: File | null) => {
     if (!file) return;

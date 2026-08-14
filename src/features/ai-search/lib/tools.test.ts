@@ -4,6 +4,7 @@ import type { Booklist } from '@/entities/booklist/types';
 import type { Thread } from '@/entities/thread/types';
 import { booklistsApi } from '@/features/booklists/api/booklistsApi';
 import { discoveryApi } from '@/features/discovery/api/discoveryApi';
+import { searchApi } from '@/features/search/api/searchApi';
 import {
   compactThread,
   compactTournament,
@@ -82,6 +83,25 @@ describe('AI 搜索工具结果', () => {
       controller.signal,
     );
     expect(result.results[0]).toEqual(compactTournament(tournament));
+  });
+
+  it('按显式 keyword_logic 将关键词转换为后端 AND 或 OR 语法', async () => {
+    vi.mocked(searchApi.search).mockResolvedValue({ total: 0, results: [] } as any);
+    const runtime = createAISearchToolRuntime(() => undefined);
+
+    await runtime.execute({
+      id: 'call-search',
+      type: 'function',
+      function: {
+        name: 'search_threads',
+        arguments: '{"keywords":"酒馆,前端/网页","keyword_logic":"or"}',
+      },
+    });
+
+    expect(searchApi.search).toHaveBeenCalledWith(
+      expect.objectContaining({ query: '酒馆/前端/网页' }),
+      undefined,
+    );
   });
 
   it('校验 ask_user 并在工具结果出现前保持待回答状态', () => {

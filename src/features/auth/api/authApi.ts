@@ -32,8 +32,10 @@ export const authApi = {
       }
 
       return await tryFallbackToAuthHeader();
-    } catch {
-      return await tryFallbackToAuthHeader();
+    } catch (cookieError) {
+      const token = getStoredAuthToken();
+      if (!token) throw cookieError;
+      return await tryFallbackToAuthHeader(token);
     }
   },
 
@@ -44,21 +46,17 @@ export const authApi = {
   },
 };
 
-async function tryFallbackToAuthHeader(): Promise<AuthResponse> {
-  const token = getStoredAuthToken();
+async function tryFallbackToAuthHeader(storedToken?: string): Promise<AuthResponse> {
+  const token = storedToken || getStoredAuthToken();
   if (!token) return { loggedIn: false };
 
-  try {
-    const response = await apiClient.get<AuthResponse>('/auth/checkauth', {
-      headers: { Authorization: `Bearer ${token}` },
-      skipAuthHeader: true,
-    });
-    if (response.data.loggedIn) {
-      setUseAuthHeader(true);
-      return response.data;
-    }
-  } catch {
-    // 两种方式都失败了
+  const response = await apiClient.get<AuthResponse>('/auth/checkauth', {
+    headers: { Authorization: `Bearer ${token}` },
+    skipAuthHeader: true,
+  });
+  if (response.data.loggedIn) {
+    setUseAuthHeader(true);
+    return response.data;
   }
 
   return { loggedIn: false };
