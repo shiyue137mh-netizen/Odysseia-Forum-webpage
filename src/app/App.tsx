@@ -8,6 +8,12 @@ import { showMascotErrorToast } from '@/features/mascot/lib/mascotToast';
 import { ThemeProvider } from '@/app/themes/ThemeProvider';
 import { bindThumbnailRepairQueryClient } from '@/features/threads/lib/thumbnailRepairQueue';
 import { consumeAuthTokenFromHash } from '@/shared/lib/authSession';
+import {
+  getRateLimitInfo,
+  isSilentPreloadRateLimit,
+  shouldRetryQuery,
+} from '@/shared/api/rateLimit';
+import { notifyRateLimit } from '@/shared/lib/notify';
 import { router } from './router';
 import { useMascotStore } from '@/features/mascot/store/mascotStore';
 
@@ -15,6 +21,11 @@ const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       console.error('Global Query Error:', error);
+      const rateLimit = getRateLimitInfo(error);
+      if (rateLimit) {
+        if (!isSilentPreloadRateLimit(error)) notifyRateLimit(rateLimit);
+        return;
+      }
       showMascotErrorToast('network', { id: 'global-network-error' });
     },
   }),
@@ -22,14 +33,14 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       refetchOnWindowFocus: false, // Prevent aggressive re-fetching when switching back
-      retry: 1,
+      retry: shouldRetryQuery,
     },
   },
 });
 
 // 方便调试
 if (import.meta.env.DEV) {
-  (window as any).queryClient = queryClient;
+  Object.assign(window, { queryClient });
 }
 
 export function App() {

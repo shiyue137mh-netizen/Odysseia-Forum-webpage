@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useInfiniteQuery, type InfiniteData } from '@tanstack/react-query';
 
@@ -13,10 +13,19 @@ import {
   type SearchParams,
 } from '@/features/search/hooks/useSearchParams';
 import { searchKeys } from '@/features/search/lib/queryKeys';
+import { SEARCH_SUBMIT_EVENT } from '@/features/search/lib/searchEvents';
+import {
+  getActiveRateLimit,
+  getRateLimitInfo,
+  getRemainingRateLimitSeconds,
+  type RateLimitInfo,
+  type RateLimitOrigin,
+} from '@/shared/api/rateLimit';
 import {
   useResultPagingModeSetting,
   useResultPreloadSettings,
 } from '@/shared/hooks/useSettings';
+import { notifyRateLimit } from '@/shared/lib/notify';
 
 interface UseSearchResultsOptions {
   params: SearchParams;
@@ -101,6 +110,11 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   } = params;
 
   const [ignoreDiscoveryPreferences, setIgnoreDiscoveryPreferences] = useState(false);
+  const [preloadPaused, setPreloadPaused] = useState(false);
+  const [visibleRateLimit, setVisibleRateLimit] = useState<RateLimitInfo | null>(null);
+  const [rateLimitClock, setRateLimitClock] = useState(() => Date.now());
+  const nextPageOriginRef = useRef<RateLimitOrigin>('foreground');
+  const attemptedForegroundPageRef = useRef<number | null>(null);
   const resultPagingMode = useResultPagingModeSetting();
   const resultPreload = useResultPreloadSettings();
   const currentPage = Math.max(1, page || 1);
@@ -157,23 +171,29 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     }),
     queryFn: ({ pageParam }) => {
       const excludeThreadIds = pageParam;
-      return searchApi.search({
-        query: query || undefined,
-        channel_ids: selectedChannel ? [selectedChannel] : undefined,
-        include_tags: includeTags.length > 0 ? includeTags : undefined,
-        exclude_tags: excludeTags.length > 0 ? excludeTags : undefined,
-        tag_logic: tagLogic,
-        sort_method: sortMethod,
-        sort_order: sortOrder,
-        apply_preferences: applyPreferences,
-        limit: PAGE_SIZE,
-        offset: 0,
-        exclude_thread_ids: excludeThreadIds,
-        created_after: timeFrom || undefined,
-        created_before: timeTo || undefined,
-        reaction_min: reactionMin,
-        reply_min: replyMin,
-      });
+      const origin =
+        excludeThreadIds.length > 0 ? nextPageOriginRef.current : 'foreground';
+      return searchApi.search(
+        {
+          query: query || undefined,
+          channel_ids: selectedChannel ? [selectedChannel] : undefined,
+          include_tags: includeTags.length > 0 ? includeTags : undefined,
+          exclude_tags: excludeTags.length > 0 ? excludeTags : undefined,
+          tag_logic: tagLogic,
+          sort_method: sortMethod,
+          sort_order: sortOrder,
+          apply_preferences: applyPreferences,
+          limit: PAGE_SIZE,
+          offset: 0,
+          exclude_thread_ids: excludeThreadIds,
+          created_after: timeFrom || undefined,
+          created_before: timeTo || undefined,
+          reaction_min: reactionMin,
+          reply_min: replyMin,
+        },
+        undefined,
+        origin,
+      );
     },
     initialPageParam: [],
     getNextPageParam: (_lastPage, allPages = []) => computeNextExcludeIds(allPages),
@@ -181,11 +201,37 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   });
 
   const loadedPageCount = infiniteQueryState.data?.pages.length || 0;
-  const {
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = infiniteQueryState;
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
+    infiniteQueryState;
+
+  const revealRateLimit = useCallback((info: RateLimitInfo) => {
+    const visibleInfo = { ...info, origin: 'foreground' as const };
+    setRateLimitClock(Date.now());
+    setVisibleRateLimit(visibleInfo);
+    notifyRateLimit(visibleInfo);
+  }, []);
+
+  const revealActiveRateLimit = useCallback(() => {
+    const activeRateLimit = getActiveRateLimit('search', 'foreground');
+    if (!activeRateLimit) return false;
+    setPreloadPaused(true);
+    revealRateLimit(activeRateLimit);
+    return true;
+  }, [revealRateLimit]);
+
+  const fetchNextPageWithOrigin = useCallback(
+    async (origin: RateLimitOrigin) => {
+      nextPageOriginRef.current = origin;
+      const result = await fetchNextPage();
+      if (!result.isError && origin === 'foreground') {
+        attemptedForegroundPageRef.current = null;
+        setPreloadPaused(false);
+        setVisibleRateLimit(null);
+      }
+      return result;
+    },
+    [fetchNextPage],
+  );
 
   const viewedPage =
     resultPagingMode === 'pagination'
@@ -200,49 +246,178 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   );
 
   useEffect(() => {
+    nextPageOriginRef.current = 'foreground';
+    attemptedForegroundPageRef.current = null;
+    const timer = window.setTimeout(() => {
+      const activeRateLimit = getActiveRateLimit('search', 'foreground');
+      setPreloadPaused(Boolean(activeRateLimit));
+      if (activeRateLimit) {
+        revealRateLimit(activeRateLimit);
+      } else {
+        setVisibleRateLimit(null);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [resultSignature, revealRateLimit]);
+
+  useEffect(() => {
+    const rateLimit = getRateLimitInfo(infiniteQueryState.error);
+    if (!rateLimit) return;
+
+    const timer = window.setTimeout(() => {
+      setPreloadPaused(true);
+      if (rateLimit.origin === 'preload') return;
+      setRateLimitClock(Date.now());
+      setVisibleRateLimit(rateLimit);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [infiniteQueryState.error]);
+
+  useEffect(() => {
+    if (!visibleRateLimit?.retryAt) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setRateLimitClock(now);
+      if (
+        visibleRateLimit.retryAt !== null &&
+        visibleRateLimit.retryAt <= now
+      ) {
+        setVisibleRateLimit(null);
+        window.clearInterval(timer);
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [visibleRateLimit]);
+
+  const visibleRateLimitRemaining = visibleRateLimit
+    ? getRemainingRateLimitSeconds(visibleRateLimit, rateLimitClock)
+    : null;
+
+  useEffect(() => {
+    const needsForegroundPage = loadedPageCount < viewedPage;
     if (
       requestedPageCount <= loadedPageCount ||
       !hasNextPage ||
-      isFetchingNextPage
+      isFetchingNextPage ||
+      (!needsForegroundPage &&
+        (preloadPaused || infiniteQueryState.isFetchNextPageError)) ||
+      (needsForegroundPage &&
+        infiniteQueryState.isFetchNextPageError &&
+        attemptedForegroundPageRef.current === viewedPage)
     ) {
       return;
     }
 
-    void fetchNextPage();
+    if (needsForegroundPage) {
+      const activeRateLimit = getActiveRateLimit('search', 'foreground');
+      if (activeRateLimit) {
+        const timer = window.setTimeout(() => {
+          setPreloadPaused(true);
+          revealRateLimit(activeRateLimit);
+        }, 0);
+        return () => window.clearTimeout(timer);
+      }
+    }
+
+    const origin: RateLimitOrigin = needsForegroundPage
+      ? 'foreground'
+      : 'preload';
+    if (origin === 'foreground')
+      attemptedForegroundPageRef.current = viewedPage;
+    const timer = window.setTimeout(() => {
+      void fetchNextPageWithOrigin(origin);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [
-    fetchNextPage,
+    fetchNextPageWithOrigin,
+    hasNextPage,
+    infiniteQueryState.isFetchNextPageError,
+    isFetchingNextPage,
+    loadedPageCount,
+    preloadPaused,
+    revealRateLimit,
+    requestedPageCount,
+    viewedPage,
+  ]);
+
+  const reportViewedPage = useCallback(
+    (pageNumber: number) => {
+      const normalizedPage = Math.max(1, Math.floor(pageNumber));
+      setViewedPageState((current) => {
+        if (
+          current.signature === resultSignature &&
+          current.page >= normalizedPage
+        ) {
+          return current;
+        }
+        return {
+          signature: resultSignature,
+          page:
+            current.signature === resultSignature
+              ? Math.max(current.page, normalizedPage)
+              : normalizedPage,
+        };
+      });
+    },
+    [resultSignature],
+  );
+
+  const requestNextPage = useCallback(() => {
+    if (isFetchingNextPage || !hasNextPage || revealActiveRateLimit()) return;
+    reportViewedPage(Math.max(1, loadedPageCount));
+    void fetchNextPageWithOrigin('foreground');
+  }, [
+    fetchNextPageWithOrigin,
     hasNextPage,
     isFetchingNextPage,
     loadedPageCount,
-    requestedPageCount,
+    reportViewedPage,
+    revealActiveRateLimit,
   ]);
 
-  const reportViewedPage = useCallback((pageNumber: number) => {
-    const normalizedPage = Math.max(1, Math.floor(pageNumber));
-    setViewedPageState((current) => {
-      if (
-        current.signature === resultSignature &&
-        current.page >= normalizedPage
-      ) {
-        return current;
-      }
-      return {
-        signature: resultSignature,
-        page:
-          current.signature === resultSignature
-            ? Math.max(current.page, normalizedPage)
-            : normalizedPage,
-      };
-    });
-  }, [resultSignature]);
+  const preparePageRequest = useCallback(
+    (pageNumber: number) => {
+      if (pageNumber <= loadedPageCount) return true;
+      if (revealActiveRateLimit()) return false;
+      attemptedForegroundPageRef.current = null;
 
-  const requestNextPage = useCallback(() => {
-    if (resultPreload.enabled) {
-      reportViewedPage(Math.max(1, loadedPageCount));
-      return;
-    }
-    void fetchNextPage();
-  }, [fetchNextPage, loadedPageCount, reportViewedPage, resultPreload.enabled]);
+      if (
+        pageNumber === currentPage &&
+        infiniteQueryState.isFetchNextPageError &&
+        !isFetchingNextPage
+      ) {
+        attemptedForegroundPageRef.current = null;
+        void fetchNextPageWithOrigin('foreground');
+        return false;
+      }
+      return true;
+    },
+    [
+      currentPage,
+      fetchNextPageWithOrigin,
+      infiniteQueryState.isFetchNextPageError,
+      isFetchingNextPage,
+      loadedPageCount,
+      revealActiveRateLimit,
+    ],
+  );
+
+  useEffect(() => {
+    const handleSearchSubmit = () => {
+      if (revealActiveRateLimit()) return;
+      nextPageOriginRef.current = 'foreground';
+      attemptedForegroundPageRef.current = null;
+      setPreloadPaused(false);
+      setVisibleRateLimit(null);
+      void refetch().then((result) => {
+        if (!result.isError) setPreloadPaused(false);
+      });
+    };
+
+    window.addEventListener(SEARCH_SUBMIT_EVENT, handleSearchSubmit);
+    return () =>
+      window.removeEventListener(SEARCH_SUBMIT_EVENT, handleSearchSubmit);
+  }, [refetch, revealActiveRateLimit]);
 
   const results = useMemo<Thread[]>(() => {
     if (resultPagingMode === 'infinite') {
@@ -276,6 +451,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     showPreferenceBanner,
     pageSize: PAGE_SIZE,
     pageByThreadId,
+    loadedPageCount,
+    preparePageRequest,
     queryState: {
       ...infiniteQueryState,
       isLoading: infiniteQueryState.isLoading || isLoadingRequestedPage,
@@ -286,5 +463,8 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     reportViewedPage,
     setIgnoreDiscoveryPreferences,
     totalResults,
+    visibleRateLimit: visibleRateLimit
+      ? { info: visibleRateLimit, remaining: visibleRateLimitRemaining }
+      : null,
   };
 }

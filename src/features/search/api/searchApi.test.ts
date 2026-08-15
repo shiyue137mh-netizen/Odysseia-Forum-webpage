@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { apiClient } from "@/shared/api/client";
+import {
+  RateLimitError,
+  resetRateLimitStateForTests,
+} from "@/shared/api/rateLimit";
 import { searchApi } from "./searchApi";
 
 vi.mock("@/shared/api/client", () => ({
@@ -9,9 +13,25 @@ vi.mock("@/shared/api/client", () => ({
 
 describe("searchApi 作者 Token", () => {
   beforeEach(() => {
+    resetRateLimitStateForTests();
     vi.mocked(apiClient.post).mockResolvedValue({
       data: { total: 0, results: [] },
     });
+  });
+
+  it("后台预加载 429 会记录冷却时间，后续请求在本地被拦截", async () => {
+    vi.mocked(apiClient.post).mockRejectedValueOnce({
+      isAxiosError: true,
+      config: { url: "/search/" },
+      response: { status: 429, headers: { "retry-after": "5" } },
+    });
+
+    await expect(searchApi.search({}, undefined, "preload")).rejects.toMatchObject({
+      name: "RateLimitError",
+      rateLimit: { origin: "preload", retryAfterSeconds: 5 },
+    });
+    await expect(searchApi.search({})).rejects.toBeInstanceOf(RateLimitError);
+    expect(apiClient.post).toHaveBeenCalledTimes(1);
   });
 
   it("把正反作者 ID 放进对应请求字段", async () => {

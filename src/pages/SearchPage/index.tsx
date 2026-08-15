@@ -44,6 +44,7 @@ import { scrollPageToTop } from "@/shared/lib/pageScroll";
 import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import {
   ArrowUpDown,
+  Clock3,
   MoveDown,
   MoveUp,
   Search,
@@ -60,11 +61,51 @@ const searchSortOptions = [
   { value: "relevance", label: "相关度" },
 ];
 
+function SearchRateLimitNotice({
+  remaining,
+  compact = false,
+}: {
+  remaining: number | null;
+  compact?: boolean;
+}) {
+  const message =
+    remaining === null
+      ? "搜索有点频繁，请稍后再试。"
+      : `搜索有点频繁，请在 ${remaining} 秒后再试。`;
+
+  if (compact) {
+    return (
+      <div
+        className="flex items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/8 px-4 py-3 text-sm text-(--od-text-secondary)"
+        role="status"
+      >
+        <Clock3 className="h-4 w-4 shrink-0 text-amber-500" />
+        <span>{message}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex flex-col items-center justify-center py-20 text-center"
+      role="status"
+    >
+      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+        <Clock3 className="h-10 w-10" />
+      </div>
+      <h3 className="mb-2 text-xl font-bold text-(--od-text-primary)">
+        搜索有点频繁
+      </h3>
+      <p className="text-(--od-text-secondary)">{message}</p>
+    </div>
+  );
+}
+
 export function SearchPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { params, setParams } = useSearchURLParams();
-  const { query, channel: selectedChannel } = params;
+  const { query, channel: selectedChannel, page: currentSearchPage } = params;
   const isThreadTab = params.type === "thread";
   const isTournamentTab = params.type === "tournament";
   const collectionKeywords = useMemo(
@@ -94,6 +135,8 @@ export function SearchPage() {
     isPreferenceActive,
     queryState: { isLoading, isError, refetch },
     infiniteQueryState,
+    loadedPageCount,
+    preparePageRequest,
     results,
     pageSize,
     pageByThreadId,
@@ -101,6 +144,7 @@ export function SearchPage() {
     reportViewedPage,
     setIgnoreDiscoveryPreferences,
     totalResults,
+    visibleRateLimit,
   } = useSearchResults({ params, preferences });
 
   const animateIn = useListEntranceAnimation(isLoading);
@@ -156,6 +200,16 @@ export function SearchPage() {
       window.clearInterval(interval);
     };
   }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (
+      !visibleRateLimit ||
+      loadedPageCount === 0 ||
+      currentSearchPage <= loadedPageCount
+    )
+      return;
+    setParams({ page: loadedPageCount });
+  }, [currentSearchPage, loadedPageCount, setParams, visibleRateLimit]);
 
   // 这些回调会传给 memo 化的 ThreadResultsCollection / ThreadCard，
   // 必须保持引用稳定，否则任何一次页面重渲染都会击穿整个列表的 memo。
@@ -476,26 +530,36 @@ export function SearchPage() {
                 ),
               )}
             </div>
-          ) : isError ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 text-red-500">
-                <SlidersHorizontal className="h-10 w-10" />
+          ) : isError && !infiniteQueryState.data ? (
+            visibleRateLimit ? (
+              <SearchRateLimitNotice remaining={visibleRateLimit.remaining} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+                  <SlidersHorizontal className="h-10 w-10" />
+                </div>
+                <h3 className="mb-2 text-xl font-bold text-(--od-text-primary)">
+                  搜索出错了
+                </h3>
+                <p className="mb-6 text-(--od-text-secondary)">
+                  暂时拉不到结果，稍后再试试吧。
+                </p>
+                <button
+                  onClick={() => refetch()}
+                  className="od-inline-action od-inline-action-primary px-6 py-3 text-sm"
+                >
+                  重试搜索
+                </button>
               </div>
-              <h3 className="mb-2 text-xl font-bold text-(--od-text-primary)">
-                搜索出错了
-              </h3>
-              <p className="mb-6 text-(--od-text-secondary)">
-                暂时拉不到结果，稍后再试试吧。
-              </p>
-              <button
-                onClick={() => refetch()}
-                className="od-inline-action od-inline-action-primary px-6 py-3 text-sm"
-              >
-                重试搜索
-              </button>
-            </div>
+            )
           ) : results.length > 0 ? (
             <div className="flex flex-col gap-6">
+              {visibleRateLimit && (
+                <SearchRateLimitNotice
+                  remaining={visibleRateLimit.remaining}
+                  compact
+                />
+              )}
               <ThreadResultsCollection
                 threads={results}
                 onTagClick={handleTagClick}
@@ -526,7 +590,9 @@ export function SearchPage() {
                   currentPage={params.page}
                   totalPages={searchTotalPages}
                   totalItems={totalResults}
-                  onChange={(page) => setParams({ page })}
+                  onChange={(page) => {
+                    if (preparePageRequest(page)) setParams({ page });
+                  }}
                   sequential
                 />
               )}
