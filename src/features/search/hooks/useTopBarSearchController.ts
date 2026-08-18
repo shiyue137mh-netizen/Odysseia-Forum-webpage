@@ -19,6 +19,7 @@ import {
   getSearchTagLogicPreference,
   type SearchParams,
 } from "@/features/search/hooks/useSearchParams";
+import { dispatchSearchSubmit } from "@/features/search/lib/searchEvents";
 
 const SEARCH_DRAFT_QUERY_KEY = "odysseia_search_draft_query";
 const SEARCH_DRAFT_CHANNEL_KEY = "odysseia_search_draft_channel";
@@ -160,7 +161,9 @@ export function useTopBarSearchController({
           `/search${nextParams.toString() ? `?${nextParams.toString()}` : ""}`,
         );
       } else {
+        const isSameSearch = trimmed === params.query;
         setParams({ query: trimmed, page: 1 });
+        if (isSameSearch) dispatchSearchSubmit();
       }
 
       if (trimmed) {
@@ -183,6 +186,7 @@ export function useTopBarSearchController({
       params.channel,
       params.excludeTags,
       params.includeTags,
+      params.query,
       params.sortMethod,
       params.tagLogic,
       setParams,
@@ -215,7 +219,7 @@ export function useTopBarSearchController({
         setParams({ query: trimmed, page: 1 });
       }
     },
-    [isSearchPage, navigate, params.query, setParams],
+    [isSearchPage, navigate, params.channel, params.query, setParams],
   );
 
   const handleSearch = useCallback(() => {

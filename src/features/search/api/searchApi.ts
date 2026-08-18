@@ -1,5 +1,12 @@
 import { SearchParams as ApiSearchParams, SearchResponse, SimilarThreadsResponse, Thread } from '@/entities/thread/types';
 import { apiClient } from '@/shared/api/client';
+import {
+  getActiveRateLimit,
+  getRateLimitInfo,
+  RateLimitError,
+  rememberRateLimit,
+  type RateLimitOrigin,
+} from '@/shared/api/rateLimit';
 import { tokenizeSearchPayload } from '@/shared/lib/searchTokenizer';
 
 export type UISortMethod =
@@ -237,12 +244,25 @@ function buildSearchRequest(params: SearchUIRequest): ApiSearchParams {
 }
 
 export const searchApi = {
-  search: async (params: SearchUIRequest = {}, signal?: AbortSignal): Promise<SearchResponse> => {
+  search: async (
+    params: SearchUIRequest = {},
+    signal?: AbortSignal,
+    origin: RateLimitOrigin = 'foreground',
+  ): Promise<SearchResponse> => {
+    const activeRateLimit = getActiveRateLimit('search', origin);
+    if (activeRateLimit) throw new RateLimitError(activeRateLimit);
+
     const requestBody = buildSearchRequest(params);
-    const response = signal
-      ? await apiClient.post<SearchResponse>('/search/', requestBody, { signal })
-      : await apiClient.post<SearchResponse>('/search/', requestBody);
-    return response.data;
+    try {
+      const response = signal
+        ? await apiClient.post<SearchResponse>('/search/', requestBody, { signal })
+        : await apiClient.post<SearchResponse>('/search/', requestBody);
+      return response.data;
+    } catch (error) {
+      const rateLimit = getRateLimitInfo(error, { scope: 'search', origin });
+      if (!rateLimit) throw error;
+      throw new RateLimitError(rememberRateLimit(rateLimit), error);
+    }
   },
 
   getThread: async (threadId: string, signal?: AbortSignal): Promise<Thread> => {

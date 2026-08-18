@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { DiscordIcon } from '@/shared/ui/icons/DiscordIcon';
 import { useAuth, useRefreshAuth } from '@/features/auth/hooks/useAuth';
@@ -14,9 +14,11 @@ import { WordLoader } from '@/shared/ui/loaders/WordLoader';
 import { ImageViewer } from '@/shared/ui/ImageViewer';
 import { useImageViewerStore } from '@/shared/store/useImageViewerStore';
 import { AuthSceneBackground } from './AuthSceneBackground';
+import { clearLoginErrorParams, normalizeLoginError } from './loginError';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const refreshAuth = useRefreshAuth();
   const openImageViewer = useImageViewerStore((state) => state.open);
@@ -30,6 +32,25 @@ export function LoginPage() {
   const loadingWordStyle: CSSProperties & { '--od-text-primary': string } = {
     '--od-text-primary': 'color-mix(in oklab, var(--od-accent) 78%, white 22%)',
   };
+
+  // OAuth 失败返回登录页时，在顶部展示一次具体原因并清理错误参数
+  useEffect(() => {
+    const rawError = searchParams.get('error');
+    if (rawError === null) return;
+
+    const errorMessage = normalizeLoginError(rawError);
+    setSearchParams(clearLoginErrorParams(searchParams), { replace: true });
+
+    if (!errorMessage) return;
+    showMascotToast({
+      id: 'login-oauth-error',
+      emotion: 'sad_apology',
+      eyebrow: 'Login Interrupted',
+      title: '这次登录没接上',
+      message: errorMessage,
+      duration: 9000,
+    });
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     const timerId = window.setTimeout(() => setIsLoginCardReady(true), 10_000);
