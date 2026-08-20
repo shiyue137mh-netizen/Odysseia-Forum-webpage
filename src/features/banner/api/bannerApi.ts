@@ -19,9 +19,16 @@ export const bannerApi = {
         return response.data;
     },
 
-    getActiveBanners: async (channelId?: string): Promise<BannerItem[]> => {
+    getActiveBanners: async (channelIds?: string[]): Promise<BannerItem[]> => {
+        const params: Record<string, unknown> = {};
+        if (channelIds && channelIds.length > 0) {
+            params.channel_ids = channelIds;
+        }
         const response = await apiClient.get<BannerItem[]>('/banner/active', {
-            params: { channel_id: channelId },
+            params,
+            paramsSerializer: {
+                indexes: null,
+            },
         });
         return response.data;
     },

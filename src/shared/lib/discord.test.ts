@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 import {
   buildDiscordAppThreadUrl,
   buildDiscordThreadUrl,
   buildDiscordWebThreadUrl,
+  openDiscordTarget,
 } from './discord';
 
 describe('discord link builders', () => {
@@ -30,3 +31,47 @@ describe('discord link builders', () => {
     expect(buildDiscordThreadUrl(options, 'app')).toBe(buildDiscordAppThreadUrl(options));
   });
 });
+
+describe('openDiscordTarget fallback mechanism', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('web 模式下直接打开 window.open', () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    openDiscordTarget({
+      webUrl: 'https://discord.com/channels/1/2',
+      appUrl: 'discord://-/channels/1/2',
+      openMode: 'web',
+    });
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://discord.com/channels/1/2',
+      '_blank',
+      'noopener,noreferrer',
+    );
+  });
+
+  it('app 模式下若 1.8s 未离开页面触发 onFallback 回调', () => {
+    const fallbackSpy = vi.fn();
+    openDiscordTarget({
+      webUrl: 'https://discord.com/channels/1/2',
+      appUrl: 'discord://-/channels/1/2',
+      openMode: 'app',
+      fallbackTimeoutMs: 1800,
+      onFallback: fallbackSpy,
+    });
+
+    // 快进 1800ms
+    vi.advanceTimersByTime(1800);
+
+    expect(fallbackSpy).toHaveBeenCalledTimes(1);
+    expect(fallbackSpy).toHaveBeenCalledWith({
+      webUrl: 'https://discord.com/channels/1/2',
+    });
+  });
+});
+

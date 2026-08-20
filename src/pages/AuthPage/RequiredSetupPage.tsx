@@ -287,30 +287,35 @@ export function RequiredSetupPage() {
           )}
 
           {stepIndex === 2 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {([
-                { value: 'web' as const, label: '网页端', description: '在浏览器中打开 Discord 帖子，兼容性更稳定。', icon: Globe2 },
-                { value: 'app' as const, label: 'Discord App', description: '优先唤起本机 Discord 客户端。', icon: Smartphone },
-              ]).map((option) => {
-                const Icon = option.icon;
-                const selected = openMode === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setOpenMode(option.value)}
-                    className={`h-full rounded-xl p-4 text-left transition-colors ${selected ? 'bg-emerald-500/12 text-(--od-text-primary)' : 'text-(--od-text-secondary) hover:bg-white/4'}`}
-                  >
-                    <div className="flex min-h-6 items-center gap-3">
-                      <Icon className={`h-5 w-5 ${selected ? 'text-emerald-300' : ''}`} />
-                      <span className="font-semibold">{option.label}</span>
-                      <span className="ml-auto"><SelectionIndicator selected={selected} /></span>
-                    </div>
-                    <p className="mt-3 min-h-12 text-sm leading-6 text-(--od-text-tertiary)">{option.description}</p>
-                  </button>
-                );
-              })}
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {([
+                  { value: 'web' as const, label: '网页端', description: '在浏览器中打开 Discord 帖子，兼容性更稳定。', icon: Globe2 },
+                  { value: 'app' as const, label: 'Discord App', description: '优先唤起本机 Discord 客户端。', icon: Smartphone },
+                ]).map((option) => {
+                  const Icon = option.icon;
+                  const selected = openMode === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setOpenMode(option.value)}
+                      className={`h-full rounded-xl p-4 text-left transition-colors ${selected ? 'bg-emerald-500/12 text-(--od-text-primary)' : 'text-(--od-text-secondary) hover:bg-white/4'}`}
+                    >
+                      <div className="flex min-h-6 items-center gap-3">
+                        <Icon className={`h-5 w-5 ${selected ? 'text-emerald-300' : ''}`} />
+                        <span className="font-semibold">{option.label}</span>
+                        <span className="ml-auto"><SelectionIndicator selected={selected} /></span>
+                      </div>
+                      <p className="mt-3 min-h-12 text-sm leading-6 text-(--od-text-tertiary)">{option.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="px-1 text-xs leading-relaxed text-(--od-text-tertiary)">
+                提示：DeepLink 协议主要用于已安装客户端的桌面端环境；移动端或未安装客户端时，网页端/HTTP 链接通常具备更好的兼容性与唤起体验。若客户端唤起无响应，系统将自动引导降级至 Web 端。
+              </p>
             </div>
           )}
 

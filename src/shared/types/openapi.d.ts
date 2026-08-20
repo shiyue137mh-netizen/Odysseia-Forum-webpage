@@ -398,6 +398,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/internal/share-metadata/threads/{thread_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 获取帖子分享元数据
+         * @description 返回公开帖子的动态分享元数据。
+         */
+        get: operations["get_thread_share_metadata_v1_internal_share_metadata_threads__thread_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/internal/share-metadata/authors/{author_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 获取作者分享元数据
+         * @description 返回至少拥有一个公开作品的作者分享元数据。
+         */
+        get: operations["get_author_share_metadata_v1_internal_share_metadata_authors__author_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/internal/share-metadata/booklists/{booklist_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 获取书单或赛事分享元数据
+         * @description 返回公开书单或赛事的动态分享元数据。
+         */
+        get: operations["get_booklist_share_metadata_v1_internal_share_metadata_booklists__booklist_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fetch-images/": {
         parameters: {
             query?: never;
@@ -1313,6 +1373,57 @@ export interface components {
             stats: components["schemas"]["AuthorStats"];
         };
         /**
+         * AuthorShareMetadataDTO
+         * @description 描述内部作者 Open Graph 接口的完整响应。
+         */
+        AuthorShareMetadataDTO: {
+            /**
+             * Display Name
+             * @description 作者显示名
+             */
+            display_name: string;
+            /**
+             * Avatar Url
+             * @description 作者头像 URL
+             */
+            avatar_url?: string | null;
+            /** @description 作者公开作品统计 */
+            stats: components["schemas"]["AuthorShareStatsDTO"];
+            /** @description 作者最新公开作品 */
+            latest_work?: components["schemas"]["OpenGraphLatestWorkDTO-Output"] | null;
+            /**
+             * Works
+             * @description 最多五个带图代表作品
+             */
+            works: components["schemas"]["OpenGraphWorkDTO-Output"][];
+            /**
+             * Updated At
+             * @description 作者资料更新时间
+             */
+            updated_at: string;
+        };
+        /**
+         * AuthorShareStatsDTO
+         * @description 描述作者公开作品的聚合统计。
+         */
+        AuthorShareStatsDTO: {
+            /**
+             * Thread Count
+             * @description 公开作品数
+             */
+            thread_count: number;
+            /**
+             * Reaction Count
+             * @description 公开作品总反应数
+             */
+            reaction_count: number;
+            /**
+             * Reply Count
+             * @description 公开作品总回复数
+             */
+            reply_count: number;
+        };
+        /**
          * AuthorStats
          * @description 作者统计摘要的响应模型。
          */
@@ -1980,6 +2091,75 @@ export interface components {
              * @description Discord 讨论帖完整 URL
              */
             thread_url: string;
+        };
+        /**
+         * BooklistShareMetadataDTO
+         * @description 描述内部书单或赛事 Open Graph 接口的完整响应。
+         */
+        BooklistShareMetadataDTO: {
+            /**
+             * Title
+             * @description 书单或赛事标题
+             */
+            title: string;
+            /**
+             * Description
+             * @description 书单或赛事简介
+             */
+            description?: string | null;
+            /**
+             * Cover Image Url
+             * @description 书单自定义封面 URL
+             */
+            cover_image_url?: string | null;
+            /**
+             * Author Name
+             * @description 非匿名书单作者名
+             */
+            author_name?: string | null;
+            /**
+             * Works
+             * @description 最多五个带图代表作品
+             */
+            works: components["schemas"]["OpenGraphWorkDTO-Output"][];
+            /** @description 书单公开统计 */
+            stats: components["schemas"]["BooklistShareStatsDTO"];
+            /**
+             * Is Tournament
+             * @description 是否为赛事书单
+             */
+            is_tournament: boolean;
+            /**
+             * Created At
+             * @description 书单创建时间
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * @description 书单更新时间
+             */
+            updated_at: string;
+        };
+        /**
+         * BooklistShareStatsDTO
+         * @description 描述书单分享卡片中的公开统计。
+         */
+        BooklistShareStatsDTO: {
+            /**
+             * Item Count
+             * @description 当前可见作品数
+             */
+            item_count: number;
+            /**
+             * Collection Count
+             * @description 书单收藏数
+             */
+            collection_count: number;
+            /**
+             * View Count
+             * @description 书单浏览数
+             */
+            view_count: number;
         };
         /**
          * BooklistSuggestion
@@ -2925,6 +3105,108 @@ export interface components {
              */
             real_thread_count: number;
         };
+        /**
+         * OpenGraphAuthorDTO
+         * @description 描述帖子分享卡片中的作者公开信息。
+         */
+        OpenGraphAuthorDTO: {
+            /**
+             * Display Name
+             * @description 作者显示名
+             */
+            display_name: string;
+            /**
+             * Avatar Url
+             * @description 作者头像 URL
+             */
+            avatar_url?: string | null;
+        };
+        /**
+         * OpenGraphLatestWorkDTO
+         * @description 描述作者最新公开作品的最小信息。
+         */
+        "OpenGraphLatestWorkDTO-Input": {
+            /**
+             * Title
+             * @description 作品标题
+             */
+            title: string;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 作品创建时间
+             */
+            created_at: string;
+        };
+        /**
+         * OpenGraphLatestWorkDTO
+         * @description 描述作者最新公开作品的最小信息。
+         */
+        "OpenGraphLatestWorkDTO-Output": {
+            /**
+             * Title
+             * @description 作品标题
+             */
+            title: string;
+            /**
+             * Created At
+             * @description 作品创建时间
+             */
+            created_at: string;
+        };
+        /**
+         * OpenGraphWorkDTO
+         * @description 描述作者或书单分享卡片中的代表作品。
+         */
+        "OpenGraphWorkDTO-Input": {
+            /**
+             * Title
+             * @description 作品标题
+             */
+            title: string;
+            /**
+             * Image Url
+             * @description 当前有效的作品图片 URL
+             */
+            image_url: string;
+            /**
+             * Reaction Count
+             * @description 作品反应数
+             */
+            reaction_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 作品创建时间
+             */
+            created_at: string;
+        };
+        /**
+         * OpenGraphWorkDTO
+         * @description 描述作者或书单分享卡片中的代表作品。
+         */
+        "OpenGraphWorkDTO-Output": {
+            /**
+             * Title
+             * @description 作品标题
+             */
+            title: string;
+            /**
+             * Image Url
+             * @description 当前有效的作品图片 URL
+             */
+            image_url: string;
+            /**
+             * Reaction Count
+             * @description 作品反应数
+             */
+            reaction_count: number;
+            /**
+             * Created At
+             * @description 作品创建时间
+             */
+            created_at: string;
+        };
         /** PaginatedResponse[BooklistDetail] */
         PaginatedResponse_BooklistDetail_: {
             /**
@@ -3423,6 +3705,62 @@ export interface components {
              * @description 所属赛事书单信息列表
              */
             tournament_info_list?: components["schemas"]["TournamentInfo-Output"][];
+        };
+        /**
+         * ThreadShareMetadataDTO
+         * @description 描述内部帖子 Open Graph 接口的完整响应。
+         */
+        ThreadShareMetadataDTO: {
+            /**
+             * Title
+             * @description 帖子标题
+             */
+            title: string;
+            /**
+             * Description
+             * @description 帖子摘要
+             */
+            description?: string | null;
+            /**
+             * Image Url
+             * @description 当前有效的帖子图片 URL
+             */
+            image_url?: string | null;
+            /** @description 帖子作者公开信息 */
+            author: components["schemas"]["OpenGraphAuthorDTO"];
+            /** @description 帖子公开统计 */
+            stats: components["schemas"]["ThreadShareStatsDTO"];
+            /**
+             * Created At
+             * @description 帖子创建时间
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * @description 帖子更新时间
+             */
+            updated_at: string;
+        };
+        /**
+         * ThreadShareStatsDTO
+         * @description 描述帖子分享卡片中的公开统计。
+         */
+        ThreadShareStatsDTO: {
+            /**
+             * Reaction Count
+             * @description 反应数
+             */
+            reaction_count: number;
+            /**
+             * Reply Count
+             * @description 回复数
+             */
+            reply_count: number;
+            /**
+             * Collection Count
+             * @description 收藏数
+             */
+            collection_count: number;
         };
         /**
          * ThreadSuggestion
@@ -4464,6 +4802,105 @@ export interface operations {
             };
         };
     };
+    get_thread_share_metadata_v1_internal_share_metadata_threads__thread_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                thread_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadShareMetadataDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_author_share_metadata_v1_internal_share_metadata_authors__author_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                author_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorShareMetadataDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_booklist_share_metadata_v1_internal_share_metadata_booklists__booklist_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                booklist_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BooklistShareMetadataDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     refresh_thread_thumbnails_v1_fetch_images__post: {
         parameters: {
             query?: never;
@@ -4533,8 +4970,10 @@ export interface operations {
     get_active_banners_v1_banner_active_get: {
         parameters: {
             query?: {
-                /** @description 频道ID，不传则获取全频道Banner */
-                channel_id?: number | null;
+                /** @description 频道ID列表，可重复传入；不传则仅获取全局Banner */
+                channel_ids?: (number | string)[] | null;
+                /** @description 兼容旧调用的单个频道ID；传入后合并到channel_ids */
+                channel_id?: number | string | null;
             };
             header?: never;
             path?: never;

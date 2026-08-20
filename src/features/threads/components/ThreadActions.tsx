@@ -2,7 +2,11 @@ import { Tooltip } from '@/shared/ui/Tooltip';
 import { DiscordIcon } from '@/shared/ui/icons/DiscordIcon';
 import { AnimatedIcon } from '@/shared/ui/animation/AnimatedIcon';
 import { useState } from 'react';
-import { buildDiscordThreadUrl } from '@/shared/lib/discord';
+import {
+    buildDiscordAppThreadUrl,
+    buildDiscordWebThreadUrl,
+} from '@/shared/lib/discord';
+import { openDiscordWithFallback } from '@/features/threads/lib/openDiscordWithFallback';
 import { useOpenModeSetting } from '@/shared/hooks/useSettings';
 
 interface ThreadActionsProps {
@@ -26,11 +30,19 @@ interface ThreadActionsProps {
 export function ThreadActions({ threadId, channelId, guildId, size = 'md', variant = 'default', alwaysVisible = false, className, externalUrlOverride }: ThreadActionsProps) {
     const [isHovered, setIsHovered] = useState(false);
     const openMode = useOpenModeSetting();
-    const targetUrl = externalUrlOverride || buildDiscordThreadUrl({
+
+    const webUrl = externalUrlOverride || buildDiscordWebThreadUrl({
         guildId,
         channelId,
         threadId,
-    }, openMode);
+    });
+    const appUrl = externalUrlOverride ? null : buildDiscordAppThreadUrl({
+        guildId,
+        channelId,
+        threadId,
+    });
+
+    const targetUrl = openMode === 'app' && appUrl ? appUrl : webUrl;
     const tooltipContent = externalUrlOverride
         ? '打开 Discord 链接'
         : openMode === 'app' ? '用 Discord App 打开' : '在 Discord 网页端打开';
@@ -39,6 +51,14 @@ export function ThreadActions({ threadId, channelId, guildId, size = 'md', varia
 
     const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.stopPropagation();
+        if (openMode === 'app' && appUrl) {
+            e.preventDefault();
+            openDiscordWithFallback({
+                appUrl,
+                webUrl,
+                openMode,
+            });
+        }
     };
 
     // 样式配置

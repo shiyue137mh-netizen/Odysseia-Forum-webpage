@@ -25,7 +25,6 @@ export function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(true);
   const [isSharpening, setIsSharpening] = useState(true);
-  const [isLoginCardReady, setIsLoginCardReady] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [hasAcceptedRules, setHasAcceptedRules] = useState(false);
 
@@ -52,28 +51,27 @@ export function LoginPage() {
     });
   }, [searchParams, setSearchParams]);
 
+  // 苏醒序列动画：进入页面时自动触发（轻快自然）
   useEffect(() => {
-    const timerId = window.setTimeout(() => setIsLoginCardReady(true), 10_000);
-    return () => window.clearTimeout(timerId);
-  }, []);
-
-  // 苏醒序列动画：进入页面时自动触发
-  useEffect(() => {
+    let isMounted = true;
     const sequence = async () => {
       // 模拟眨眼效果：闭-睁-闭-睁
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 250));
+      if (!isMounted) return;
       setIsWakingUp(false);  // 第一次睁眼
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 150));
+      if (!isMounted) return;
       setIsWakingUp(true);   // 再次闭眼
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise(r => setTimeout(r, 250));
+      if (!isMounted) return;
       setIsWakingUp(false);  // 最终睁眼
-
-      // 睁眼后逐渐变清晰
-      await new Promise(r => setTimeout(r, 400));
-      setIsSharpening(false);
+      setIsSharpening(false); // 睁眼后变清晰
     };
 
     sequence();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 如果已经登录，自动跳转到首页
@@ -128,7 +126,7 @@ export function LoginPage() {
           setIsRedirecting(false);
           setIsWakingUp(false);
         }
-      }, 3000); // 留出更多时间感受闭眼和加载过程
+      }, 500);
       return;
     }
 
@@ -139,25 +137,25 @@ export function LoginPage() {
 
     setTimeout(() => {
       window.location.href = finalUrl;
-    }, 3000); // 留出 3s 给闭眼动画和后续加载感
+    }, 450);
   };
 
   return (
     <div className="relative flex min-h-screen items-center overflow-hidden px-4">
       {/* 苏醒遮罩：上眼睑 (z-100) */}
       <div
-        className={`fixed inset-x-0 top-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-1000 ease-in-out ${
+        className={`fixed inset-x-0 top-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-500 ease-in-out ${
           isWakingUp ? 'translate-y-0' : '-translate-y-full'
         }`}
       />
       {/* 苏醒遮罩：下眼睑 (z-100) */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-1000 ease-in-out ${
+        className={`fixed inset-x-0 bottom-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-500 ease-in-out ${
           isWakingUp ? 'translate-y-0' : 'translate-y-full'
         }`}
       />
 
-      <div className={`absolute inset-0 transition-[filter] duration-[3500ms] ease-out ${isSharpening ? 'blur-xl' : 'blur-0'}`}>
+      <div className={`absolute inset-0 transition-[filter] duration-700 ease-out ${isSharpening ? 'blur-md' : 'blur-0'}`}>
         <AuthSceneBackground onClick={() => isUiHidden && setIsUiHidden(false)} />
       </div>
 
@@ -167,13 +165,13 @@ export function LoginPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.5 }}
             className="absolute inset-0 z-10 bg-black/58 backdrop-blur-xs"
           />
         )}
       </AnimatePresence>
 
-      {!isRedirecting && isLoginCardReady && (
+      {!isRedirecting && !isWakingUp && (
         <button
           type="button"
           onClick={() => setIsUiHidden((current) => !current)}
@@ -184,8 +182,8 @@ export function LoginPage() {
         </button>
       )}
 
-      {isUiHidden && !isRedirecting && isLoginCardReady && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-40 flex justify-center animate-in fade-in zoom-in duration-500">
+      {isUiHidden && !isRedirecting && !isWakingUp && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-20 z-40 flex justify-center animate-in fade-in zoom-in duration-300">
           <span className="rounded-full bg-black/30 px-4 py-1.5 text-sm text-white/70 backdrop-blur-md">
             点击背景任意处恢复登录界面
           </span>
@@ -193,15 +191,15 @@ export function LoginPage() {
       )}
 
       <div
-        className={`relative mx-auto flex w-full max-w-7xl transition-all duration-1000 ${
+        className={`relative mx-auto flex w-full max-w-7xl transition-all duration-500 ${
           isRedirecting ? 'z-[110] justify-center' : 'z-20 justify-center md:justify-start md:pl-[8%] lg:pl-[10%]'
         } ${
-          !isRedirecting && (isWakingUp || isSharpening) ? 'opacity-0 translate-y-8 blur-sm' : 'opacity-100 translate-y-0 blur-0'
+          !isRedirecting && isWakingUp ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
         }`}
       >
 
         <AnimatePresence mode="wait">
-          {!isRedirecting && isLoginCardReady && !isUiHidden ? (
+          {!isRedirecting && !isWakingUp && !isUiHidden ? (
             <motion.div
               key="login-card"
               initial={{ opacity: 0, y: 20 }}

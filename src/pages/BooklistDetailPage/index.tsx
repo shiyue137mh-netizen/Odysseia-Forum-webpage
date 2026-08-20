@@ -55,6 +55,7 @@ import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import { PageStatusMessage } from "@/shared/ui/PageStatusMessage";
 import { resolveDiscordPublishedMessageUrl } from "@/shared/lib/discord";
+import { openDiscordWithFallback } from "@/features/threads/lib/openDiscordWithFallback";
 
 export function BooklistDetailPage() {
   const { id } = useParams();
@@ -246,6 +247,16 @@ export function BooklistDetailPage() {
                         target={discussionLinkTarget}
                         rel={discussionLinkRel}
                         title={discussionLinkTitle}
+                        onClick={(e) => {
+                          if (usesDiscordAppLink && webDiscussionUrl) {
+                            e.preventDefault();
+                            openDiscordWithFallback({
+                              appUrl: discussionUrl,
+                              webUrl: webDiscussionUrl,
+                              openMode,
+                            });
+                          }
+                        }}
                         className="inline-flex items-center gap-1 font-medium text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
                       >
                         <ExternalLink className="h-3.5 w-3.5" />

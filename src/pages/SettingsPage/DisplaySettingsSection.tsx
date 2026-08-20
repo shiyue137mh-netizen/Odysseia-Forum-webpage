@@ -223,6 +223,9 @@ export function DisplaySettingsSection({ settings, updateSettings }: DisplaySett
                 <Smartphone className="od-choice-icon h-5 w-5 text-(--od-text-secondary)" />
                 <div><p className="od-choice-title text-sm font-medium text-(--od-text-primary)">Discord 客户端</p></div>
               </button>
+              <p className="text-xs leading-relaxed text-(--od-text-tertiary)">
+                提示：DeepLink 协议主要用于已安装客户端的桌面端环境；移动端或未安装客户端时，网页端/HTTP 链接通常具备更好的兼容性与唤起体验。若客户端唤起无响应，系统将自动引导降级至 Web 端。
+              </p>
             </div>
           </div>
         </div>
