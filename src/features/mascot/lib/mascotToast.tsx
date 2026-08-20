@@ -27,6 +27,7 @@ const mascotToastStyle: CSSProperties = {
   background: 'transparent',
   boxShadow: 'none',
   width: 'min(26rem, calc(100vw - 2rem))',
+  zIndex: 99999,
 };
 
 export function showMascotToast({

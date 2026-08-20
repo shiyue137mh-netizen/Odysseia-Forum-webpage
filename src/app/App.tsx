@@ -1,4 +1,6 @@
+import axios from 'axios';
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { RouterProvider } from 'react-router-dom';
@@ -20,12 +22,33 @@ import { useMascotStore } from '@/features/mascot/store/mascotStore';
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
-      console.error('Global Query Error:', error);
+      // 忽略请求取消（如切换路由、切标签或组件卸载）
+      if (
+        axios.isCancel(error) ||
+        (error as { name?: string })?.name === 'CanceledError' ||
+        (error as { code?: string })?.code === 'ERR_CANCELED'
+      ) {
+        return;
+      }
+
       const rateLimit = getRateLimitInfo(error);
       if (rateLimit) {
         if (!isSilentPreloadRateLimit(error)) notifyRateLimit(rateLimit);
         return;
       }
+
+      // 如果有明确的 HTTP 响应（4xx/5xx 等由业务处理），或者属于静默预加载，不弹全局网络错误
+      if (axios.isAxiosError(error) && error.response) {
+        return;
+      }
+      if (
+        isSilentPreloadRateLimit(error) ||
+        (typeof document !== 'undefined' && document.visibilityState === 'hidden')
+      ) {
+        return;
+      }
+
+      console.error('Global Network Error:', error);
       showMascotErrorToast('network', { id: 'global-network-error' });
     },
   }),
@@ -62,40 +85,33 @@ export function App() {
     }
   }, []);
 
-  // Monitor network status
-  useEffect(() => {
-    const handleOffline = () => {
-      showMascotErrorToast('network', { id: 'browser-offline-error' });
-    };
-
-    window.addEventListener('offline', handleOffline);
-    return () => window.removeEventListener('offline', handleOffline);
-  }, []);
-
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <RouterProvider router={router} />
-          <Toaster
-            position="top-center"
-            richColors
-            visibleToasts={4}
-            expand={false}
-            gap={14}
-            style={{ zIndex: 99999 }}
-            toastOptions={{
-              style: {
-                background: 'color-mix(in srgb, var(--od-bg-secondary) 82%, transparent)',
-                backdropFilter: 'blur(16px) saturate(122%)',
-                WebkitBackdropFilter: 'blur(16px) saturate(122%)',
-                border: '1px solid var(--od-glass-border)',
-                color: 'var(--od-text-primary)',
-                boxShadow: 'var(--od-shadow-floating)',
-                zIndex: 99999,
-              },
-            }}
-          />
+          {createPortal(
+            <Toaster
+              position="top-center"
+              richColors
+              visibleToasts={4}
+              expand={false}
+              gap={14}
+              style={{ zIndex: 99999 }}
+              toastOptions={{
+                style: {
+                  background: 'color-mix(in srgb, var(--od-bg-secondary) 82%, transparent)',
+                  backdropFilter: 'blur(16px) saturate(122%)',
+                  WebkitBackdropFilter: 'blur(16px) saturate(122%)',
+                  border: '1px solid var(--od-glass-border)',
+                  color: 'var(--od-text-primary)',
+                  boxShadow: 'var(--od-shadow-floating)',
+                  zIndex: 99999,
+                },
+              }}
+            />,
+            document.body,
+          )}
           {/* 仅在需要调试时显示 DevTools，默认隐藏 */}
           {import.meta.env.VITE_SHOW_DEVTOOLS === 'true' && (
             <ReactQueryDevtools initialIsOpen={false} />

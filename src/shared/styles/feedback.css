@@ -178,4 +178,9 @@
 
 [data-sonner-toaster] {
   z-index: 99999 !important;
+  position: fixed !important;
+}
+
+[data-sonner-toast] {
+  z-index: 99999 !important;
 }
