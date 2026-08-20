@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { addToken } from "@/shared/lib/searchTokenizer";
+import { useSidebarCollapsedSetting } from "@/shared/hooks/useSettings";
 import { Select } from "@/shared/ui/Select";
 import { useTagStats } from "@/features/tags/hooks/useTagStats";
 import { useChannels } from "@/shared/hooks/useChannels";
@@ -19,26 +20,21 @@ interface AggregatedTagCard {
   name: string;
   totalCount: number;
   channelSlices: AggregatedChannelSlice[];
+  topChannelSlices: AggregatedChannelSlice[];
+  remainingChannels: number;
+  hasVirtual: boolean;
   normalizedChannelSearch: string;
 }
 
-interface ChannelTagGroup {
-  channelId: string;
-  channelName: string;
-  tags: Array<{
-    name: string;
-    count: number;
-    isVirtual: boolean;
-  }>;
-}
-
 const ALL_CHANNELS_VALUE = "__all__";
+const TOP_CHANNEL_SLICE_COUNT = 3;
 
 export function TagsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedChannelId, setSelectedChannelId] =
     useState<string>(ALL_CHANNELS_VALUE);
   const navigate = useNavigate();
+  const sidebarCollapsed = useSidebarCollapsedSetting();
 
   const { data: channelsData, isLoading: isChannelsLoading } = useChannels();
   const channelMap = useMemo(() => {
@@ -80,6 +76,9 @@ export function TagsPage() {
         name: item.tag_name,
         totalCount: 0,
         channelSlices: [] as AggregatedChannelSlice[],
+        topChannelSlices: [],
+        remainingChannels: 0,
+        hasVirtual: false,
         normalizedChannelSearch: "",
       };
 
@@ -106,33 +105,41 @@ export function TagsPage() {
         }
       });
 
-      // 统计值以后端 total_thread_count 为准，channel_info 仅用于分解展示
+      base.hasVirtual =
+        base.hasVirtual || item.channel_info.some((info) => info.is_virtual);
+      // 统计值以后端 total_thread_count 为准
       base.totalCount = Number(item.total_thread_count || 0);
       grouped.set(item.tag_name, base);
     });
 
-    return Array.from(grouped.values())
-      .map((tag) => {
-        const sortedSlices = [...tag.channelSlices].sort(
-          (a, b) => b.count - a.count,
-        );
-        const normalizedChannelSearch = sortedSlices
-          .map((slice) => slice.channelName.toLowerCase())
-          .join(" ");
+    const cards = Array.from(grouped.values()).map((tag) => {
+      const sortedSlices = [...tag.channelSlices].sort(
+        (a, b) => b.count - a.count,
+      );
+      const topChannelSlices = sortedSlices.slice(0, TOP_CHANNEL_SLICE_COUNT);
+      const remainingChannels = Math.max(
+        0,
+        sortedSlices.length - TOP_CHANNEL_SLICE_COUNT,
+      );
+      const normalizedChannelSearch = sortedSlices
+        .map((slice) => slice.channelName.toLowerCase())
+        .join(" ");
 
-        return {
-          ...tag,
-          channelSlices: sortedSlices,
-          normalizedChannelSearch,
-        };
-      })
-      .sort((a, b) => b.totalCount - a.totalCount);
+      return {
+        ...tag,
+        channelSlices: sortedSlices,
+        topChannelSlices,
+        remainingChannels,
+        normalizedChannelSearch,
+      };
+    });
+
+    return cards.sort((a, b) => b.totalCount - a.totalCount);
   }, [channelMap, statsData]);
 
   const filteredTags = useMemo(() => {
-    if (!searchQuery.trim()) return aggregatedTags;
-
-    const query = searchQuery.toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return aggregatedTags;
     return aggregatedTags.filter(
       (tag) =>
         tag.name.toLowerCase().includes(query) ||
@@ -140,56 +147,32 @@ export function TagsPage() {
     );
   }, [aggregatedTags, searchQuery]);
 
-  const channelTagGroups = useMemo<ChannelTagGroup[]>(() => {
-    const groups = new Map<string, ChannelTagGroup>();
-    const query = searchQuery.trim().toLowerCase();
+  const totalThreads = Number(statsData?.total_threads || 0);
+  const totalTags = aggregatedTags.length;
+  const maxTagCount = useMemo(
+    () =>
+      aggregatedTags.length > 0
+        ? Math.max(...aggregatedTags.map((tag) => tag.totalCount))
+        : 1,
+    [aggregatedTags],
+  );
 
-    filteredTags.forEach((tag) => {
-      tag.channelSlices.forEach((slice) => {
-        if (
-          query &&
-          !tag.name.toLowerCase().includes(query) &&
-          !slice.channelName.toLowerCase().includes(query)
-        ) {
-          return;
-        }
-        const group = groups.get(slice.channelId) || {
-          channelId: slice.channelId,
-          channelName: slice.channelName,
-          tags: [],
-        };
-        const existing = group.tags.find((item) => item.name === tag.name);
+  const handleTagClick = (tag: AggregatedTagCard) => {
+    const query = addToken("", "tag", tag.name);
+    const nextParams = new URLSearchParams();
+    nextParams.set("q", query);
+    if (selectedChannelId !== ALL_CHANNELS_VALUE) {
+      nextParams.set("channel", selectedChannelId);
+    }
+    navigate(`/search?${nextParams.toString()}`);
+  };
 
-        if (existing) {
-          existing.count += slice.count;
-          existing.isVirtual &&= slice.isVirtual;
-        } else {
-          group.tags.push({
-            name: tag.name,
-            count: slice.count,
-            isVirtual: slice.isVirtual,
-          });
-        }
-        groups.set(slice.channelId, group);
-      });
-    });
-
-    return Array.from(groups.values())
-      .map((group) => ({
-        ...group,
-        tags: group.tags.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-CN")),
-      }))
-      .sort((a, b) => {
-        const aIndex = channelOptions.findIndex((channel) => channel.id === a.channelId);
-        const bIndex = channelOptions.findIndex((channel) => channel.id === b.channelId);
-        if (aIndex === -1 && bIndex === -1) return a.channelName.localeCompare(b.channelName, "zh-CN");
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-      });
-  }, [channelOptions, filteredTags, searchQuery]);
-
-  const handleTagClick = (tagName: string, channelId: string) => {
+  const handleChannelSliceClick = (
+    event: MouseEvent,
+    tagName: string,
+    channelId: string,
+  ) => {
+    event.stopPropagation();
     const query = addToken("", "tag", tagName);
     const nextParams = new URLSearchParams();
     nextParams.set("q", query);
@@ -197,8 +180,6 @@ export function TagsPage() {
     navigate(`/search?${nextParams.toString()}`);
   };
 
-  const totalTags = aggregatedTags.length;
-  const totalThreads = Number(statsData?.total_threads || 0);
   const isPageLoading = isChannelsLoading || isStatsLoading;
 
   return (
@@ -270,7 +251,8 @@ export function TagsPage() {
                     {selectedChannelName}
                   </span>
                 </span>
-                <span>按频道分组展示</span>
+                <span>同名标签已聚合</span>
+                <span>展示前三个频道</span>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
@@ -301,7 +283,13 @@ export function TagsPage() {
           </section>
 
           {isPageLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+            <div
+              className={`grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-5 ${
+                sidebarCollapsed
+                  ? "lg:grid-cols-4 xl:grid-cols-5"
+                  : "lg:grid-cols-3 xl:grid-cols-4"
+              }`}
+            >
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
@@ -309,30 +297,91 @@ export function TagsPage() {
                 />
               ))}
             </div>
-          ) : channelTagGroups.length > 0 ? (
-            <div className="space-y-8 animate-in fade-in duration-500" style={{ animationDelay: "300ms" }}>
-              {channelTagGroups.map((group) => (
-                <section key={group.channelId}>
-                  <div className="mb-3 flex items-baseline gap-3">
-                    <h2 className="text-sm font-semibold text-(--od-text-primary)">{group.channelName}</h2>
-                    <span className="text-xs text-(--od-text-tertiary)">{group.tags.length} 个标签</span>
+          ) : filteredTags.length > 0 ? (
+            <div
+              className={`grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:gap-x-8 lg:gap-y-3 ${
+                sidebarCollapsed
+                  ? "lg:grid-cols-4 xl:grid-cols-5"
+                  : "lg:grid-cols-3 xl:grid-cols-4"
+              } animate-in fade-in duration-500`}
+              style={{ animationDelay: "300ms" }}
+            >
+              {filteredTags.map((tag, index) => (
+                <button
+                  key={tag.key}
+                  onClick={() => handleTagClick(tag)}
+                  className="group relative flex min-h-[168px] w-full flex-col py-3 text-left transition-colors duration-200"
+                  style={{ animationDelay: `${300 + index * 24}ms` }}
+                >
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="truncate text-[1.02rem] font-semibold tracking-tight text-(--od-text-primary) transition-colors group-hover:text-(--od-accent)">
+                          {tag.name}
+                        </h3>
+                        {tag.hasVirtual && (
+                          <span className="rounded-full border border-(--od-accent)/30 bg-(--od-accent)/10 px-2 py-0.5 text-[10px] font-semibold text-(--od-accent)">
+                            虚拟
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-(--od-text-tertiary)">
+                        同名标签聚合视图
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-lg font-semibold tracking-tight text-(--od-accent)">
+                        {tag.totalCount}
+                      </p>
+                      <p className="text-[11px] text-(--od-text-tertiary)">
+                        帖子
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-2">
-                    {group.tags.map((tag) => (
-                      <button
-                        key={`${group.channelId}-${tag.name}`}
-                        type="button"
-                        onClick={() => handleTagClick(tag.name, group.channelId)}
-                        className="group inline-flex min-h-9 items-center gap-2 rounded-full px-3 text-sm text-(--od-text-secondary) transition-colors hover:bg-(--od-surface-soft) hover:text-(--od-accent)"
-                        title={`在频道 ${group.channelName} 中搜索标签 ${tag.name}`}
-                      >
-                        <span>{tag.name}</span>
-                        {tag.isVirtual && <span className="text-[10px] text-(--od-accent)">虚拟</span>}
-                        <span className="text-[11px] tabular-nums text-(--od-text-tertiary) group-hover:text-(--od-accent)">{tag.count}</span>
-                      </button>
-                    ))}
+
+                  <div className="min-h-[56px] flex-1">
+                    <div className="flex min-h-[56px] flex-col items-stretch gap-1.5">
+                      {tag.topChannelSlices.map((slice) => (
+                        <div
+                          key={`${tag.key}-${slice.channelId}-${slice.isVirtual ? "v" : "r"}`}
+                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleChannelSliceClick(
+                                e,
+                                tag.name,
+                                slice.channelId,
+                              )
+                            }
+                            className="truncate text-left text-xs text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
+                            title={`在频道 ${slice.channelName} 中搜索标签 ${tag.name}`}
+                          >
+                            {slice.channelName}
+                          </button>
+                          <span className="text-[11px] tabular-nums text-(--od-text-tertiary)">
+                            {slice.count}
+                          </span>
+                        </div>
+                      ))}
+                      {tag.remainingChannels > 0 && (
+                        <span className="mb-2 block text-[11px] leading-none text-(--od-text-tertiary)">
+                          +{tag.remainingChannels} 频道
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </section>
+
+                  <div className="relative mt-4 h-[2px] overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--od-text-secondary)_10%,transparent)]">
+                    <div
+                      className="h-full bg-linear-to-r from-(--od-accent)/50 to-(--od-accent) transition-all duration-500"
+                      style={{
+                        width: `${Math.min((tag.totalCount / maxTagCount) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                </button>
               ))}
             </div>
           ) : (
