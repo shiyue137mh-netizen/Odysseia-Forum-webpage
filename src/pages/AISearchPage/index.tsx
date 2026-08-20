@@ -34,7 +34,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowUp, Check, ChevronUp, Pencil, RefreshCw, RotateCcw, Settings, Square, SquarePen, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type AISearchLiveResponse = AISearchAgentProgress & {
@@ -66,7 +66,9 @@ export function AISearchPage() {
   const [placeholderIndex, setPlaceholderIndex] = useState(
     () => Math.floor(Math.random() * INPUT_PLACEHOLDERS.length),
   );
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const hasAutoStartedRef = useRef(false);
   const activeConversationId = useAISearchConversationStore((state) => state.activeConversationId);
   const conversations = useAISearchConversationStore((state) => state.conversations);
   const startConversation = useAISearchConversationStore((state) => state.startConversation);
@@ -378,6 +380,31 @@ export function AISearchPage() {
       setLiveResponse((current) => current?.conversationId === conversationId ? null : current);
     }
   };
+
+  // 接收从外部（如帖子卡片右键“AI 探索相似”）传入的初始结构化 Prompt，自动开启新会话并开始对话
+  useEffect(() => {
+    if (hasAutoStartedRef.current) return;
+    const state = location.state as { initialPrompt?: string; autoSend?: boolean } | null;
+    const promptFromUrl = searchParams.get('prompt');
+    const prompt = state?.initialPrompt || promptFromUrl;
+
+    if (prompt && prompt.trim()) {
+      hasAutoStartedRef.current = true;
+      const userMessage = prompt.trim();
+      setInput(userMessage);
+
+      // 如果已配置模型，则立即新建会话并开始执行
+      if (settings.baseUrl && settings.model) {
+        const conversationId = startConversation(userMessage);
+        setSearchParams({ conversation: conversationId }, { replace: true });
+        setInput('');
+        void executeTurn(conversationId, userMessage, []);
+      } else {
+        // 未配置模型时，提示用户去配置，但保留输入框中的完整 Prompt
+        ensureModelConfigured();
+      }
+    }
+  }, [location.state, searchParams, settings.baseUrl, settings.model]);
 
   const handleStop = () => {
     if (activeConversationId) abortAISearchConversation(activeConversationId);

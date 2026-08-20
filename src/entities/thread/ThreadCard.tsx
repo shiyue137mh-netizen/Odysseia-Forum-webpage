@@ -89,9 +89,22 @@ function ThreadCardImpl({
   };
 
   const handleAISimilar = () => {
-    navigate(
-      `/ai-search?q=${encodeURIComponent(`帮我找和《${thread.title}》题材、风格相似的作品`)}`,
-    );
+    const promptParts = [
+      `请帮我寻找与以下作品在题材、设定、写作风格或核心看点上相似的论坛作品：\n`,
+      `【作品标题】：${thread.title}`,
+      `【作者】：${thread.author?.display_name || thread.author?.name || "未知"}`,
+      `【标签分类】：${thread.tags && thread.tags.length > 0 ? thread.tags.join(", ") : "无"}`,
+    ];
+    if (thread.first_message_excerpt && thread.first_message_excerpt.trim()) {
+      promptParts.push(
+        `【作品简介/正文前瞻】：\n${thread.first_message_excerpt.trim()}`,
+      );
+    }
+
+    const fullPrompt = promptParts.join("\n");
+    navigate(`/ai-search?prompt=${encodeURIComponent(fullPrompt)}`, {
+      state: { initialPrompt: fullPrompt, autoSend: true },
+    });
   };
 
   const handleOpenInNewTab = () => {
