@@ -98,7 +98,8 @@ export function RootLayout() {
     if (!container) return;
     let saveTimer: number | null = null;
 
-    const save = () => saveLastBrowsePosition(currentUrl, container.scrollTop);
+    const save = () =>
+      saveLastBrowsePosition(window.location.href, container.scrollTop);
     const handleScroll = () => {
       if (saveTimer !== null) window.clearTimeout(saveTimer);
       saveTimer = window.setTimeout(() => {

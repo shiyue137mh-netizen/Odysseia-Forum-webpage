@@ -51,7 +51,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const searchSortOptions = [
   { value: "last_active_desc", label: "最近活跃" },
@@ -103,7 +103,6 @@ function SearchRateLimitNotice({
 
 export function SearchPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { params, setParams } = useSearchURLParams();
   const { query, channel: selectedChannel, page: currentSearchPage } = params;
   const isThreadTab = params.type === "thread";
@@ -126,7 +125,6 @@ export function SearchPage() {
   );
   const resultPagingMode = useResultPagingModeSetting();
   const hasTriggeredSearchCueRef = useRef<string | null>(null);
-  const lastSearchLocationRef = useRef<string | null>(null);
 
   const {
     discoveryPreferenceContext,
@@ -142,6 +140,7 @@ export function SearchPage() {
     pageByThreadId,
     requestNextPage,
     reportViewedPage,
+    viewedPage,
     setIgnoreDiscoveryPreferences,
     totalResults,
     visibleRateLimit,
@@ -175,31 +174,33 @@ export function SearchPage() {
   });
   useSearchWhisper(query);
 
-  useEffect(() => {
-    const searchLocation = `${location.pathname}?${location.search}`;
+  const prevChannelRef = useRef<string | undefined>(params.channel);
+  const prevQueryRef = useRef<string | undefined>(params.query);
+  const prevSortRef = useRef<string | undefined>(params.sortMethod);
+  const prevTypeRef = useRef<string | undefined>(params.type);
+  const isInitialMountRef = useRef(true);
 
-    if (lastSearchLocationRef.current === null) {
-      lastSearchLocationRef.current = searchLocation;
+  // 仅在用户主动切换频道、修改搜索词或排序时平滑回顶
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
       return;
     }
 
-    if (lastSearchLocationRef.current === searchLocation) return;
-    lastSearchLocationRef.current = searchLocation;
+    const channelChanged = prevChannelRef.current !== params.channel;
+    const queryChanged = prevQueryRef.current !== params.query;
+    const sortChanged = prevSortRef.current !== params.sortMethod;
+    const typeChanged = prevTypeRef.current !== params.type;
 
-    scrollPageToTop("auto");
-    const frame = window.requestAnimationFrame(() => scrollPageToTop("auto"));
-    let attempts = 0;
-    const interval = window.setInterval(() => {
+    prevChannelRef.current = params.channel;
+    prevQueryRef.current = params.query;
+    prevSortRef.current = params.sortMethod;
+    prevTypeRef.current = params.type;
+
+    if (channelChanged || queryChanged || sortChanged || typeChanged) {
       scrollPageToTop("auto");
-      attempts += 1;
-      if (attempts >= 6) window.clearInterval(interval);
-    }, 80);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      window.clearInterval(interval);
-    };
-  }, [location.pathname, location.search]);
+    }
+  }, [params.channel, params.query, params.sortMethod, params.type]);
 
   useEffect(() => {
     if (
@@ -254,6 +255,44 @@ export function SearchPage() {
     reactToSearch(totalResults > 0 ? "found" : "empty", normalizedQuery);
     hasTriggeredSearchCueRef.current = cueKey;
   }, [isError, isLoading, query, reactToSearch, totalResults]);
+
+  // 动态同步当前页码到右下角浮动球
+  useEffect(() => {
+    const totalPages = isThreadTab ? searchTotalPages : booklistTotalPages;
+    const currentPage = isThreadTab
+      ? isInfiniteMode
+        ? viewedPage
+        : params.page || 1
+      : params.page || 1;
+
+    if (totalPages > 1) {
+      window.dispatchEvent(
+        new CustomEvent("odysseia:active-page-info", {
+          detail: { currentPage, totalPages },
+        }),
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("odysseia:active-page-info", {
+          detail: null,
+        }),
+      );
+    }
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("odysseia:active-page-info", {
+          detail: null,
+        }),
+      );
+    };
+  }, [
+    params.page,
+    searchTotalPages,
+    booklistTotalPages,
+    isThreadTab,
+    isInfiniteMode,
+    viewedPage,
+  ]);
 
   // 标题栏与偏好同步共用的解析结果，按 query 缓存
   const queryTokens = useMemo(() => parseSearchQuery(query), [query]);
@@ -593,7 +632,6 @@ export function SearchPage() {
                   onChange={(page) => {
                     if (preparePageRequest(page)) setParams({ page });
                   }}
-                  sequential
                 />
               )}
             </div>

@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, X } from 'lucide-react';
+import { Checkbox } from '@/shared/ui/Checkbox';
 import type { Booklist, BooklistFormInput } from '@/entities/booklist/types';
 import { createPortal } from 'react-dom';
 
@@ -139,10 +140,13 @@ export function BooklistFormModal({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex items-center gap-2 rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-secondary)">
-              <input type="checkbox" {...register('is_public')} />
-              {publicLabel ?? `公开${entityLabel}`}
-            </label>
+            <div className="flex items-center rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2.5">
+              <Checkbox
+                {...register('is_public')}
+                label={publicLabel ?? `公开${entityLabel}`}
+                className="w-full"
+              />
+            </div>
 
             <div>
               <label className="mb-1 block text-xs font-semibold text-(--od-text-secondary)">展示顺序</label>

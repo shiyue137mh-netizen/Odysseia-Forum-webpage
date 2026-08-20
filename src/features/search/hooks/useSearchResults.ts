@@ -158,6 +158,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   const [viewedPageState, setViewedPageState] = useState({
     signature: resultSignature,
     page: 1,
+    maxPage: 1,
   });
 
 
@@ -239,8 +240,16 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
       : viewedPageState.signature === resultSignature
         ? viewedPageState.page
         : 1;
+
+  const preloadAnchorPage =
+    resultPagingMode === 'pagination'
+      ? currentPage
+      : viewedPageState.signature === resultSignature
+        ? viewedPageState.maxPage
+        : 1;
+
   const requestedPageCount = computeBufferedPageTarget(
-    viewedPage,
+    preloadAnchorPage,
     resultPreload.enabled,
     resultPreload.pages,
   );
@@ -346,15 +355,16 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
       setViewedPageState((current) => {
         if (
           current.signature === resultSignature &&
-          current.page >= normalizedPage
+          current.page === normalizedPage
         ) {
           return current;
         }
         return {
           signature: resultSignature,
-          page:
+          page: normalizedPage,
+          maxPage:
             current.signature === resultSignature
-              ? Math.max(current.page, normalizedPage)
+              ? Math.max(current.maxPage, normalizedPage)
               : normalizedPage,
         };
       });
@@ -461,6 +471,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     resultPagingMode,
     requestNextPage,
     reportViewedPage,
+    viewedPage,
     setIgnoreDiscoveryPreferences,
     totalResults,
     visibleRateLimit: visibleRateLimit

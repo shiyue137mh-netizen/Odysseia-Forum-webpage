@@ -93,17 +93,38 @@ function ThreadResultsCollectionImpl({
     const element = collectionRef.current;
     if (!element || !pageByThreadId || !onViewedPageChange) return;
 
-    let highestViewedPage = 1;
+    const visibleMap = new Map<HTMLElement, number>();
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const page = Number((entry.target as HTMLElement).dataset.resultPage || 1);
-          highestViewedPage = Math.max(highestViewedPage, page);
+          const targetEl = entry.target as HTMLElement;
+          const page = Number(targetEl.dataset.resultPage || 1);
+          if (entry.isIntersecting) {
+            visibleMap.set(targetEl, page);
+          } else {
+            visibleMap.delete(targetEl);
+          }
         }
-        onViewedPageChange(highestViewedPage);
+
+        if (visibleMap.size === 0) return;
+
+        // 计算当前视口中最靠近顶部上方（120px 处）的可见卡片页码
+        let closestPage = 1;
+        let minDistance = Infinity;
+
+        visibleMap.forEach((page, el) => {
+          const rect = el.getBoundingClientRect();
+          const dist = Math.abs(rect.top - 120);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestPage = page;
+          }
+        });
+
+        onViewedPageChange(closestPage);
       },
-      { threshold: 0.1 },
+      { threshold: [0, 0.1, 0.5] },
     );
 
     const resultElements = element.querySelectorAll<HTMLElement>('[data-result-page]');

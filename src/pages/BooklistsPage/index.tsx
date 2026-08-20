@@ -91,6 +91,29 @@ export function BooklistsPage() {
     [scope],
   );
 
+  useEffect(() => {
+    if (totalPages > 1) {
+      window.dispatchEvent(
+        new CustomEvent("odysseia:active-page-info", {
+          detail: { currentPage: page, totalPages },
+        }),
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("odysseia:active-page-info", {
+          detail: null,
+        }),
+      );
+    }
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("odysseia:active-page-info", {
+          detail: null,
+        }),
+      );
+    };
+  }, [page, totalPages]);
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-8 p-4 sm:p-6 lg:gap-10 lg:p-8">
       <section>

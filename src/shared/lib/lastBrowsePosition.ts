@@ -28,6 +28,9 @@ export function saveLastBrowsePosition(url: string, scrollTop: number) {
       return;
     }
 
+    // 净化 URL，确保持久化的基础 URL 不含瞬时 page 参数
+    parsedUrl.searchParams.delete('page');
+
     const position: LastBrowsePosition = {
       url: `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`,
       scrollTop: Math.max(0, Number.isFinite(scrollTop) ? scrollTop : 0),

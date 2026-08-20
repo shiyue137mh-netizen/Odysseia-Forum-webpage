@@ -29,8 +29,14 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { BrowseHistoryHoverPopup } from "@/features/history/components/BrowseHistoryHoverPopup";
+import {
+  getBrowseHistory,
+  clearBrowseHistory,
+  type BrowseHistoryItem,
+} from "@/shared/lib/browseHistory";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface TopBarProps {
@@ -66,6 +72,45 @@ export function TopBar({
 
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+
+  const [browseHistoryOpen, setBrowseHistoryOpen] = useState(false);
+  const [browseHistoryItems, setBrowseHistoryItems] = useState<BrowseHistoryItem[]>([]);
+  const browseHistoryTimerRef = useRef<number | null>(null);
+
+  const handleOpenBrowseHistory = useCallback(() => {
+    setBrowseHistoryItems(getBrowseHistory());
+    setBrowseHistoryOpen(true);
+  }, []);
+
+  const handleCloseBrowseHistory = useCallback(() => {
+    setBrowseHistoryOpen(false);
+  }, []);
+
+  const handleBrowseHistoryMouseEnter = useCallback(() => {
+    if (browseHistoryTimerRef.current) {
+      window.clearTimeout(browseHistoryTimerRef.current);
+    }
+    browseHistoryTimerRef.current = window.setTimeout(() => {
+      handleOpenBrowseHistory();
+    }, 150);
+  }, [handleOpenBrowseHistory]);
+
+  const handleBrowseHistoryMouseLeave = useCallback(() => {
+    if (browseHistoryTimerRef.current) {
+      window.clearTimeout(browseHistoryTimerRef.current);
+    }
+    browseHistoryTimerRef.current = window.setTimeout(() => {
+      handleCloseBrowseHistory();
+    }, 200);
+  }, [handleCloseBrowseHistory]);
+
+  useEffect(() => {
+    return () => {
+      if (browseHistoryTimerRef.current) {
+        window.clearTimeout(browseHistoryTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleNotificationCountMatch = (e: Event) => {
@@ -569,25 +614,47 @@ export function TopBar({
           </AnimatePresence>
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate("/me?tab=history")}
-          className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${
-            location.pathname === "/me" &&
-            new URLSearchParams(location.search).get("tab") === "history"
-              ? "text-(--od-accent)"
-              : "hover:text-(--od-text-primary)"
-          }`}
-          aria-label="打开浏览足迹"
-          title="浏览足迹"
+        <div
+          className="relative"
+          onMouseEnter={handleBrowseHistoryMouseEnter}
+          onMouseLeave={handleBrowseHistoryMouseLeave}
         >
-          <AnimatedIcon
-            icon={Eye}
-            className="h-4 w-4"
-            animation="scale"
-            trigger="hover"
+          <button
+            type="button"
+            onClick={() => {
+              handleCloseBrowseHistory();
+              navigate("/me?tab=history");
+            }}
+            className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${
+              location.pathname === "/me" &&
+              new URLSearchParams(location.search).get("tab") === "history"
+                ? "text-(--od-accent)"
+                : "hover:text-(--od-text-primary)"
+            }`}
+            aria-label="打开浏览足迹"
+            title="浏览足迹"
+          >
+            <AnimatedIcon
+              icon={Eye}
+              className="h-4 w-4"
+              animation="scale"
+              trigger="hover"
+            />
+          </button>
+          <BrowseHistoryHoverPopup
+            open={browseHistoryOpen}
+            historyItems={browseHistoryItems}
+            onSelectThread={(threadId) => {
+              setPreviewThreadId(threadId);
+              handleCloseBrowseHistory();
+            }}
+            onClearHistory={() => {
+              clearBrowseHistory();
+              setBrowseHistoryItems([]);
+            }}
+            onClose={handleCloseBrowseHistory}
           />
-        </button>
+        </div>
 
         <div className="relative">
           <button

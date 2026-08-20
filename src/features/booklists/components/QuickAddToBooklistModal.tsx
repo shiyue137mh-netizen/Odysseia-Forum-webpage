@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { useMyBooklistsList } from "@/features/booklists/hooks/useBooklistsData";
 import { booklistsApi } from "@/features/booklists/api/booklistsApi";
 import { booklistKeys } from "@/features/booklists/lib/queryKeys";
+import { Checkbox } from "@/shared/ui/Checkbox";
 import {
   extractErrorMessage,
   notifyError,
@@ -175,39 +176,41 @@ export function QuickAddToBooklistModal({
           ) : (
             <>
               <div className="max-h-56 space-y-2 overflow-y-auto pr-1 scrollbar-thin">
-                {myBooklists.map((booklist) => (
-                  <label
-                    key={booklist.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
-                      selectedBooklistIds.has(booklist.id)
-                        ? "border-(--od-accent) bg-(--od-accent)/8"
-                        : "border-(--od-border) hover:border-(--od-border-strong)"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedBooklistIds.has(booklist.id)}
-                      onChange={() => {
-                        setSelectedBooklistIds((current) => {
-                          const next = new Set(current);
-                          if (next.has(booklist.id)) next.delete(booklist.id);
-                          else next.add(booklist.id);
-                          return next;
-                        });
-                      }}
-                      className="mt-1"
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-(--od-text-primary)">
-                        {booklist.title}
+                {myBooklists.map((booklist) => {
+                  const isChecked = selectedBooklistIds.has(booklist.id);
+                  return (
+                    <label
+                      key={booklist.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-all duration-200 ${
+                        isChecked
+                          ? "border-(--od-accent) bg-(--od-accent)/10 shadow-xs"
+                          : "border-(--od-border) hover:border-(--od-border-strong) hover:bg-(--od-surface-hover)"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        aria-label={booklist.title}
+                        onChange={() => {
+                          setSelectedBooklistIds((current) => {
+                            const next = new Set(current);
+                            if (next.has(booklist.id)) next.delete(booklist.id);
+                            else next.add(booklist.id);
+                            return next;
+                          });
+                        }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-(--od-text-primary)">
+                          {booklist.title}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-(--od-text-tertiary)">
+                          {booklist.item_count} 帖子 · {booklist.collection_count}{" "}
+                          收藏
+                        </span>
                       </span>
-                      <span className="mt-0.5 block text-xs text-(--od-text-tertiary)">
-                        {booklist.item_count} 帖子 · {booklist.collection_count}{" "}
-                        收藏
-                      </span>
-                    </span>
-                  </label>
-                ))}
+                    </label>
+                  );
+                })}
               </div>
 
               <div className="space-y-2">

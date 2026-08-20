@@ -24,6 +24,12 @@ export function scrollPageToTop(behavior: ScrollBehavior = 'smooth') {
   document.body.scrollTo?.({ top: 0, behavior });
 }
 
+export function setPageScrollTop(top: number) {
+  const container = getMainScrollContainer();
+  if (container) container.scrollTop = top;
+  window.scrollTo({ top, behavior: 'instant' as ScrollBehavior });
+}
+
 export function addPageScrollListener(listener: () => void) {
   const container = getMainScrollContainer();
   const options = { passive: true } as const;

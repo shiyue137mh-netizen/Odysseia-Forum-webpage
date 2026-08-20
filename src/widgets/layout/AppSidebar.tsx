@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import ServerIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useServerIconSecret } from '@/features/easter-eggs/hooks/useServerIconSecret';
@@ -93,13 +94,36 @@ export function AppSidebar() {
     setParams({ channel: null });
   };
 
-  const navigateToSearchWithParams = (updates: { channel?: string | null; query?: string }) => {
-    const nextParams = new URLSearchParams();
-    const nextQuery = updates.query ?? params.query ?? '';
-    const nextChannel = updates.channel === undefined ? params.channel : updates.channel;
+  useEffect(() => {
+    if (location.pathname === '/search' && location.search) {
+      try {
+        sessionStorage.setItem('od_last_search_params', location.search);
+      } catch {
+        // ignore
+      }
+    }
+  }, [location.pathname, location.search]);
 
-    if (nextQuery.trim()) nextParams.set('q', nextQuery.trim());
+  const navigateToSearchWithParams = (updates: { channel?: string | null; query?: string }) => {
+    let baseSearch = '';
+    try {
+      baseSearch = sessionStorage.getItem('od_last_search_params') || '';
+    } catch {
+      baseSearch = '';
+    }
+
+    const nextParams = baseSearch ? new URLSearchParams(baseSearch) : new URLSearchParams();
+    const nextQuery = updates.query !== undefined ? updates.query : params.query;
+    const nextChannel = updates.channel !== undefined ? updates.channel : params.channel;
+
+    if (nextQuery && nextQuery.trim()) nextParams.set('q', nextQuery.trim());
+    else if (updates.query !== undefined) nextParams.delete('q');
+
     if (nextChannel) nextParams.set('channel', nextChannel);
+    else if (updates.channel !== undefined) nextParams.delete('channel');
+
+    // 切换频道/重新进入时重置页码为 1
+    nextParams.delete('page');
 
     navigate(`/search${nextParams.toString() ? `?${nextParams.toString()}` : ''}`);
   };
@@ -177,8 +201,17 @@ export function AppSidebar() {
               <span className="truncate">赛事</span>
             </Link>
 
-            <Link
-              to="/search"
+            <button
+              type="button"
+              onClick={() => {
+                let savedSearch = '';
+                try {
+                  savedSearch = sessionStorage.getItem('od_last_search_params') || '';
+                } catch {
+                  savedSearch = '';
+                }
+                navigate(`/search${savedSearch}`);
+              }}
               className={navItemClass(isActive('/search'))}
             >
               <span className={navIndicatorClass(isActive('/search'))} />
@@ -189,7 +222,7 @@ export function AppSidebar() {
                 trigger="hover"
               />
               <span className="truncate">搜索</span>
-            </Link>
+            </button>
 
             <Link
               to="/draw"
