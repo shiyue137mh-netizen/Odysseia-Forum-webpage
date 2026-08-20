@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BookmarkPlus, Loader2, X } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -37,19 +37,22 @@ export function QuickAddToBooklistModal({
     new Set(),
   );
   const [comment, setComment] = useState("");
-  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const myBooklists = myBooklistsQuery.data?.results || [];
 
   useEffect(() => {
-    if (!isOpen) {
-      dialogRef.current?.close();
-      return;
-    }
-    if (dialogRef.current && !dialogRef.current.open) {
-      dialogRef.current.showModal();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen || !myBooklistsQuery.data) return;
@@ -107,21 +110,19 @@ export function QuickAddToBooklistModal({
   if (!isOpen) return null;
 
   return createPortal(
-    <dialog
-      ref={dialogRef}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === dialogRef.current) {
-          onClose();
-        }
-      }}
-      className="od-floating-panel-solid fixed inset-0 z-[3000] m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border border-(--od-border) p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-xs outline-hidden open:flex open:flex-col"
-    >
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
+      {/* 背景遮罩 */}
       <div
-        className="flex w-full flex-col"
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+        aria-hidden="true"
+      />
+
+      {/* 弹窗主体 */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="od-floating-panel-solid relative z-10 w-full max-w-lg rounded-xl border border-(--od-border) p-0 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-(--od-border) px-5 py-4">
@@ -249,7 +250,7 @@ export function QuickAddToBooklistModal({
           </div>
         </div>
       </div>
-    </dialog>,
+    </div>,
     document.body,
   );
 }

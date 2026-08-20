@@ -54,7 +54,6 @@ export function ThreadPreviewOverlay({
   const fontSizes = fontSizeMap[fontSize];
   const [isVisible, setIsVisible] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isClosingRef = useRef(false);
@@ -67,13 +66,29 @@ export function ThreadPreviewOverlay({
 
   useLockBodyScroll(true);
 
+  const handleClose = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    setIsVisible(false);
+    setTimeout(() => {
+      onClose();
+    }, 300);
+  }, [onClose]);
+
   useEffect(() => {
     setIsVisible(true);
-    if (dialogRef.current && !dialogRef.current.open) {
-      dialogRef.current.showModal();
-      closeButtonRef.current?.focus({ preventScroll: true });
-    }
-  }, []);
+    closeButtonRef.current?.focus({ preventScroll: true });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleClose]);
 
   // 打开或切换帖子时预先露出一部分正文；这只是初始位置，用户仍可滑回图片顶部。
   useEffect(() => {
@@ -102,16 +117,6 @@ export function ThreadPreviewOverlay({
     },
     [],
   );
-
-  const handleClose = () => {
-    if (isClosingRef.current) return;
-    isClosingRef.current = true;
-    setIsVisible(false);
-    setTimeout(() => {
-      dialogRef.current?.close();
-      onClose();
-    }, 300);
-  };
 
   const finishWheelGesture = () => {
     wheelGestureActiveRef.current = false;
@@ -165,11 +170,6 @@ export function ThreadPreviewOverlay({
     touchGestureStartedAtTopRef.current = false;
   };
 
-  const handleNativeCancel = (e: React.SyntheticEvent) => {
-    e.preventDefault();
-    handleClose();
-  };
-
   const createdTime = formatRelativeDateTime(thread.created_at);
   const fullTime = formatAbsoluteDateTime(thread.created_at);
   const lastActiveTime = thread.last_active_at
@@ -204,24 +204,29 @@ export function ThreadPreviewOverlay({
 
       handleClose();
     },
-    [location.pathname, navigate, params.query, setParams],
+    [handleClose, location.pathname, navigate, params.query, setParams],
   );
 
   return createPortal(
-    <>
-      <dialog
-        ref={dialogRef}
-        onCancel={handleNativeCancel}
-        onClick={(e) => {
-          if (e.target === dialogRef.current) {
-            handleClose();
-          }
-        }}
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center">
+      {/* 背景遮罩 */}
+      <div
+        onClick={handleClose}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 ${
+          isVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        aria-hidden="true"
+      />
+
+      {/* 弹窗主体卡片 */}
+      <div
+        role="dialog"
+        aria-modal="true"
         aria-labelledby="thread-preview-title"
-        className={`fixed inset-0 z-2000 m-0 flex h-dvh min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden rounded-none p-0 backdrop:bg-black/60 backdrop:backdrop-blur-xs transition-all duration-300 sm:inset-x-6 sm:inset-y-6 sm:m-auto sm:h-[calc(100vh-3rem)] sm:w-[calc(100%-3rem)] sm:max-w-2xl sm:rounded-[1.6rem] sm:supports-[height:100dvh]:h-[calc(100dvh-3rem)] ${
+        className={`relative z-10 flex h-dvh min-h-0 w-full min-w-0 max-w-none flex-col overflow-hidden rounded-none p-0 transition-all duration-300 sm:inset-x-6 sm:inset-y-6 sm:m-auto sm:h-[calc(100vh-3rem)] sm:w-[calc(100%-3rem)] sm:max-w-2xl sm:rounded-[1.6rem] sm:supports-[height:100dvh]:h-[calc(100dvh-3rem)] ${
           isVisible
             ? "translate-y-0 scale-100 opacity-100"
-            : "translate-y-4 scale-95 opacity-0 backdrop:bg-black/0 backdrop:backdrop-blur-none"
+            : "translate-y-4 scale-95 opacity-0"
         } od-floating-panel-solid`}
       >
         {/* Header */}
@@ -411,14 +416,14 @@ export function ThreadPreviewOverlay({
             )}
           </div>
         </div>
-      </dialog>
+      </div>
       <QuickAddToBooklistModal
         isOpen={quickAddOpen}
         threadId={thread.thread_id}
         threadTitle={thread.title}
         onClose={() => setQuickAddOpen(false)}
       />
-    </>,
+    </div>,
     document.body,
   );
 }

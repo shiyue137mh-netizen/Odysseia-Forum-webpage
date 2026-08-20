@@ -83,6 +83,7 @@ export function App() {
             visibleToasts={4}
             expand={false}
             gap={14}
+            style={{ zIndex: 99999 }}
             toastOptions={{
               style: {
                 background: 'color-mix(in srgb, var(--od-bg-secondary) 82%, transparent)',
@@ -91,7 +92,7 @@ export function App() {
                 border: '1px solid var(--od-glass-border)',
                 color: 'var(--od-text-primary)',
                 boxShadow: 'var(--od-shadow-floating)',
-                zIndex: 9999,
+                zIndex: 99999,
               },
             }}
           />
