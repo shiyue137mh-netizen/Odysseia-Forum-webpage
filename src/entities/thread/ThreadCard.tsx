@@ -1,5 +1,16 @@
-import { BookOpen, Calendar, Clock3, Image as ImageIcon } from "lucide-react";
+import {
+  BookOpen,
+  Calendar,
+  Clock3,
+  Copy,
+  ExternalLink,
+  Image as ImageIcon,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
 import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
@@ -17,6 +28,13 @@ import { DiscordMarkdownText } from "@/shared/ui/DiscordMarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/shared/ui/ContextMenu";
 
 interface ThreadCardProps {
   thread: Thread;
@@ -45,7 +63,40 @@ function ThreadCardImpl({
   animateIn = true,
   resultPage,
 }: ThreadCardProps) {
+  const navigate = useNavigate();
   const ariaLabel = `帖子：${thread.title}。作者：${thread.author?.display_name || thread.author?.name || "未知"}。${thread.reply_count}条回复，${thread.reaction_count}个点赞。标签：${thread.tags.join(", ")}`;
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/threads/${thread.thread_id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("已复制帖子链接");
+    } catch {
+      toast.error("复制链接失败");
+    }
+  };
+
+  const handleFindSimilar = () => {
+    if (thread.tags && thread.tags.length > 0) {
+      const tagQueries = thread.tags
+        .slice(0, 3)
+        .map((t) => `tag:${t}`)
+        .join(" ");
+      navigate(`/search?q=${encodeURIComponent(tagQueries)}`);
+    } else {
+      navigate(`/search?q=${encodeURIComponent(thread.title)}`);
+    }
+  };
+
+  const handleAISimilar = () => {
+    navigate(
+      `/ai-search?q=${encodeURIComponent(`帮我找和《${thread.title}》题材、风格相似的作品`)}`,
+    );
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(`/threads/${thread.thread_id}`, "_blank", "noopener,noreferrer");
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -103,14 +154,16 @@ function ThreadCardImpl({
 
   return (
     <>
-      <article
-        ref={articleRef}
-        data-result-page={resultPage}
-        role="button"
-        aria-label={ariaLabel}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-        className={`group flex w-full flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
+      <ContextMenu>
+        <ContextMenuTrigger className={masonry ? "h-auto w-full" : "h-full w-full"}>
+          <article
+            ref={articleRef}
+            data-result-page={resultPage}
+            role="button"
+            aria-label={ariaLabel}
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+            className={`group flex w-full flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
         style={{
           animationDelay: animateIn ? animationDelay : undefined,
           WebkitTapHighlightColor: "transparent",
@@ -269,10 +322,40 @@ function ThreadCardImpl({
             <ThreadBooklistComment comment={booklistComment} variant="card" />
 
             <ThreadStatsRow thread={thread} variant="card" />
-
           </div>
         </div>
       </article>
+        </ContextMenuTrigger>
+
+        <ContextMenuContent>
+          <ContextMenuItem
+            icon={<Search className="h-4 w-4" />}
+            onClick={handleFindSimilar}
+          >
+            找相似作品
+          </ContextMenuItem>
+          <ContextMenuItem
+            icon={<Sparkles className="h-4 w-4" />}
+            onClick={handleAISimilar}
+          >
+            AI 探索相似
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            icon={<Copy className="h-4 w-4" />}
+            onClick={handleCopyLink}
+          >
+            复制帖子链接
+          </ContextMenuItem>
+          <ContextMenuItem
+            icon={<ExternalLink className="h-4 w-4" />}
+            onClick={handleOpenInNewTab}
+          >
+            在新标签页打开
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
       <QuickAddToBooklistModal
         isOpen={quickAddOpen}
         threadId={thread.thread_id}
