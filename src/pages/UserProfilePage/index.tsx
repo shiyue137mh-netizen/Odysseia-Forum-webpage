@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
-import { ThreadResultsCollection } from "@/entities/thread/ThreadResultsCollection";
+import { ThreadResultsCollection } from "@/features/threads/components/ThreadResultsCollection";
 import type { Thread } from "@/entities/thread/types";
 import { UserHeaderCard } from "@/entities/user/UserHeaderCard";
 import { UserStatsGrid } from "@/entities/user/UserStatsGrid";

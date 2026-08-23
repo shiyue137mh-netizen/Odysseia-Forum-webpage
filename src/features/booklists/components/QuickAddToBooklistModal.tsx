@@ -7,11 +7,8 @@ import { useMyBooklistsList } from "@/features/booklists/hooks/useBooklistsData"
 import { booklistsApi } from "@/features/booklists/api/booklistsApi";
 import { booklistKeys } from "@/features/booklists/lib/queryKeys";
 import { Checkbox } from "@/shared/ui/Checkbox";
-import {
-  extractErrorMessage,
-  notifyError,
-  notifySuccess,
-} from "@/shared/lib/notify";
+import { notifyError, notifySuccess } from "@/features/mascot/lib/notify";
+import { extractErrorMessage } from "@/shared/lib/notify";
 
 interface QuickAddToBooklistModalProps {
   isOpen: boolean;

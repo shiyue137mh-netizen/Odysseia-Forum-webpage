@@ -107,30 +107,30 @@ export function SearchFilterPanel({ "data-tour": dataTour, ...props }: Props) {
 
 ## 8. 对话框与浮层规范 (Dialogs & Overlays)
 
-对于全局遮罩、对话框或弹出类浮层（如 `src/widgets/thread-preview/ThreadPreviewOverlay.tsx`），我们推崇使用现代化、轻量级的原生浏览器 API 结合 Tailwind 动效，而非引入臃肿的第三方 Modal 库。
+对于全局遮罩、对话框或弹出类浮层，优先复用项目现有实现，不为统一形式而改写已经稳定的交互。当前项目同时存在原生 `<dialog>` 与 Portal 覆盖层，两者按实际焦点管理、动画和布局需求选择。
 
 ### 8.1 原生 `<dialog>` 标签
 
-优先使用原生的 HTML `<dialog>` 标签来构建弹窗。它天生自带顶级层叠上下文 (Top Layer) 以及 `::backdrop` 伪元素支持。
+适合需要浏览器 Top Layer、原生 `::backdrop` 和 `showModal()` 行为的弹窗。当前 `ImageViewer`、`ExternalLinkWarningDialog` 和通知公告浮层使用这一模式。
 
 - **唤起方式**: 在 `useEffect` 中调用 `dialogRef.current.showModal()` 进行模态展示。
 - **关闭处理**: 可以通过绑定 `onCancel` 事件拦截原生的 `Esc` 关闭动作，以进行自定义动画退场或状态清理。
 
 ### 8.2 createPortal 挂载
 
-为了避免深层嵌套组件中的 `z-index` 或 `overflow: hidden` 干扰，大型浮层必须使用 React 提供的 `createPortal` 将其挂载至 `document.body` 下。
+为了避免深层嵌套组件中的 `z-index` 或 `overflow: hidden` 干扰，大型浮层可使用 React 提供的 `createPortal` 挂载至 `document.body`。当前 `ThreadPreviewOverlay` 使用 Portal + 自定义 `role="dialog"`，并自行处理焦点、Esc、滚动锁定和退场动画；它不是原生 `<dialog>`。
 
 ### 8.3 动效控制
 
 摒弃针对简单浮层引入复杂的 `motion` 动画实例。建议利用内部局部状态结合 Tailwind 的 `transition-all` 类名实现进入/离开的缓动。
 
-示例（基于最新重构的 ThreadPreviewOverlay 模式）：
+原生 `<dialog>` 的最小示例：
 
 ```tsx
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
-export function ModernDialog({ onClose }: { onClose: () => void }) {
+export function NativeDialog({ onClose }: { onClose: () => void }) {
   const [isVisible, setIsVisible] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 

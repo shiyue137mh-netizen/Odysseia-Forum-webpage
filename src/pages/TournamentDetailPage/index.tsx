@@ -18,8 +18,8 @@ import type { Tournament, TournamentItem } from "@/entities/tournament/types";
 import { threadFromBooklistItem } from "@/entities/booklist/lib/threadFromBooklistItem";
 import type { Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
-import { ThreadCard } from "@/entities/thread/ThreadCard";
-import { ThreadListItem } from "@/entities/thread/ThreadListItem";
+import { ThreadCard } from "@/features/threads/components/ThreadCard";
+import { ThreadListItem } from "@/features/threads/components/ThreadListItem";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   useTournamentDetail,

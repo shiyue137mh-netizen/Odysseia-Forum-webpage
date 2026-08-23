@@ -14,7 +14,8 @@ import {
 import { usePreviewStore } from '@/features/search/store/previewStore';
 import { useThemeSettings } from '@/shared/hooks/useSettings';
 import { formatRelativeDateTime } from '@/shared/lib/dateTime';
-import { extractErrorMessage, notifyError } from '@/shared/lib/notify';
+import { notifyError } from '@/features/mascot/lib/notify';
+import { extractErrorMessage } from '@/shared/lib/notify';
 import { LazyImage } from '@/shared/ui/LazyImage';
 import { NotificationAnnouncementModal } from '@/features/notifications/components/NotificationAnnouncementModal';
 

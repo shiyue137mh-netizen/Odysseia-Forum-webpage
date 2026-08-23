@@ -50,7 +50,7 @@ import {
   getBrowseHistory,
   removeBrowseHistory,
 } from "@/shared/lib/browseHistory";
-import { notifyError, notifySuccess } from "@/shared/lib/notify";
+import { notifyError, notifySuccess } from "@/features/mascot/lib/notify";
 
 type MeTab = "booklists" | "follows" | "history" | "preferences";
 type FollowStatusFilter = "current" | "past" | "all";

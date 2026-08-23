@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useImageModeSetting } from '@/shared/hooks/useSettings';
-import { reportBrokenThreadThumbnail, subscribeThreadThumbnailRepair } from '@/features/threads/lib/thumbnailRepairQueue';
 import { optimizeDiscordImageUrl } from '@/shared/lib/imageOptimization';
+import {
+  reportBrokenImage,
+  subscribeImageRecovery,
+} from '@/shared/lib/imageRecovery';
 
 // 会话内已完整显示过的图片 URL。路由切换会重建组件、重置 isLoaded，
 // 浏览器 HTTP 缓存挡不住浮现动画重播；看过的图片重挂时凭这份记忆直出成品。
 const sessionLoadedImages = new Set<string>();
 
-interface LazyImageProps {
+export interface LazyImageProps {
   src: string;
   alt?: string;
   className?: string;
@@ -20,6 +23,7 @@ interface LazyImageProps {
   imageIndex?: number; // Used to identify which picture in the sequence this is
   onNaturalSize?: (width: number, height: number) => void;
   onFallback?: () => void;
+  onError?: () => void;
 }
 
 export function LazyImage({
@@ -35,6 +39,7 @@ export function LazyImage({
   imageIndex = 0,
   onNaturalSize,
   onFallback,
+  onError,
 }: LazyImageProps) {
   const [currentSrc, setCurrentSrc] = useState(() => optimizeDiscordImageUrl(src, 800));
   const onFallbackRef = useRef(onFallback);
@@ -44,6 +49,14 @@ export function LazyImage({
   const imgRef = useRef<HTMLDivElement>(null);
   const imageMode = useImageModeSetting();
   const isImageDisabled = imageMode === 'off';
+
+  useEffect(() => {
+    if (!threadId) return;
+    return subscribeImageRecovery(threadId, (urls) => {
+      const targetUrl = urls[imageIndex];
+      if (targetUrl) setCurrentSrc(targetUrl);
+    });
+  }, [imageIndex, threadId]);
 
   useEffect(() => {
     onFallbackRef.current = onFallback;
@@ -92,16 +105,6 @@ export function LazyImage({
 
     return () => window.clearTimeout(timer);
   }, [currentSrc, fallbackSrc, isImageDisabled, isInView, isLoaded, loadTimeoutMs]);
-
-  useEffect(() => {
-    if (!threadId) return;
-    return subscribeThreadThumbnailRepair(threadId, (urls) => {
-      const targetUrl = urls[imageIndex];
-      if (targetUrl) {
-        setCurrentSrc(targetUrl);
-      }
-    });
-  }, [threadId, imageIndex]);
 
   return (
     <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
@@ -158,8 +161,10 @@ export function LazyImage({
                   setIsLoaded(false);
                   return;
                 }
-                if (!threadId) return;
-                reportBrokenThreadThumbnail({ threadId, channelId });
+                if (threadId) {
+                  reportBrokenImage({ threadId, channelId });
+                }
+                onError?.();
               }}
             />
           )}

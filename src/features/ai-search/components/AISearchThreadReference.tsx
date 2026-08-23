@@ -1,6 +1,6 @@
 import { BookOpen, Palette } from 'lucide-react';
 
-import { ThreadListItem } from '@/entities/thread/ThreadListItem';
+import { ThreadListItem } from '@/features/threads/components/ThreadListItem';
 import type { Thread } from '@/entities/thread/types';
 import type { AIThreadReference } from '@/features/ai-search/lib/responseParser';
 import { MASCOT_IMAGES } from '@/features/mascot/assets';

@@ -13,7 +13,7 @@
 
 项目中使用了 `openapi-typescript` 进行 API 类型的自动化维护：
 
-- 运行 `npm run gen:api`，会自动从后端生成 `openapi.json`，并提取 TypeScript 类型写入 `src/shared/types/openapi.d.ts`。
+- 运行 `pnpm gen:api`，会自动从后端生成 `openapi.json`，并提取 TypeScript 类型写入 `src/shared/types/openapi.d.ts`。
 - 我们应尽量复用该文件中生成的接口类型规范出入参。
 
 ## 认证 (`/auth`)

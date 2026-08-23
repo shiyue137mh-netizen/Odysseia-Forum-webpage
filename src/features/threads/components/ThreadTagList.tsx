@@ -1,5 +1,5 @@
 import { ThreadAchievementTag } from "@/entities/thread/ThreadAchievementTag";
-import { ThreadTagItem } from "@/entities/thread/ThreadTagItem";
+import { ThreadTagItem } from "@/features/threads/components/ThreadTagItem";
 import type { Thread } from "@/entities/thread/types";
 
 interface ThreadTagListProps {

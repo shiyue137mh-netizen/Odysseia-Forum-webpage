@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 // FSD 分层：shared < entities < features < widgets < pages < app
-// 下层不得引用上层。现存违规见 docs/code-review-2026-07-26.md §3.1，
+// 下层不得引用上层。现存违规见 docs/code-review-2026-08-23.md §4.3，
 // 暂定为 warn，违规清零后升级为 error。
 const upperLayers = {
   shared: ['@/entities/*', '@/features/*', '@/widgets/*', '@/pages/*', '@/app/*'],

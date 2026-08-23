@@ -19,6 +19,16 @@ const pending = new Map<string, FetchImageItem>();
 const repaired = new Map<string, string[]>();
 const failureCooldown = new Map<string, number>();
 const listeners = new Map<string, Set<ThumbnailListener>>();
+// ponytail: 新增持有 Thread 的 Query 根键时需同步加入此表；若根键持续增长，升级为各数据源显式注册缓存更新器。
+const THREAD_CACHE_ROOTS = new Set([
+  'authors',
+  'booklists',
+  'discovery',
+  'follows',
+  'plaza',
+  'search',
+  'search-discovery',
+]);
 
 function toThreadId(value: string | number): string {
   return String(value).trim();
@@ -71,10 +81,16 @@ function patchQueryCaches(threadId: string, urls: string[]) {
 
   for (const query of allQueries) {
     const queryKey = query.queryKey;
+    if (!isThreadCacheQueryKey(queryKey)) continue;
     boundQueryClient.setQueryData(queryKey, (oldData: unknown) => {
       return patchThreadThumbnailsInData(oldData, threadId, urls);
     });
   }
+}
+
+export function isThreadCacheQueryKey(queryKey: readonly unknown[]) {
+  const root = queryKey[0];
+  return typeof root === 'string' && THREAD_CACHE_ROOTS.has(root);
 }
 
 function notify(threadId: string, urls: string[]) {

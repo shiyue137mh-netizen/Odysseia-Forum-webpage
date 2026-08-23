@@ -20,7 +20,7 @@ import {
 import {
   CompactThreadCard,
   CompactThreadCardSkeleton,
-} from "@/widgets/content-display/ContentDisplayCards";
+} from "@/features/threads/components/CompactThreadCard";
 
 interface SearchDiscoveryHubProps {
   channelId?: string | null;

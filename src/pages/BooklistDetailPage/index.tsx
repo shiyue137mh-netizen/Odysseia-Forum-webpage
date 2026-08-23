@@ -19,8 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { ThreadCard } from "@/entities/thread/ThreadCard";
-import { ThreadListItem } from "@/entities/thread/ThreadListItem";
+import { ThreadCard } from "@/features/threads/components/ThreadCard";
+import { ThreadListItem } from "@/features/threads/components/ThreadListItem";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { threadFromBooklistItem } from "@/entities/booklist/lib/threadFromBooklistItem";
 import {

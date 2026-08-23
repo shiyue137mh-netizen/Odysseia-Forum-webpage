@@ -2,7 +2,7 @@ import type { Thread } from '@/entities/thread/types';
 import {
   CompactThreadCard,
   CompactThreadCardSkeleton,
-} from '@/widgets/content-display/ContentDisplayCards';
+} from '@/features/threads/components/CompactThreadCard';
 
 interface DailyNewCardsProps {
   threads: Thread[];

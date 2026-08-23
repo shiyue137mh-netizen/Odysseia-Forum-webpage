@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import { useSettings } from '@/shared/hooks/useSettings';
 import { resetUserSettings } from '@/shared/lib/settings';
-import { notifyError, notifySuccess } from '@/shared/lib/notify';
+import { notifyError, notifySuccess } from '@/features/mascot/lib/notify';
 
 import { AdvancedSettingsSection } from './AdvancedSettingsSection';
 import { AtmosphereSettingsSection } from './AtmosphereSettingsSection';

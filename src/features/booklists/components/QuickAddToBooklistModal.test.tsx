@@ -12,7 +12,7 @@ vi.mock("@/features/booklists/hooks/useBooklistsData", () => ({
 vi.mock("@/features/booklists/api/booklistsApi", () => ({
   booklistsApi: { syncItems: vi.fn() },
 }));
-vi.mock("@/shared/lib/notify", () => ({
+vi.mock("@/features/mascot/lib/notify", () => ({
   extractErrorMessage: (_error: unknown, fallback: string) => fallback,
   notifyError: vi.fn(),
   notifySuccess: vi.fn(),

@@ -25,11 +25,12 @@ import {
   useResultPagingModeSetting,
   useResultPreloadSettings,
 } from '@/shared/hooks/useSettings';
-import { notifyRateLimit } from '@/shared/lib/notify';
+import { notifyRateLimit } from '@/features/mascot/lib/notify';
 
 interface UseSearchResultsOptions {
   params: SearchParams;
   preferences: UserPreferencesResponse | null | undefined;
+  enabled?: boolean;
 }
 
 const PAGE_SIZE = 24;
@@ -91,7 +92,11 @@ export function buildResultPageMap(
   return pageMap;
 }
 
-export function useSearchResults({ params, preferences }: UseSearchResultsOptions) {
+export function useSearchResults({
+  params,
+  preferences,
+  enabled = true,
+}: UseSearchResultsOptions) {
   const {
     query,
     channel: selectedChannel,
@@ -170,7 +175,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
       preferenceSignature: discoveryPreferenceContext?.signature,
       resultPagingMode,
     }),
-    queryFn: ({ pageParam }) => {
+    queryFn: ({ pageParam, signal }) => {
       const excludeThreadIds = pageParam;
       const origin =
         excludeThreadIds.length > 0 ? nextPageOriginRef.current : 'foreground';
@@ -192,13 +197,14 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
           reaction_min: reactionMin,
           reply_min: replyMin,
         },
-        undefined,
+        signal,
         origin,
       );
     },
     initialPageParam: [],
     getNextPageParam: (_lastPage, allPages = []) => computeNextExcludeIds(allPages),
     staleTime: RESULTS_STALE_TIME,
+    enabled,
   });
 
   const loadedPageCount = infiniteQueryState.data?.pages.length || 0;
@@ -305,6 +311,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   useEffect(() => {
     const needsForegroundPage = loadedPageCount < viewedPage;
     if (
+      !enabled ||
       requestedPageCount <= loadedPageCount ||
       !hasNextPage ||
       isFetchingNextPage ||
@@ -338,6 +345,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     }, 0);
     return () => window.clearTimeout(timer);
   }, [
+    enabled,
     fetchNextPageWithOrigin,
     hasNextPage,
     infiniteQueryState.isFetchNextPageError,
@@ -373,10 +381,11 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
   );
 
   const requestNextPage = useCallback(() => {
-    if (isFetchingNextPage || !hasNextPage || revealActiveRateLimit()) return;
+    if (!enabled || isFetchingNextPage || !hasNextPage || revealActiveRateLimit()) return;
     reportViewedPage(Math.max(1, loadedPageCount));
     void fetchNextPageWithOrigin('foreground');
   }, [
+    enabled,
     fetchNextPageWithOrigin,
     hasNextPage,
     isFetchingNextPage,
@@ -387,6 +396,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
 
   const preparePageRequest = useCallback(
     (pageNumber: number) => {
+      if (!enabled) return false;
       if (pageNumber <= loadedPageCount) return true;
       if (revealActiveRateLimit()) return false;
       attemptedForegroundPageRef.current = null;
@@ -404,6 +414,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     },
     [
       currentPage,
+      enabled,
       fetchNextPageWithOrigin,
       infiniteQueryState.isFetchNextPageError,
       isFetchingNextPage,
@@ -414,6 +425,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
 
   useEffect(() => {
     const handleSearchSubmit = () => {
+      if (!enabled) return;
       if (revealActiveRateLimit()) return;
       nextPageOriginRef.current = 'foreground';
       attemptedForegroundPageRef.current = null;
@@ -427,7 +439,7 @@ export function useSearchResults({ params, preferences }: UseSearchResultsOption
     window.addEventListener(SEARCH_SUBMIT_EVENT, handleSearchSubmit);
     return () =>
       window.removeEventListener(SEARCH_SUBMIT_EVENT, handleSearchSubmit);
-  }, [refetch, revealActiveRateLimit]);
+  }, [enabled, refetch, revealActiveRateLimit]);
 
   const results = useMemo<Thread[]>(() => {
     if (resultPagingMode === 'infinite') {

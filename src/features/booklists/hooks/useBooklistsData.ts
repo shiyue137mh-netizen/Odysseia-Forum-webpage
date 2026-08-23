@@ -16,11 +16,8 @@ import type {
   BooklistItemUpdateInput,
   BooklistPublishRequest,
 } from "@/entities/booklist/types";
-import {
-  extractErrorMessage,
-  notifyError,
-  notifySuccess,
-} from "@/shared/lib/notify";
+import { notifyError, notifySuccess } from "@/features/mascot/lib/notify";
+import { extractErrorMessage } from "@/shared/lib/notify";
 
 export function useBooklistsList(params: {
   scope: BooklistScope;

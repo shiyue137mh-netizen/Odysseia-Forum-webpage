@@ -8,14 +8,14 @@ import {
   Search,
   Sparkles,
 } from "lucide-react";
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
 import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
-import { ThreadTagList } from "@/entities/thread/ThreadTagList";
+import { ThreadTagList } from "@/features/threads/components/ThreadTagList";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import type { Thread } from "@/entities/thread/types";
 import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
@@ -64,8 +64,6 @@ function ThreadCardImpl({
   resultPage,
 }: ThreadCardProps) {
   const navigate = useNavigate();
-  const ariaLabel = `帖子：${thread.title}。作者：${thread.author?.display_name || thread.author?.name || "未知"}。${thread.reply_count}条回复，${thread.reaction_count}个点赞。标签：${thread.tags.join(", ")}`;
-
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/threads/${thread.thread_id}`;
     try {
@@ -111,12 +109,6 @@ function ThreadCardImpl({
     window.open(`/threads/${thread.thread_id}`, "_blank", "noopener,noreferrer");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onPreview?.(thread);
-    }
-  };
   const {
     fontSize,
     fontSizes,
@@ -144,8 +136,6 @@ function ThreadCardImpl({
   const [naturalAspectRatio, setNaturalAspectRatio] = useState<number | null>(
     () => thumbnailAspectRatioCache.get(initialThumbnail) || null,
   );
-  const articleRef = useRef<HTMLElement>(null);
-
   useEffect(() => {
     setThumbnailSrc(initialThumbnail);
     setNaturalAspectRatio(
@@ -170,13 +160,8 @@ function ThreadCardImpl({
       <ContextMenu>
         <ContextMenuTrigger className={masonry ? "h-auto w-full" : "h-full w-full"}>
           <article
-            ref={articleRef}
             data-result-page={resultPage}
-            role="button"
-            aria-label={ariaLabel}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            className={`group flex w-full flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent) ${masonry ? "h-auto" : "h-full"}`}
+            className={`group flex w-full flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} ${masonry ? "h-auto" : "h-full"}`}
         style={{
           animationDelay: animateIn ? animationDelay : undefined,
           WebkitTapHighlightColor: "transparent",
@@ -191,20 +176,8 @@ function ThreadCardImpl({
           }
         }}
       >
-        {/* 拦截 Tab 焦点进入内部元素，并对辅助技术隐藏内部细节 */}
         <div
-          aria-hidden="true"
           className={`flex w-full flex-col pointer-events-auto ${masonry ? "h-auto" : "h-full"}`}
-          ref={(el) => {
-            if (el) {
-              const focusables = el.querySelectorAll(
-                'a, button, [tabindex="0"]',
-              );
-              focusables.forEach((node) => {
-                node.setAttribute("tabindex", "-1");
-              });
-            }
-          }}
         >
           <div className="flex flex-col gap-2 px-1 pb-3 pt-1 text-(--od-text-primary)">
             <div className="flex min-w-0 items-center gap-2 overflow-hidden">
@@ -303,13 +276,18 @@ function ThreadCardImpl({
           </div>
 
           <div className="relative z-10 -mt-10 flex flex-1 flex-col gap-3 px-2 text-(--od-text-primary)">
-            <div data-thread-preview className="cursor-pointer overflow-hidden">
+            <button
+              type="button"
+              data-thread-preview
+              className="cursor-pointer overflow-hidden text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent)"
+              aria-label={`预览帖子：${thread.title}`}
+            >
               <h3
                 className={`line-clamp-2 min-h-[2lh] ${mobileTitleClass} font-extrabold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent)`}
               >
                 <HighlightText text={thread.title} highlight={searchQuery} />
               </h3>
-            </div>
+            </button>
             <div className="min-h-11">
               {hasExcerpt && (
                 <p

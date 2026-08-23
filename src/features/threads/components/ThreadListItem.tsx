@@ -11,7 +11,7 @@ import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentity
 import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
 import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
-import { ThreadTagList } from "@/entities/thread/ThreadTagList";
+import { ThreadTagList } from "@/features/threads/components/ThreadTagList";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
 import { usePretextClampText } from "@/shared/hooks/usePretextClampText";
@@ -232,14 +232,18 @@ function ThreadListItemImpl({
             <ThreadTournamentBadges thread={thread} variant="inline" />
           </div>
 
-          <div className="mb-3 flex items-start gap-2.5">
+          <button
+            type="button"
+            className="mb-3 flex items-start gap-2.5 text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent)"
+            aria-label={`预览帖子：${thread.title}`}
+          >
             <h3
               ref={titleMeasureRef}
               className={`min-w-0 flex-1 font-semibold leading-snug tracking-[-0.02em] text-(--od-text-primary) transition-colors duration-200 group-hover:text-(--od-accent) ${fontSizes.title}`}
             >
               <HighlightText text={clampedTitle} highlight={searchQuery} />
             </h3>
-          </div>
+          </button>
 
           {hasExcerpt && (
             <div

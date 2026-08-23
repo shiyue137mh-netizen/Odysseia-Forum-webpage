@@ -12,7 +12,7 @@ import {
   resetRateLimitStateForTests,
   type RateLimitOrigin,
 } from "@/shared/api/rateLimit";
-import { notifyRateLimit } from "@/shared/lib/notify";
+import { notifyRateLimit } from "@/features/mascot/lib/notify";
 import { useSearchResults } from "./useSearchResults";
 
 vi.mock("@/features/search/api/searchApi", () => ({
@@ -29,7 +29,7 @@ vi.mock("@/shared/hooks/useSettings", () => ({
   useResultPreloadSettings: () => settings.preload,
 }));
 
-vi.mock("@/shared/lib/notify", () => ({
+vi.mock("@/features/mascot/lib/notify", () => ({
   notifyRateLimit: vi.fn(),
 }));
 
@@ -172,5 +172,67 @@ describe("useSearchResults 限流分层", () => {
 
     await waitFor(() => expect(searchApi.search).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(result.current.results[0]?.thread_id).toBe("2"));
+  });
+
+  it.each(["booklist", "tournament"] as const)(
+    "%s 模式禁用帖子搜索",
+    async (type) => {
+      const { result } = renderHook(
+        () =>
+          useSearchResults({
+            params: { ...params, type },
+            preferences: null,
+            enabled: false,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await waitFor(() =>
+        expect(result.current.infiniteQueryState.fetchStatus).toBe("idle"),
+      );
+      expect(searchApi.search).not.toHaveBeenCalled();
+    },
+  );
+
+  it("查询键变化时中止旧搜索请求", async () => {
+    let firstSignal: AbortSignal | undefined;
+    vi.mocked(searchApi.search).mockImplementation((_request, signal) => {
+      if (!firstSignal) firstSignal = signal;
+      return new Promise<SearchResponse>(() => {});
+    });
+
+    let currentParams = params;
+    const { rerender } = renderHook(
+      () => useSearchResults({ params: currentParams, preferences: null }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(firstSignal).toBeDefined());
+    expect(firstSignal?.aborted).toBe(false);
+
+    currentParams = { ...params, query: "new query" };
+    rerender();
+
+    await waitFor(() => expect(firstSignal?.aborted).toBe(true));
+  });
+
+  it("已有下一页缓存时切换为禁用不会继续预加载", async () => {
+    settings.preload = { enabled: false, pages: 2 };
+    vi.mocked(searchApi.search).mockResolvedValue(page(["1"], 10));
+    let enabled = true;
+
+    const { rerender } = renderHook(
+      () => useSearchResults({ params, preferences: null, enabled }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(searchApi.search).toHaveBeenCalledTimes(1));
+
+    settings.preload = { enabled: true, pages: 2 };
+    enabled = false;
+    rerender();
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(searchApi.search).toHaveBeenCalledTimes(1);
   });
 });

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import previewBackground from '@/assets/images/background/garden.png';
-import { ThreadCard } from '@/entities/thread/ThreadCard';
+import { ThreadCard } from '@/features/threads/components/ThreadCard';
 import type { Thread } from '@/entities/thread/types';
 import { useEasterEggUnlocks } from '@/features/easter-eggs/hooks/useEasterEggUnlocks';
 import { useTheme } from '@/shared/hooks/useTheme';

@@ -42,11 +42,11 @@ Odysseia-Forum-Main/
 │   │   │   ├── preferences/        # 用户偏好设置 (搜索习惯、标签过滤黑白名单)
 │   │   │   ├── search/             # 搜索中枢 (分词器、URL状态同步、API桥接)
 │   │   │   ├── tags/               # 标签目录
-│   │   │   ├── threads/            # 帖子行为总成 (点赞、转发、预览流等动作钩子)
+│   │   │   ├── threads/            # 完整帖子交互总成 (ThreadCard、ThreadListItem、结果集合与帖子动作)
 │   │   │   └── tournaments/        # 赛事 (本质是标记为 is_tournament 的书单)
 │   │   │
 │   │   ├── entities/               # [Entities 面向实体层] 以特定业务模型为核心的对象与轻量视图
-│   │   │   ├── thread/             # 帖子骨架与数据结构 (ThreadCard, ThreadListItem)
+│   │   │   ├── thread/             # 帖子类型、派生模型、统计/状态/赛事徽章与加载骨架
 │   │   │   ├── booklist/           # 书单卡片
 │   │   │   ├── tournament/         # 赛事类型 (Tournament = Booklist 的别名)
 │   │   │   └── user/               # 用户卡片 (AuthorAvatar)
@@ -89,7 +89,7 @@ import { Button } from "../../../../shared/ui/Button";
 // ✅ 正确规范写法
 import { Button } from "@/shared/ui/Button";
 import { Thread } from "@/entities/thread/types";
-// ✅ 对于由 npm run gen:api 产生的类型文件，专用了强关联短标识
+// ✅ 对于由 pnpm gen:api 产生的类型文件，专用了强关联短标识
 import { paths } from "@shared-types/openapi";
 ```
 
@@ -97,6 +97,6 @@ import { paths } from "@shared-types/openapi";
 
 `shared < entities < features < widgets < pages < app`，**下层不得引用上层**。
 
-`eslint.config.js` 里用 `no-restricted-imports` 为每一层配置了禁止引用的上层路径。目前存量违规按 `warn` 计入 `pnpm lint` 的 `--max-warnings` 基线，**新增违规会让基线超标从而 CI 失败**。存量清单见 `docs/code-review-2026-07-26.md` §3.1，清零后应把规则提升为 `error`。
+`eslint.config.js` 里用 `no-restricted-imports` 为每一层配置了禁止引用的上层路径。目前存量违规按 `warn` 计入 `pnpm lint` 的 `--max-warnings` 基线，**新增违规会让基线超标从而 CI 失败**。存量清单见 `docs/code-review-2026-08-23.md` §4.3，清零后应把规则提升为 `error`。
 
 常见的正确解法是 **props 注入** 而不是直接 import：底层组件暴露 `actionsSlot?: ReactNode` 之类的插槽，由上层把业务组件传进来。

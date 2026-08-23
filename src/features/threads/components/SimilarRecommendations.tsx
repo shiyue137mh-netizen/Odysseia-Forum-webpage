@@ -7,7 +7,7 @@ import type { Thread } from "@/entities/thread/types";
 import { searchApi } from "@/features/search/api/searchApi";
 import { searchKeys } from "@/features/search/lib/queryKeys";
 import { usePreviewStore } from "@/features/search/store/previewStore";
-import { CompactThreadCard } from "@/widgets/content-display/ContentDisplayCards";
+import { CompactThreadCard } from "@/features/threads/components/CompactThreadCard";
 
 interface SimilarRecommendationsProps {
   currentThreadId: string;

@@ -33,9 +33,9 @@
 #### 构建设置
 
 - **框架预设**: `Vite`
-- **构建命令**: `npm run build`
+- **构建命令**: `pnpm build`
 - **构建输出目录**: `dist`
-- **Node.js 版本**: `18` 或更高
+- **Node.js 版本**: `22`（与当前 CI 一致）
 
 ### 3. 环境变量配置
 
@@ -44,8 +44,10 @@
 | 变量名          | 示例值                                | 说明                     |
 | --------------- | ------------------------------------- | ------------------------ |
 | `VITE_API_URL`  | `https://api.odysseia.example.com/v1` | 后端 API 地址（必填）    |
-| `VITE_USE_MOCK` | `false`                               | 生产环境必须设为 `false` |
-| `NODE_VERSION`  | `18`                                  | Node.js 版本             |
+| `VITE_USE_MOCK` | `false`                               | 仅控制开发环境登录 Mock，生产环境保持 `false` |
+| `VITE_API_MOCKING` | `false`                            | 控制 Mock 控制台和测试路由，生产环境保持 `false` |
+| `VITE_SHOW_DEVTOOLS` | `false`                          | 是否显示 React Query Devtools，生产环境通常保持 `false` |
+| `NODE_VERSION`  | `22`                                  | 与当前 CI 构建版本一致 |
 
 > **重要**: 环境变量必须以 `VITE_` 开头才能在前端代码中访问。
 
@@ -58,8 +60,8 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 1. 点击 **Save and Deploy**
 2. Cloudflare Pages 会自动：
    - 克隆仓库
-   - 安装依赖（`npm install`）
-   - 运行构建（`npm run build`）
+   - 安装依赖（`pnpm install --frozen-lockfile`）
+   - 运行构建（`pnpm build`）
    - 部署到 CDN
 
 3. 等待构建完成（通常 2-5 分钟）
@@ -78,7 +80,7 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 
 ## 关键配置文件
 
-### `/webpage/public/_redirects`
+### `public/_redirects`
 
 ```
 /* /index.html 200
@@ -86,7 +88,7 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 
 此文件确保所有路由请求都返回 `index.html`，实现 SPA 路由支持。**已自动包含在构建输出中**。
 
-### `/webpage/public/_routes.json`
+### `public/_routes.json`
 
 ```json
 {
@@ -134,7 +136,7 @@ curl -A Discordbot https://你的域名/share/booklists/书单ID
 
 返回的 `<head>` 应包含该书单对应的 `og:title`、`og:description` 和 `og:image`。
 
-### `/webpage/src/config/channels.ts`
+### `src/shared/config/channelCategories.private.ts`
 
 静态频道配置，作为 API 失败时的回退数据。如果后端 `/meta/channels` 不可用，前端会自动使用此配置。
 
@@ -229,5 +231,5 @@ Cloudflare Pages 支持 Git 分支自动部署：
 
 ---
 
-**最后更新**: 2025-12-18  
-**文档版本**: 1.0
+**最后更新**: 2026-08-23
+**文档版本**: 1.1

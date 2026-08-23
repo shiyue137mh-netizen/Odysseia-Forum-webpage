@@ -1,5 +1,5 @@
-import { ThreadCard } from '@/entities/thread/ThreadCard';
-import { ThreadListItem } from '@/entities/thread/ThreadListItem';
+import { ThreadCard } from '@/features/threads/components/ThreadCard';
+import { ThreadListItem } from '@/features/threads/components/ThreadListItem';
 import type { Thread } from '@/entities/thread/types';
 import { useLayoutMode } from '@/shared/hooks/useSettings';
 import type { LayoutMode } from '@/shared/hooks/useLayoutPreference';

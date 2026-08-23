@@ -1,38 +1,9 @@
 import axios from 'axios';
-import { showMascotToast, type MascotToastOptions } from '@/features/mascot/lib/mascotToast';
 import {
   getRateLimitInfo,
   getRemainingRateLimitSeconds,
   type RateLimitInfo,
 } from '@/shared/api/rateLimit';
-
-interface NotifyMessageOptions extends MascotToastOptions {
-  description?: string;
-}
-
-const DEFAULT_DURATION = 5200;
-
-export function notifySuccess(message: string, options?: NotifyMessageOptions) {
-  return showMascotToast({
-    emotion: 'success',
-    title: '好消息！',
-    message,
-    duration: DEFAULT_DURATION,
-    ...options,
-  });
-}
-
-
-export function notifyError(message: string, options?: NotifyMessageOptions) {
-  // 这里的 message 可能是后端返回的原始错误，我们后续可以增加更智能的解析
-  return showMascotToast({
-    emotion: 'complaint',
-    title: '出了点小状况',
-    message,
-    duration: 6000,
-    ...options,
-  });
-}
 
 export function formatRateLimitMessage(info: RateLimitInfo, now = Date.now()) {
   const remaining = getRemainingRateLimitSeconds(info, now);
@@ -40,17 +11,6 @@ export function formatRateLimitMessage(info: RateLimitInfo, now = Date.now()) {
   return remaining === null
     ? `${subject}有点频繁，请稍后再试。`
     : `${subject}有点频繁，请在 ${remaining} 秒后再试。`;
-}
-
-export function notifyRateLimit(info: RateLimitInfo) {
-  return showMascotToast({
-    id: `${info.scope}-rate-limit`,
-    emotion: 'complaint',
-    eyebrow: 'Rate Limit',
-    title: '操作有点频繁',
-    message: formatRateLimitMessage(info),
-    duration: 6000,
-  });
 }
 
 export function extractErrorMessage(error: unknown, fallback = '操作未完成，请稍后再试') {

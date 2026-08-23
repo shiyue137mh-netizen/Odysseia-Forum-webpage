@@ -8,14 +8,19 @@ import { Toaster } from 'sonner';
 import { ErrorBoundary } from '@/app/providers/ErrorBoundary';
 import { showMascotErrorToast } from '@/features/mascot/lib/mascotToast';
 import { ThemeProvider } from '@/app/themes/ThemeProvider';
-import { bindThumbnailRepairQueryClient } from '@/features/threads/lib/thumbnailRepairQueue';
+import {
+  bindThumbnailRepairQueryClient,
+  reportBrokenThreadThumbnail,
+  subscribeThreadThumbnailRepair,
+} from '@/features/threads/lib/thumbnailRepairQueue';
 import { consumeAuthTokenFromHash } from '@/shared/lib/authSession';
 import {
   getRateLimitInfo,
   isSilentPreloadRateLimit,
   shouldRetryQuery,
 } from '@/shared/api/rateLimit';
-import { notifyRateLimit } from '@/shared/lib/notify';
+import { notifyRateLimit } from '@/features/mascot/lib/notify';
+import { configureImageRecovery } from '@/shared/lib/imageRecovery';
 import { router } from './router';
 import { useMascotStore } from '@/features/mascot/store/mascotStore';
 
@@ -69,6 +74,10 @@ if (import.meta.env.DEV) {
 export function App() {
   useEffect(() => {
     bindThumbnailRepairQueryClient(queryClient);
+    configureImageRecovery({
+      report: reportBrokenThreadThumbnail,
+      subscribe: subscribeThreadThumbnailRepair,
+    });
   }, []);
 
   useEffect(() => {

@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { followsApi, type FollowsQueryParams } from '@/features/follows/api/followsApi';
 import { followsKeys } from '@/features/follows/lib/queryKeys';
-import { extractErrorMessage, notifyError, notifySuccess } from '@/shared/lib/notify';
+import { notifyError, notifySuccess } from '@/features/mascot/lib/notify';
+import { extractErrorMessage } from '@/shared/lib/notify';
 
 interface EnabledOption {
   enabled?: boolean;

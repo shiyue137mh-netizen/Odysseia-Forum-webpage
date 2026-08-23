@@ -6,7 +6,8 @@ import { X, Loader2, Image as ImageIcon, Hash, Eye } from 'lucide-react';
 import { bannerApi } from '@/features/banner/api/bannerApi';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
-import { extractErrorMessage, notifySuccess } from '@/shared/lib/notify';
+import { notifySuccess } from '@/features/mascot/lib/notify';
+import { extractErrorMessage } from '@/shared/lib/notify';
 import { useChannels } from '@/shared/hooks/useChannels';
 
 const bannerSchema = z.object({

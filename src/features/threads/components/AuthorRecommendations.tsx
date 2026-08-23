@@ -7,7 +7,7 @@ import { usePreviewStore } from "@/features/search/store/previewStore";
 import type { Thread } from "@/entities/thread/types";
 import { BookOpenText, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { CompactThreadCard } from "@/widgets/content-display/ContentDisplayCards";
+import { CompactThreadCard } from "@/features/threads/components/CompactThreadCard";
 
 interface AuthorRecommendationsProps {
   authorId: string;

@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { authApi } from '@/features/auth/api/authApi';
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
-import { extractErrorMessage, notifySuccess } from '@/shared/lib/notify';
+import { notifySuccess } from '@/features/mascot/lib/notify';
+import { extractErrorMessage } from '@/shared/lib/notify';
 import { LOGIN_REDIRECT_STORAGE_KEY, sanitizeInternalRedirect } from '@/shared/lib/navigationSafety';
 import { OmicronLoader } from '@/shared/ui/loaders/OmicronLoader';
 

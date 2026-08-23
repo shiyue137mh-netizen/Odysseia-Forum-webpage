@@ -7,7 +7,7 @@ import { useAuth, useRefreshAuth } from '@/features/auth/hooks/useAuth';
 import { apiClient } from '@/shared/api/client';
 import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
 import { showMascotToast } from '@/features/mascot/lib/mascotToast';
-import { notifySuccess } from '@/shared/lib/notify';
+import { notifySuccess } from '@/features/mascot/lib/notify';
 import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
 import ruleImage from '@/assets/images/background/rule.png';
 import { WordLoader } from '@/shared/ui/loaders/WordLoader';

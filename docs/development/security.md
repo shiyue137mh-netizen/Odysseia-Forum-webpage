@@ -28,4 +28,4 @@
 
 ## 3. 第三方依赖审查 (Dependency Auditing)
 
-请确保 `package.json` 中的构建脚本不会带来构建时的后门漏洞。定期执行 `npm audit` 审查关键依赖的子包安全警报，尤其是像 React 解析器、Markdown 解析器这种直接操作 DOM 的直接包。
+请确保 `package.json` 中的构建脚本不会带来构建时的后门漏洞。定期执行 `pnpm audit` 审查关键依赖的子包安全警报，尤其是像 React 解析器、Markdown 解析器这种直接操作 DOM 的直接包。

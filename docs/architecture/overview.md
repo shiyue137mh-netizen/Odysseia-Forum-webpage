@@ -48,4 +48,4 @@ pnpm build
 - 提交前请在本地跑一遍 CI 的五道门禁：`pnpm typecheck`、`pnpm lint`、`pnpm lint:styles`、`pnpm test:run`、`pnpm build`。
   （注意用 `test:run` 而不是 `test`——后者是 watch 模式，不会自己退出。）
 - **特别注意**：本项目已升级至 **Tailwind CSS v4** 和 **React 19**，请务必阅读 `docs/architecture/core_architecture.md` 了解最新的“现代化范式”，避免使用诸如 `forwardRef` 等旧模式。
-- 最近一次全量代码审查的结论与待办清单见 [`docs/code-review-2026-07-26.md`](../code-review-2026-07-26.md)。
+- 最近一次全量代码审查的结论与待办清单见 [`docs/code-review-2026-08-23.md`](../code-review-2026-08-23.md)。

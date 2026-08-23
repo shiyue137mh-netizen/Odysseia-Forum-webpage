@@ -1,6 +1,6 @@
 import { BellOff, Bookmark, CheckCircle2, RefreshCw, Search } from 'lucide-react';
 
-import { ThreadListItem } from '@/entities/thread/ThreadListItem';
+import { ThreadListItem } from '@/features/threads/components/ThreadListItem';
 import type { Thread } from '@/entities/thread/types';
 import { useListEntranceAnimation } from '@/shared/hooks/useListEntranceAnimation';
 

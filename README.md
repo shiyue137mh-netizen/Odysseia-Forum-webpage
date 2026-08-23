@@ -21,11 +21,11 @@
 
 <!-- 技术栈徽章 -->
 <p align="center">
-  <a href="https://reactjs.org/"><img src="https://img.shields.io/badge/React-18-blue.svg?style=flat&logo=react" alt="React" /></a>
-  <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-5-646CFF.svg?style=flat&logo=vite&logoColor=white" alt="Vite" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5-3178C6.svg?style=flat&logo=typescript&logoColor=white" alt="TypeScript" /></a>
-  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC.svg?style=flat&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
-  <a href="https://zustand-demo.pmnd.rs/"><img src="https://img.shields.io/badge/Zustand-4.5-56291C.svg?style=flat" alt="Zustand" /></a>
+  <a href="https://reactjs.org/"><img src="https://img.shields.io/badge/React-19-blue.svg?style=flat&logo=react" alt="React" /></a>
+  <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-8-646CFF.svg?style=flat&logo=vite&logoColor=white" alt="Vite" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6-3178C6.svg?style=flat&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind_CSS-4-38B2AC.svg?style=flat&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" /></a>
+  <a href="https://zustand-demo.pmnd.rs/"><img src="https://img.shields.io/badge/Zustand-5-56291C.svg?style=flat" alt="Zustand" /></a>
 </p>
 
 <!-- 动态仓库状态徽章 -->
@@ -51,9 +51,9 @@
 
 ## 我们建小房子的砖块
 
-- **React 18** 加上 **Vite**：页面加载速度超快，就像我吹喇叭一样一呼百应！<img align="center" height="24" src="src/assets/images/mascot/blow_the_trumpet.png" alt="吹喇叭" />
-- **Tailwind CSS**：可以随时给界面切掉换上好看的皮肤！深浅色主题随心切换，怎么打扮都好看！
-- **Zustand** & **React Query**：帮我把宝宝们写的所有帖子和状态都打理得整整齐齐，就算是路过找东西也绝不会乱哦！<img align="center" height="24" src="src/assets/images/mascot/searching.png" alt="搜索" />
+- **React 19** 加上 **Vite 8**：页面加载速度超快，就像我吹喇叭一样一呼百应！<img align="center" height="24" src="src/assets/images/mascot/blow_the_trumpet.png" alt="吹喇叭" />
+- **Tailwind CSS 4**：可以随时给界面切掉换上好看的皮肤！深浅色主题随心切换，怎么打扮都好看！
+- **Zustand 5** & **React Query**：帮我把宝宝们写的所有帖子和状态都打理得整整齐齐，就算是路过找东西也绝不会乱哦！<img align="center" height="24" src="src/assets/images/mascot/searching.png" alt="搜索" />
 - **路由懒加载 + 无限滚动**：每个页面都是单独的小包裹，进哪个房间才拆哪个，翻卡片也能一直往下滑！<img align="center" height="24" src="src/assets/images/mascot/success.png" alt="赞" />
 
 ## 想在你的电脑上部署这个项目吗？
@@ -61,9 +61,9 @@
 如果你想在本地拉起项目看到这个前端网站的样子，只需要这样：
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env
-npm run dev
+pnpm dev
 ```
 
 等魔法生效后，用浏览器访问 `http://localhost:3000` 就能看到我啦！如果你做错什么把代码弄坏了... 哼，如果你好好哄哄我，我也会尽力帮你解答你遇到的开发报错的哦！<img align="center" height="24" src="src/assets/images/mascot/sad_apology.png" alt="嫌弃又委屈" />

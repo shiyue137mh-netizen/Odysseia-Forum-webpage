@@ -1,7 +1,7 @@
 import { ThreadCardSkeleton } from "@/entities/thread/ThreadCardSkeleton";
 import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { ThreadListItemSkeleton } from "@/entities/thread/ThreadListItemSkeleton";
-import { ThreadResultsCollection } from "@/entities/thread/ThreadResultsCollection";
+import { ThreadResultsCollection } from "@/features/threads/components/ThreadResultsCollection";
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
 import { BooklistListItem } from "@/entities/booklist/BooklistListItem";
 import { TournamentListItem } from "@/features/tournaments/components/TournamentListItem";
@@ -144,7 +144,7 @@ export function SearchPage() {
     setIgnoreDiscoveryPreferences,
     totalResults,
     visibleRateLimit,
-  } = useSearchResults({ params, preferences });
+  } = useSearchResults({ params, preferences, enabled: isThreadTab });
 
   const animateIn = useListEntranceAnimation(isLoading);
 
