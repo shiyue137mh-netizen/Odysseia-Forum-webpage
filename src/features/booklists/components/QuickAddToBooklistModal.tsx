@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 
 import { useMyBooklistsList } from "@/features/booklists/hooks/useBooklistsData";
 import { booklistsApi } from "@/features/booklists/api/booklistsApi";
-import { booklistKeys } from "@/features/booklists/lib/queryKeys";
+import { invalidateBooklistQueries } from "@/features/booklists/lib/invalidateBooklistQueries";
 import { Checkbox } from "@/shared/ui/Checkbox";
 import { notifyError, notifySuccess } from "@/features/mascot/lib/notify";
 import { extractErrorMessage } from "@/shared/lib/notify";
@@ -97,7 +97,13 @@ export function QuickAddToBooklistModal({
         removed > 0 ? `移出 ${removed} 个书单` : null,
       ].filter(Boolean);
       notifySuccess(changes.length > 0 ? changes.join("，") : "书单内容已更新");
-      queryClient.invalidateQueries({ queryKey: booklistKeys.all });
+      void invalidateBooklistQueries(queryClient, {
+        booklistIds: [
+          ...(result.added_to_booklist_ids || []),
+          ...(result.removed_from_booklist_ids || []),
+        ],
+        includeItems: true,
+      });
       onClose();
     },
     onError: (error) => {

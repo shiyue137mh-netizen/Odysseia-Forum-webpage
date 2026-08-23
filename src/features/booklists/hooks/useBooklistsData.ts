@@ -10,6 +10,7 @@ import {
   booklistKeys,
   type BooklistScope,
 } from "@/features/booklists/lib/queryKeys";
+import { invalidateBooklistQueries } from "@/features/booklists/lib/invalidateBooklistQueries";
 import type {
   BooklistFormInput,
   BooklistItemAddInput,
@@ -160,17 +161,17 @@ export function useBooklistItems(booklistId: number | string) {
 function useInvalidateBooklists() {
   const queryClient = useQueryClient();
 
-  return (booklistId?: number | string) => {
-    queryClient.invalidateQueries({ queryKey: booklistKeys.all });
-    if (booklistId !== undefined && /^\d+$/.test(String(booklistId))) {
-      queryClient.invalidateQueries({
-        queryKey: booklistKeys.detail(booklistId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: booklistKeys.items(booklistId),
-      });
-    }
-  };
+  return (
+    booklistId?: number | string,
+    options: { includeItems?: boolean } = {},
+  ) =>
+    invalidateBooklistQueries(queryClient, {
+      booklistIds:
+        booklistId !== undefined && /^\d+$/.test(String(booklistId))
+          ? [booklistId]
+          : [],
+      includeItems: options.includeItems,
+    });
 }
 
 export function useToggleBooklistCollection() {
@@ -281,7 +282,7 @@ export function useAddBooklistItems(
       booklistsApi.addItems(booklistId, items),
     onSuccess: () => {
       notifySuccess("帖子已加入书单");
-      invalidateBooklists(booklistId);
+      invalidateBooklists(booklistId, { includeItems: true });
       onSuccess?.();
     },
     onError: (error) =>
@@ -297,7 +298,7 @@ export function useRemoveBooklistItems(booklistId: number | string) {
       booklistsApi.removeItems(booklistId, [String(threadId)]),
     onSuccess: () => {
       notifySuccess("书单条目已移除");
-      invalidateBooklists(booklistId);
+      invalidateBooklists(booklistId, { includeItems: true });
     },
     onError: (error) =>
       notifyError(extractErrorMessage(error, "移除书单条目失败")),
@@ -320,7 +321,7 @@ export function useUpdateBooklistItem(
     }) => booklistsApi.updateItem(booklistId, threadId, payload),
     onSuccess: () => {
       notifySuccess("书单条目已更新");
-      invalidateBooklists(booklistId);
+      invalidateBooklists(booklistId, { includeItems: true });
       onSuccess?.();
     },
     onError: (error) =>
