@@ -11,6 +11,12 @@ import { ALL_VIRTUAL_TAGS } from "@/shared/config/navigation";
 import { parseSearchQuery, tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
 import type { SearchParams } from "@/features/search/hooks/useSearchParams";
 import { searchKeys } from "@/features/search/lib/queryKeys";
+import {
+  useChannels,
+  type ChannelTagCatalogItem,
+} from "@/shared/hooks/useChannels";
+
+const EMPTY_CHANNEL_TAG_CATALOG: ChannelTagCatalogItem[] = [];
 
 function mergeUnique(values: string[]) {
   return Array.from(
@@ -24,6 +30,7 @@ interface UseSearchAutocompleteOptions {
   searchInput: string;
   debouncedQuery: string;
   showSuggestions: boolean;
+  enabled?: boolean;
 }
 
 export interface SearchTagGroup {
@@ -38,6 +45,7 @@ export function useSearchAutocomplete({
   searchInput,
   debouncedQuery,
   showSuggestions,
+  enabled = true,
 }: UseSearchAutocompleteOptions) {
   const suggestionQuery = useMemo(
     () => tokenizeSearchPayload(debouncedQuery).text,
@@ -56,12 +64,9 @@ export function useSearchAutocomplete({
     );
   }, [searchInput]);
 
-  const { data: channelTagCatalog = [] } = useQuery({
-    queryKey: searchKeys.channelTagCatalog(params.channel),
-    queryFn: () => searchApi.getChannelTagCatalog(params.channel),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
+  const { data: channelsData } = useChannels();
+  const channelTagCatalog =
+    channelsData?.tagCatalog || EMPTY_CHANNEL_TAG_CATALOG;
 
   const globalAvailableTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -157,11 +162,10 @@ export function useSearchAutocomplete({
   const { data: suggestionsData } = useQuery({
     queryKey: searchKeys.suggestions({
       query: suggestionQuery,
-      channel: params.channel,
-      preferenceSignature: discoveryPreferenceContext?.signature,
+      applyPreferences: true,
     }),
     queryFn: () => searchApi.getSuggestions(suggestionQuery),
-    enabled: showSuggestions && suggestionQuery.length > 0,
+    enabled: enabled && showSuggestions && suggestionQuery.length > 0,
     staleTime: 30 * 1000,
     retry: false,
   });

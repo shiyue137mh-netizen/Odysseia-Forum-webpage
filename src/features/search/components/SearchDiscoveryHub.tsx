@@ -21,6 +21,7 @@ import {
   CompactThreadCard,
   CompactThreadCardSkeleton,
 } from "@/features/threads/components/CompactThreadCard";
+import { useChannels } from "@/shared/hooks/useChannels";
 
 interface SearchDiscoveryHubProps {
   channelId?: string | null;
@@ -79,6 +80,7 @@ export function SearchDiscoveryHub({
   const [isExpanded, setIsExpanded] = useState(loadDiscoveryHubExpanded);
   const [isRollingTags, setIsRollingTags] = useState(false);
   const queryClient = useQueryClient();
+  const { data: channelsData } = useChannels();
   const daysPanelRef = useRef<HTMLDetailsElement>(null);
   const scope = channelId ? `channel:${channelId}` : "global";
   const [tagSelection, setTagSelection] = useState<{
@@ -103,13 +105,16 @@ export function SearchDiscoveryHub({
       }),
     placeholderData: (previousData) => previousData,
     staleTime: 2 * 60 * 1000,
+    enabled: isExpanded,
   });
 
-  const tagCatalogQuery = useQuery({
-    queryKey: ["search-discovery", "tag-catalog", scope],
-    queryFn: async () => {
-      if (!channelId) return searchApi.getGlobalTags();
-      const catalog = await searchApi.getChannelTagCatalog(channelId);
+  const availableTags = useMemo(
+    () => {
+      const catalog = channelId
+        ? (channelsData?.tagCatalog || []).filter(
+            (item) => item.channel_id === channelId,
+          )
+        : channelsData?.tagCatalog || [];
       return Array.from(
         new Set(
           catalog.flatMap((item) => [
@@ -119,12 +124,7 @@ export function SearchDiscoveryHub({
         ),
       );
     },
-    staleTime: 30 * 60 * 1000,
-  });
-
-  const availableTags = useMemo(
-    () => tagCatalogQuery.data || [],
-    [tagCatalogQuery.data],
+    [channelId, channelsData?.tagCatalog],
   );
 
   useEffect(() => {
@@ -178,6 +178,7 @@ export function SearchDiscoveryHub({
       queryKey: getTagThreadQueryKey(tag),
       queryFn: () => getTagThreads(tag),
       staleTime: 30 * 60 * 1000,
+      enabled: isExpanded,
     })),
   });
 

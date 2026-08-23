@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 
 import { usePreviewStore } from '@/features/search/store/previewStore';
 import type { Thread } from '@/entities/thread/types';
-import { addBrowseHistory } from '@/shared/lib/browseHistory';
 
 export function usePreviewThread() {
   const setPreviewThread = usePreviewStore((state) => state.setPreviewThread);
@@ -12,7 +11,6 @@ export function usePreviewThread() {
   // ThreadCard / ThreadListItem，引用一变整个列表的 memo 就全部失效。
   const openPreview = useCallback(
     (thread: Thread) => {
-      addBrowseHistory(thread);
       setPreviewThread(thread);
     },
     [setPreviewThread],

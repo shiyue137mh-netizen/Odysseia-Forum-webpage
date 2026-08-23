@@ -112,7 +112,9 @@ export function SearchPage() {
     [query],
   );
 
-  const { preferences } = useUserPreferences({ guildId: GUILD_ID });
+  const { preferences, isLoading: arePreferencesLoading } = useUserPreferences({
+    guildId: GUILD_ID,
+  });
   const collectBooklistMutation = useToggleBooklistCollection();
   const { data: channelsData } = useChannels();
   const { openPreview } = usePreviewThread();
@@ -131,7 +133,7 @@ export function SearchPage() {
     hasSearchFilters,
     ignoreDiscoveryPreferences,
     isPreferenceActive,
-    queryState: { isLoading, isError, refetch },
+    queryState: { isLoading: isResultsLoading, isError, refetch },
     infiniteQueryState,
     loadedPageCount,
     preparePageRequest,
@@ -144,7 +146,13 @@ export function SearchPage() {
     setIgnoreDiscoveryPreferences,
     totalResults,
     visibleRateLimit,
-  } = useSearchResults({ params, preferences, enabled: isThreadTab });
+  } = useSearchResults({
+    params,
+    preferences,
+    enabled: isThreadTab && !arePreferencesLoading,
+  });
+  const isLoading =
+    isResultsLoading || (isThreadTab && arePreferencesLoading);
 
   const animateIn = useListEntranceAnimation(isLoading);
 

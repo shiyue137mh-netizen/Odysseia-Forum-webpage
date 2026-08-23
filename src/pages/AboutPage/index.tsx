@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { withViewTransition } from "@/shared/lib/viewTransition";
 
-import forumIcon from "@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png";
+import forumIcon from "@/assets/images/icon/forum-icon-256.png";
 import { APP_VERSION } from "@/shared/config/appInfo";
 import { parallaxScenes } from "@/shared/config/parallaxScenes";
-import { useDeviceOrientationParallax } from "@/shared/hooks/useDeviceOrientationParallax";
+import { useSettledParallax } from "@/shared/hooks/useSettledParallax";
 import { WordLogoStatic } from "@/shared/ui/loaders/WordLogoStatic";
 
 const GITHUB_REPO_URL =
@@ -20,6 +20,35 @@ const FRONTEND_CONTRIBUTORS_API =
 const BACKEND_CONTRIBUTORS_API =
   "https://api.github.com/repos/starowo/Odysseia-Forum/contributors?per_page=100";
 const WIKI_URL = "https://wiki.xn--35zx7g.org/";
+
+// About 独立视差手调区：X/Y 控制最大移动幅度（px），baseX/baseY 控制人物静止位置，
+// scale 控制图层大小；baseXViewport 以屏幕宽度为单位平移，-0.4 即向左移动 40vw。
+// 移动端使用 contain 保留完整人物，再用这两个参数把透明画布右侧的人物移到中央。
+const ABOUT_PARALLAX = {
+  mobileBreakpoint: 640,
+  background: {
+    desktop: { x: 6, y: 6, scale: 1.05 },
+    mobile: { x: 3, y: 3, scale: 1.03 },
+  },
+  foreground: {
+    desktop: {
+      x: 18,
+      y: 12,
+      baseX: 28,
+      baseY: 14,
+      scale: 1.02,
+      baseXViewport: 0,
+    },
+    mobile: {
+      x: 6,
+      y: 5,
+      baseX: 0,
+      baseY: 10,
+      scale: 3.5,
+      baseXViewport: -0.4,
+    },
+  },
+} as const;
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -81,44 +110,44 @@ export function AboutPage() {
   const hasSpawnedRef = useRef(false);
   const backgroundLayerRef = useRef<HTMLImageElement>(null);
   const foregroundLayerRef = useRef<HTMLImageElement>(null);
-  const parallaxTargetRef = useRef({ x: 0, y: 0 });
+  const initialBackground =
+    window.innerWidth < ABOUT_PARALLAX.mobileBreakpoint
+      ? ABOUT_PARALLAX.background.mobile
+      : ABOUT_PARALLAX.background.desktop;
+  const initialForeground =
+    window.innerWidth < ABOUT_PARALLAX.mobileBreakpoint
+      ? ABOUT_PARALLAX.foreground.mobile
+      : ABOUT_PARALLAX.foreground.desktop;
   const [isLeaving, setIsLeaving] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [isSharpening, setIsSharpening] = useState(false);
-  useDeviceOrientationParallax(parallaxTargetRef);
-
-  useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    let frameId = 0;
-    let currentX = 0;
-    let currentY = 0;
-
-    const render = () => {
-      currentX += (parallaxTargetRef.current.x - currentX) * 0.05;
-      currentY += (parallaxTargetRef.current.y - currentY) * 0.05;
-
+  const setParallaxTarget = useSettledParallax(
+    useCallback(({ x: currentX, y: currentY }) => {
+      const isMobile = window.innerWidth < ABOUT_PARALLAX.mobileBreakpoint;
+      const background = isMobile
+        ? ABOUT_PARALLAX.background.mobile
+        : ABOUT_PARALLAX.background.desktop;
+      const foreground = isMobile
+        ? ABOUT_PARALLAX.foreground.mobile
+        : ABOUT_PARALLAX.foreground.desktop;
       if (backgroundLayerRef.current) {
-        backgroundLayerRef.current.style.transform = `translate3d(${(-currentX * 12).toFixed(2)}px, ${(-currentY * 12).toFixed(2)}px, 0) scale(1.08)`;
+        backgroundLayerRef.current.style.transform = `translate3d(${(-currentX * background.x).toFixed(2)}px, ${(-currentY * background.y).toFixed(2)}px, 0) scale(${background.scale})`;
       }
       if (foregroundLayerRef.current) {
-        foregroundLayerRef.current.style.transform = `translate3d(${(60 - currentX * 58).toFixed(2)}px, ${(28 - currentY * 46).toFixed(2)}px, 0) scale(1.1)`;
+        const baseX =
+          foreground.baseX + window.innerWidth * foreground.baseXViewport;
+        foregroundLayerRef.current.style.transform = `translate3d(${(baseX - currentX * foreground.x).toFixed(2)}px, ${(foreground.baseY - currentY * foreground.y).toFixed(2)}px, 0) scale(${foreground.scale})`;
       }
-
-      frameId = requestAnimationFrame(render);
-    };
-
-    frameId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(frameId);
-  }, []);
+    }, []),
+  );
 
   const handleParallaxMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType !== "mouse") return;
-    parallaxTargetRef.current = {
+    setParallaxTarget({
       x: (event.clientX / window.innerWidth) * 2 - 1,
       y: (event.clientY / window.innerHeight) * 2 - 1,
-    };
+    });
   };
 
   // 苏醒序列动画：仅在进入背景模式时触发
@@ -263,7 +292,7 @@ export function AboutPage() {
         }`}
         onPointerMove={handleParallaxMove}
         onPointerLeave={() => {
-          parallaxTargetRef.current = { x: 0, y: 0 };
+          setParallaxTarget({ x: 0, y: 0 });
         }}
         onClick={() => {
           if (isUiHidden) setIsUiHidden(false);
@@ -274,20 +303,22 @@ export function AboutPage() {
           src={scene.background}
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-          style={{ transform: "scale(1.08)", willChange: "transform" }}
+          style={{
+            transform: `scale(${initialBackground.scale})`,
+            willChange: "transform",
+          }}
         />
         <img
           ref={foregroundLayerRef}
           src={scene.foreground}
           alt=""
-          className={`pointer-events-none absolute inset-0 h-full w-full ${
+          className={`pointer-events-none absolute inset-0 h-full w-full origin-center sm:origin-bottom-right ${
             scene.foregroundFit === "contain"
-              ? "object-contain object-right-bottom"
-              : "object-cover object-top"
+              ? "object-contain object-center sm:object-right-bottom"
+              : "object-contain object-center sm:object-cover sm:object-top"
           }`}
           style={{
-            transform: "translate3d(40px, 50px, 0) scale(1.00)",
-            transformOrigin: "right bottom",
+            transform: `translate3d(${initialForeground.baseX + window.innerWidth * initialForeground.baseXViewport}px, ${initialForeground.baseY}px, 0) scale(${initialForeground.scale})`,
             willChange: "transform",
           }}
         />

@@ -55,25 +55,29 @@ export function OnboardingManager() {
 
   // 功能级引导触发（如高级筛选面板出现时）
   useEffect(() => {
-    if (activeTutorial || isTutorialCompleted('advanced_search_guide')) return;
+    if (
+      activeTutorial ||
+      location.pathname !== '/search' ||
+      isTutorialCompleted('advanced_search_guide')
+    ) return;
 
-    const checkElement = () => {
+    const startAdvancedGuide = () => {
       const filterPanel = document.querySelector('[data-tour="filter-panel"]');
       if (filterPanel) {
         startTutorial(ADVANCED_SEARCH_GUIDE_TUTORIAL);
-        return true;
       }
-      return false;
     };
 
-    if (checkElement()) return;
+    const handleFilterButtonClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (!target.closest('[data-tour="search-filters-btn"]')) return;
+      window.requestAnimationFrame(startAdvancedGuide);
+    };
 
-    const interval = setInterval(() => {
-      if (checkElement()) clearInterval(interval);
-    }, 200)
-
-    return () => clearInterval(interval);
-  }, [activeTutorial, isTutorialCompleted, startTutorial]);
+    document.addEventListener('click', handleFilterButtonClick);
+    return () => document.removeEventListener('click', handleFilterButtonClick);
+  }, [activeTutorial, isTutorialCompleted, location.pathname, startTutorial]);
 
   if (!activeTutorial) return null;
 

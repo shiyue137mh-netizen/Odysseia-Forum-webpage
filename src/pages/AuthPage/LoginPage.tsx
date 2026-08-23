@@ -1,22 +1,26 @@
-import { useEffect, useState, type CSSProperties } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
-import { DiscordIcon } from '@/shared/ui/icons/DiscordIcon';
-import { useAuth, useRefreshAuth } from '@/features/auth/hooks/useAuth';
-import { apiClient } from '@/shared/api/client';
-import forumIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
-import { showMascotToast } from '@/features/mascot/lib/mascotToast';
-import { notifySuccess } from '@/features/mascot/lib/notify';
-import { WordLogoStatic } from '@/shared/ui/loaders/WordLogoStatic';
-import ruleImage from '@/assets/images/background/rule.png';
-import { WordLoader } from '@/shared/ui/loaders/WordLoader';
-import { ImageViewer } from '@/shared/ui/ImageViewer';
-import { useImageViewerStore } from '@/shared/store/useImageViewerStore';
-import { AuthSceneBackground } from './AuthSceneBackground';
-import { clearLoginErrorParams, normalizeLoginError } from './loginError';
+import { useEffect, useState, type CSSProperties } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
+import { DiscordIcon } from "@/shared/ui/icons/DiscordIcon";
+import { useAuth, useRefreshAuth } from "@/features/auth/hooks/useAuth";
+import { apiClient } from "@/shared/api/client";
+import forumIcon from "@/assets/images/icon/forum-icon-256.png";
+import { showMascotToast } from "@/features/mascot/lib/mascotToast";
+import { notifySuccess } from "@/features/mascot/lib/notify";
+import { WordLogoStatic } from "@/shared/ui/loaders/WordLogoStatic";
+import ruleImage from "@/assets/images/background/rule.png";
+import { WordLoader } from "@/shared/ui/loaders/WordLoader";
+import { ImageViewer } from "@/shared/ui/ImageViewer";
+import { useImageViewerStore } from "@/shared/store/useImageViewerStore";
+import { AuthSceneBackground } from "./AuthSceneBackground";
+import { clearLoginErrorParams, normalizeLoginError } from "./loginError";
 
-export function LoginPage() {
+interface LoginPageProps {
+  preview?: boolean;
+}
+
+export function LoginPage({ preview = false }: LoginPageProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -25,16 +29,17 @@ export function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isWakingUp, setIsWakingUp] = useState(true);
   const [isSharpening, setIsSharpening] = useState(true);
+  const [isSceneReady, setIsSceneReady] = useState(false);
   const [isUiHidden, setIsUiHidden] = useState(false);
   const [hasAcceptedRules, setHasAcceptedRules] = useState(false);
 
-  const loadingWordStyle: CSSProperties & { '--od-text-primary': string } = {
-    '--od-text-primary': 'color-mix(in oklab, var(--od-accent) 78%, white 22%)',
+  const loadingWordStyle: CSSProperties & { "--od-text-primary": string } = {
+    "--od-text-primary": "color-mix(in oklab, var(--od-accent) 78%, white 22%)",
   };
 
   // OAuth 失败返回登录页时，在顶部展示一次具体原因并清理错误参数
   useEffect(() => {
-    const rawError = searchParams.get('error');
+    const rawError = searchParams.get("error");
     if (rawError === null) return;
 
     const errorMessage = normalizeLoginError(rawError);
@@ -42,30 +47,35 @@ export function LoginPage() {
 
     if (!errorMessage) return;
     showMascotToast({
-      id: 'login-oauth-error',
-      emotion: 'sad_apology',
-      eyebrow: 'Login Interrupted',
-      title: '这次登录没接上',
+      id: "login-oauth-error",
+      emotion: "sad_apology",
+      eyebrow: "Login Interrupted",
+      title: "这次登录没接上",
       message: errorMessage,
       duration: 9000,
     });
   }, [searchParams, setSearchParams]);
 
-  // 苏醒序列动画：进入页面时自动触发（轻快自然）
+  // 苏醒序列与 About 背景模式保持同一节奏，避免登录页像快速闪屏。
   useEffect(() => {
     let isMounted = true;
     const sequence = async () => {
       // 模拟眨眼效果：闭-睁-闭-睁
-      await new Promise(r => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 600));
       if (!isMounted) return;
-      setIsWakingUp(false);  // 第一次睁眼
-      await new Promise(r => setTimeout(r, 150));
+      setIsWakingUp(false);
+      await new Promise((r) => setTimeout(r, 300));
       if (!isMounted) return;
-      setIsWakingUp(true);   // 再次闭眼
-      await new Promise(r => setTimeout(r, 250));
+      setIsWakingUp(true);
+      await new Promise((r) => setTimeout(r, 500));
       if (!isMounted) return;
-      setIsWakingUp(false);  // 最终睁眼
-      setIsSharpening(false); // 睁眼后变清晰
+      setIsWakingUp(false);
+      await new Promise((r) => setTimeout(r, 400));
+      if (!isMounted) return;
+      setIsSharpening(false);
+      await new Promise((r) => setTimeout(r, 3500));
+      if (!isMounted) return;
+      setIsSceneReady(true);
     };
 
     sequence();
@@ -76,19 +86,30 @@ export function LoginPage() {
 
   // 如果已经登录，自动跳转到首页
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/', { replace: true });
+    if (isAuthenticated && !preview) {
+      navigate("/", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, preview]);
 
   const handleLogin = async () => {
+    if (preview) {
+      showMascotToast({
+        id: "login-preview-mode",
+        emotion: "tea",
+        eyebrow: "Preview Mode",
+        title: "这里只看界面",
+        message: "登录预览不会发起 OAuth，也不会改变当前登录状态。",
+      });
+      return;
+    }
+
     if (!hasAcceptedRules) {
       showMascotToast({
-        id: 'login-rules-required',
-        emotion: 'confused',
-        eyebrow: 'Rules Required',
-        title: '还差一枚确认标记',
-        message: '登录前需要先确认已经阅读并遵守社区规则。',
+        id: "login-rules-required",
+        emotion: "confused",
+        eyebrow: "Rules Required",
+        title: "还差一枚确认标记",
+        message: "登录前需要先确认已经阅读并遵守社区规则。",
       });
       return;
     }
@@ -97,26 +118,29 @@ export function LoginPage() {
     setIsWakingUp(true); // 闭眼
 
     // 在 Mock 模式下，这将由 msw 拦截
-    if (import.meta.env.MODE === 'development' && import.meta.env.VITE_USE_MOCK === 'true') {
+    if (
+      import.meta.env.MODE === "development" &&
+      import.meta.env.VITE_USE_MOCK === "true"
+    ) {
       setTimeout(async () => {
         try {
-          const response = await apiClient.post('/auth/login');
+          const response = await apiClient.post("/auth/login");
           if (response.data.token) {
-            localStorage.setItem('auth_token', response.data.token);
-            notifySuccess('登录成功，欢迎回来', { id: 'login-mock-success' });
+            localStorage.setItem("auth_token", response.data.token);
+            notifySuccess("登录成功，欢迎回来", { id: "login-mock-success" });
             refreshAuth();
-            navigate('/', { replace: true });
+            navigate("/", { replace: true });
           }
         } catch {
           showMascotToast({
-            id: 'login-mock-error',
-            emotion: 'error',
-            eyebrow: 'Connection Failed',
-            title: '登录入口没有接通',
-            message: '刚才这次连接没成功。你可以立刻再试一次，我会继续盯着。',
-            actionLabel: '重新登录',
+            id: "login-mock-error",
+            emotion: "error",
+            eyebrow: "Connection Failed",
+            title: "登录入口没有接通",
+            message: "刚才这次连接没成功。你可以立刻再试一次，我会继续盯着。",
+            actionLabel: "重新登录",
             onAction: () => window.location.reload(),
-            cancelLabel: '先停一下',
+            cancelLabel: "先停一下",
             onCancel: () => {
               setIsRedirecting(false);
               setIsWakingUp(false);
@@ -131,8 +155,9 @@ export function LoginPage() {
     }
 
     // 真实环境：跳转到后端 OAuth 登录接口
-    const loginPath = import.meta.env.DEV ? '/auth/login-dev' : '/auth/login';
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://forum.shimmerday.top';
+    const loginPath = import.meta.env.DEV ? "/auth/login-dev" : "/auth/login";
+    const backendUrl =
+      import.meta.env.VITE_BACKEND_URL || "https://forum.shimmerday.top";
     const finalUrl = `${backendUrl}/v1${loginPath}`;
 
     setTimeout(() => {
@@ -144,19 +169,23 @@ export function LoginPage() {
     <div className="relative flex min-h-screen items-center overflow-hidden px-4">
       {/* 苏醒遮罩：上眼睑 (z-100) */}
       <div
-        className={`fixed inset-x-0 top-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-500 ease-in-out ${
-          isWakingUp ? 'translate-y-0' : '-translate-y-full'
+        className={`fixed inset-x-0 top-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-1000 ease-in-out ${
+          isWakingUp ? "translate-y-0" : "-translate-y-full"
         }`}
       />
       {/* 苏醒遮罩：下眼睑 (z-100) */}
       <div
-        className={`fixed inset-x-0 bottom-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-500 ease-in-out ${
-          isWakingUp ? 'translate-y-0' : 'translate-y-full'
+        className={`fixed inset-x-0 bottom-0 z-[100] h-1/2 bg-[#010103] transition-transform duration-1000 ease-in-out ${
+          isWakingUp ? "translate-y-0" : "translate-y-full"
         }`}
       />
 
-      <div className={`absolute inset-0 transition-[filter] duration-700 ease-out ${isSharpening ? 'blur-md' : 'blur-0'}`}>
-        <AuthSceneBackground onClick={() => isUiHidden && setIsUiHidden(false)} />
+      <div
+        className={`absolute inset-0 transition-[filter] duration-[3500ms] ease-out ${isSharpening ? "blur-xl" : "blur-0"}`}
+      >
+        <AuthSceneBackground
+          onClick={() => isUiHidden && setIsUiHidden(false)}
+        />
       </div>
 
       {/* 背景压暗层 (z-10) */}
@@ -171,18 +200,22 @@ export function LoginPage() {
         )}
       </AnimatePresence>
 
-      {!isRedirecting && !isWakingUp && (
+      {!isRedirecting && isSceneReady && (
         <button
           type="button"
           onClick={() => setIsUiHidden((current) => !current)}
           className="absolute bottom-6 right-6 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white/80 backdrop-blur-md transition-all hover:bg-black/60 hover:text-white"
-          title={isUiHidden ? '显示登录界面' : '隐藏界面看背景'}
+          title={isUiHidden ? "显示登录界面" : "隐藏界面看背景"}
         >
-          {isUiHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          {isUiHidden ? (
+            <EyeOff className="h-5 w-5" />
+          ) : (
+            <Eye className="h-5 w-5" />
+          )}
         </button>
       )}
 
-      {isUiHidden && !isRedirecting && !isWakingUp && (
+      {isUiHidden && !isRedirecting && isSceneReady && (
         <div className="pointer-events-none absolute inset-x-0 bottom-20 z-40 flex justify-center animate-in fade-in zoom-in duration-300">
           <span className="rounded-full bg-black/30 px-4 py-1.5 text-sm text-white/70 backdrop-blur-md">
             点击背景任意处恢复登录界面
@@ -192,20 +225,23 @@ export function LoginPage() {
 
       <div
         className={`relative mx-auto flex w-full max-w-7xl transition-all duration-500 ${
-          isRedirecting ? 'z-[110] justify-center' : 'z-20 justify-center md:justify-start md:pl-[8%] lg:pl-[10%]'
+          isRedirecting
+            ? "z-[110] justify-center"
+            : "z-20 justify-center md:justify-start md:pl-[8%] lg:pl-[10%]"
         } ${
-          !isRedirecting && isWakingUp ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
+          !isRedirecting && !isSceneReady
+            ? "opacity-0 translate-y-4"
+            : "opacity-100 translate-y-0"
         }`}
       >
-
         <AnimatePresence mode="wait">
-          {!isRedirecting && !isWakingUp && !isUiHidden ? (
+          {!isRedirecting && isSceneReady && !isUiHidden ? (
             <motion.div
               key="login-card"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, filter: 'blur(8px)' }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
+              exit={{ opacity: 0, scale: 0.95, filter: "blur(8px)" }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
               className="w-full max-w-sm rounded-3xl bg-[color-mix(in_oklab,var(--od-bg-tertiary)_85%,transparent)] p-8 text-center shadow-2xl backdrop-blur-lg"
             >
               {/* Logo */}
@@ -219,11 +255,15 @@ export function LoginPage() {
 
               {/* 标题 */}
               <div className="flex flex-col items-center justify-center mb-10 gap-2 max-w-full overflow-hidden">
-                <span className="text-xl font-bold tracking-[0.2em] text-(--od-text-primary)">类脑</span>
+                <span className="text-xl font-bold tracking-[0.2em] text-(--od-text-primary)">
+                  类脑
+                </span>
                 <WordLogoStatic className="h-5 shrink-0 text-(--od-text-primary) sm:h-6" />
               </div>
 
-              <p className="mb-10 text-(--od-text-secondary)">使用 Discord 登录以继续</p>
+              <p className="mb-10 text-(--od-text-secondary)">
+                使用 Discord 登录以继续
+              </p>
 
               <label className="mb-5 flex items-start gap-3 rounded-2xl border border-(--od-border) bg-[color-mix(in_srgb,var(--od-bg-secondary)_64%,transparent)] px-4 py-3 text-left text-sm text-(--od-text-secondary)">
                 <input
@@ -238,7 +278,7 @@ export function LoginPage() {
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();
-                      openImageViewer(ruleImage, '社区规则');
+                      openImageViewer(ruleImage, "社区规则");
                     }}
                     className="mx-1 font-semibold text-(--od-link) underline-offset-4 hover:underline"
                   >
@@ -255,9 +295,7 @@ export function LoginPage() {
               >
                 <div className="flex items-center justify-center gap-3">
                   <DiscordIcon className="h-7 w-7" />
-                  <span className="text-lg">
-                    使用 Discord 登录
-                  </span>
+                  <span className="text-lg">使用 Discord 登录</span>
                 </div>
               </button>
 
@@ -272,7 +310,7 @@ export function LoginPage() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
               className="flex flex-col items-center justify-center"
               style={loadingWordStyle}
             >

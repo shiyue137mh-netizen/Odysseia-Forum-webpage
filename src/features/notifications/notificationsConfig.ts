@@ -1,6 +1,6 @@
 import { APP_VERSION, RELEASE_FEED_URL } from '@/shared/config/appInfo';
 import { parse as parseYaml } from 'yaml';
-import serverIconUrl from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
+import serverIconUrl from '@/assets/images/icon/forum-icon-256.png';
 
 // ── 通知类型 ──────────────────────────────────────────
 export type NotificationKind = 'release' | 'announcement' | 'maintenance';

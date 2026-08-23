@@ -40,6 +40,7 @@ import { LayoutModeToggle } from "@/shared/ui/LayoutModeToggle";
 import { PageStatusMessage } from "@/shared/ui/PageStatusMessage";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
+import { useAdjacentImagePreload } from "@/shared/hooks/useAdjacentImagePreload";
 
 function toTournamentThread(
   item: TournamentItem,
@@ -115,6 +116,12 @@ export function TournamentDetailPage() {
     return () => window.clearInterval(timer);
   }, [bannerSlides.length]);
 
+  const bannerUrls = useMemo(
+    () => bannerSlides.map((slide) => slide.url),
+    [bannerSlides],
+  );
+  useAdjacentImagePreload(bannerUrls, activeBannerIndex);
+
   if (!normalizedBooklistId) {
     return <PageStatusMessage tone="error">无效赛事 ID</PageStatusMessage>;
   }
@@ -163,17 +170,13 @@ export function TournamentDetailPage() {
         <section className="relative w-full overflow-hidden">
           <div className="relative h-[min(78vh,860px)] min-h-[420px] sm:min-h-[560px]">
             <BannerFadeMedia>
-              {bannerSlides.length > 0 ? (
-                bannerSlides.map((slide, index) => (
-                  <img
-                    key={`${slide.threadId}-${slide.url}`}
-                    src={slide.url}
-                    alt={slide.title}
-                    className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-                      index === activeBannerIndex ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
-                ))
+              {activeBannerSlide ? (
+                <img
+                  key={`${activeBannerSlide.threadId}-${activeBannerSlide.url}`}
+                  src={activeBannerSlide.url}
+                  alt={activeBannerSlide.title}
+                  className="absolute inset-0 h-full w-full animate-in object-cover fade-in duration-700"
+                />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center bg-(--od-surface-shell)">
                   <Trophy className="h-20 w-20 text-(--od-text-tertiary)/20" />

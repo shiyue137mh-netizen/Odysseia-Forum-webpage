@@ -1,9 +1,9 @@
-import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
-import { ProtectedRoute } from '@/app/providers/ProtectedRoute';
-import { RequiredSetupGate } from '@/app/providers/RequiredSetupGate';
-import { RootLayout } from '@/widgets/layout/RootLayout';
-import { OmicronLoader } from '@/shared/ui/loaders/OmicronLoader';
+import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
+import { createBrowserRouter } from "react-router-dom";
+import { ProtectedRoute } from "@/app/providers/ProtectedRoute";
+import { RequiredSetupGate } from "@/app/providers/RequiredSetupGate";
+import { RootLayout } from "@/widgets/layout/RootLayout";
+import { OmicronLoader } from "@/shared/ui/loaders/OmicronLoader";
 
 // 页面全部按需加载，避免把全站打进首屏 chunk。
 // 页面用的是命名导出，这里统一转成 lazy 需要的 default 形态。
@@ -12,45 +12,78 @@ const lazyPage = <K extends string>(
   name: K,
 ) => lazy(() => loader().then((module) => ({ default: module[name] })));
 
-const LoginPage = lazyPage(() => import('@/pages/AuthPage/LoginPage'), 'LoginPage');
-const CallbackPage = lazyPage(() => import('@/pages/AuthPage/CallbackPage'), 'CallbackPage');
+const lazyPageWithProps = <P extends object, K extends string>(
+  loader: () => Promise<Record<K, ComponentType<P>>>,
+  name: K,
+) => lazy(() => loader().then((module) => ({ default: module[name] })));
+
+const LoginPage = lazyPageWithProps<{ preview?: boolean }, "LoginPage">(
+  () => import("@/pages/AuthPage/LoginPage"),
+  "LoginPage",
+);
+const CallbackPage = lazyPage(
+  () => import("@/pages/AuthPage/CallbackPage"),
+  "CallbackPage",
+);
 const RequiredSetupPage = lazyPage(
-  () => import('@/pages/AuthPage/RequiredSetupPage'),
-  'RequiredSetupPage',
+  () => import("@/pages/AuthPage/RequiredSetupPage"),
+  "RequiredSetupPage",
 );
-const SearchPage = lazyPage(() => import('@/pages/SearchPage'), 'SearchPage');
-const AISearchPage = lazyPage(() => import('@/pages/AISearchPage'), 'AISearchPage');
-const PlazaPage = lazyPage(() => import('@/pages/PlazaPage'), 'PlazaPage');
-const DrawPage = lazyPage(() => import('@/pages/DrawPage'), 'DrawPage');
-const TagsPage = lazyPage(() => import('@/pages/TagsPage'), 'TagsPage');
-const SettingsPage = lazyPage(() => import('@/pages/SettingsPage'), 'SettingsPage');
-const AboutPage = lazyPage(() => import('@/pages/AboutPage'), 'AboutPage');
-const MePage = lazyPage(() => import('@/pages/MePage'), 'MePage');
-const UserProfilePage = lazyPage(() => import('@/pages/UserProfilePage'), 'UserProfilePage');
+const SearchPage = lazyPage(() => import("@/pages/SearchPage"), "SearchPage");
+const AISearchPage = lazyPage(
+  () => import("@/pages/AISearchPage"),
+  "AISearchPage",
+);
+const PlazaPage = lazyPage(() => import("@/pages/PlazaPage"), "PlazaPage");
+const DrawPage = lazyPage(() => import("@/pages/DrawPage"), "DrawPage");
+const TagsPage = lazyPage(() => import("@/pages/TagsPage"), "TagsPage");
+const SettingsPage = lazyPage(
+  () => import("@/pages/SettingsPage"),
+  "SettingsPage",
+);
+const AboutPage = lazyPage(() => import("@/pages/AboutPage"), "AboutPage");
+const MePage = lazyPage(() => import("@/pages/MePage"), "MePage");
+const UserProfilePage = lazyPage(
+  () => import("@/pages/UserProfilePage"),
+  "UserProfilePage",
+);
 const ThreadDetailPage = lazyPage(
-  () => import('@/pages/ThreadDetailPage'),
-  'ThreadDetailPage',
+  () => import("@/pages/ThreadDetailPage"),
+  "ThreadDetailPage",
 );
-const BooklistsPage = lazyPage(() => import('@/pages/BooklistsPage'), 'BooklistsPage');
+const BooklistsPage = lazyPage(
+  () => import("@/pages/BooklistsPage"),
+  "BooklistsPage",
+);
 const BooklistDetailPage = lazyPage(
-  () => import('@/pages/BooklistDetailPage'),
-  'BooklistDetailPage',
+  () => import("@/pages/BooklistDetailPage"),
+  "BooklistDetailPage",
 );
-const TournamentsPage = lazyPage(() => import('@/pages/TournamentsPage'), 'TournamentsPage');
-const MyTournamentsPage = lazyPage(() => import('@/pages/MyTournamentsPage'), 'MyTournamentsPage');
+const TournamentsPage = lazyPage(
+  () => import("@/pages/TournamentsPage"),
+  "TournamentsPage",
+);
+const MyTournamentsPage = lazyPage(
+  () => import("@/pages/MyTournamentsPage"),
+  "MyTournamentsPage",
+);
 const TournamentDetailPage = lazyPage(
-  () => import('@/pages/TournamentDetailPage'),
-  'TournamentDetailPage',
+  () => import("@/pages/TournamentDetailPage"),
+  "TournamentDetailPage",
 );
 const TournamentManagePage = lazyPage(
-  () => import('@/pages/TournamentManagePage'),
-  'TournamentManagePage',
+  () => import("@/pages/TournamentManagePage"),
+  "TournamentManagePage",
 );
-const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage');
+const NotFoundPage = lazyPage(
+  () => import("@/pages/NotFoundPage"),
+  "NotFoundPage",
+);
 // 调试页只在 DEV / mock 模式下注册路由；作为独立 chunk 存在，生产环境永远不会被下载
-const TestPage = lazyPage(() => import('@/pages/TestPage'), 'TestPage');
+const TestPage = lazyPage(() => import("@/pages/TestPage"), "TestPage");
 
-const isDevToolsEnabled = import.meta.env.DEV || import.meta.env.VITE_API_MOCKING === 'true';
+const isDevToolsEnabled =
+  import.meta.env.DEV || import.meta.env.VITE_API_MOCKING === "true";
 
 const PageFallback = () => (
   <div className="flex min-h-[60vh] w-full items-center justify-center">
@@ -58,7 +91,9 @@ const PageFallback = () => (
   </div>
 );
 
-const withSuspense = (node: ReactNode) => <Suspense fallback={<PageFallback />}>{node}</Suspense>;
+const withSuspense = (node: ReactNode) => (
+  <Suspense fallback={<PageFallback />}>{node}</Suspense>
+);
 
 const appChildren = [
   {
@@ -66,90 +101,98 @@ const appChildren = [
     element: withSuspense(<PlazaPage />),
   },
   {
-    path: 'search',
+    path: "search",
     element: withSuspense(<SearchPage />),
   },
   {
-    path: 'ai-search',
+    path: "ai-search",
     element: withSuspense(<AISearchPage />),
   },
   {
-    path: 'tournaments',
+    path: "tournaments",
     element: withSuspense(<TournamentsPage />),
   },
   {
-    path: 'tournaments/mine',
+    path: "tournaments/mine",
     element: withSuspense(<MyTournamentsPage />),
   },
   {
-    path: 'tournaments/manage/:booklistId',
+    path: "tournaments/manage/:booklistId",
     element: withSuspense(<TournamentManagePage />),
   },
   {
-    path: 'tournaments/:booklistId',
+    path: "tournaments/:booklistId",
     element: withSuspense(<TournamentDetailPage />),
   },
   {
-    path: 'draw',
+    path: "draw",
     element: withSuspense(<DrawPage />),
   },
   {
-    path: 'tags',
+    path: "tags",
     element: withSuspense(<TagsPage />),
   },
   {
-    path: 'booklists',
+    path: "booklists",
     element: withSuspense(<BooklistsPage />),
   },
   {
-    path: 'booklists/:id',
+    path: "booklists/:id",
     element: withSuspense(<BooklistDetailPage />),
   },
   {
-    path: 'settings',
+    path: "settings",
     element: withSuspense(<SettingsPage />),
   },
   {
-    path: 'me',
+    path: "me",
     element: withSuspense(<MePage />),
   },
   {
-    path: 'u/:userId',
+    path: "u/:userId",
     element: withSuspense(<UserProfilePage />),
   },
   {
-    path: 'threads/:threadId',
+    path: "threads/:threadId",
     element: withSuspense(<ThreadDetailPage />),
   },
   ...(isDevToolsEnabled
     ? [
-      {
-        path: 'test',
-        element: withSuspense(<TestPage />),
-      },
-    ]
+        {
+          path: "test",
+          element: withSuspense(<TestPage />),
+        },
+      ]
     : []),
 ];
 
 export const router = createBrowserRouter([
   {
-    path: '/login',
+    path: "/login",
     element: withSuspense(<LoginPage />),
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: "/test/login",
+          element: withSuspense(<LoginPage preview />),
+        },
+      ]
+    : []),
   {
-    path: '/about',
+    path: "/about",
     element: withSuspense(<AboutPage />),
   },
   {
-    path: '/auth/callback',
+    path: "/auth/callback",
     element: withSuspense(<CallbackPage />),
   },
   {
-    path: '/',
+    path: "/",
     element: <ProtectedRoute />,
     children: [
       {
-        path: 'setup',
+        path: "setup",
         element: withSuspense(<RequiredSetupPage />),
       },
       {
@@ -160,7 +203,7 @@ export const router = createBrowserRouter([
             children: [
               ...appChildren,
               {
-                path: '*',
+                path: "*",
                 element: withSuspense(<NotFoundPage />),
               },
             ],

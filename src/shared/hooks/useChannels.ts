@@ -21,6 +21,37 @@ export interface UnifiedChannel {
   groupName?: string;
 }
 
+export interface ChannelTagCatalogItem {
+  channel_id: string;
+  channel_name: string;
+  available_tags: string[];
+  virtual_tags: string[];
+}
+
+function uniqueTagNames(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))),
+  );
+}
+
+export function buildChannelTagCatalog(
+  apiChannels: ApiChannel[] | null | undefined,
+): ChannelTagCatalogItem[] {
+  return (apiChannels || []).map((channel) => ({
+    channel_id: channel.channel_id,
+    channel_name: channel.name || channel.channel_id,
+    available_tags: uniqueTagNames([
+      ...channel.available_tags.map((tag) => tag.name),
+      ...(channel.mapped_source_channels || []).flatMap((source) =>
+        source.available_tags.map((tag) => tag.name),
+      ),
+    ]),
+    virtual_tags: uniqueTagNames(
+      channel.virtual_tags.map((tag) => tag.tag_name),
+    ),
+  }));
+}
+
 export function useChannels() {
   return useQuery({
     queryKey: ['meta', 'channels'],
@@ -79,6 +110,7 @@ export function useChannels() {
           source: 'api' as const,
           channels,
           apiData: apiChannels,
+          tagCatalog: buildChannelTagCatalog(apiChannels),
         };
       } catch (err) {
         console.warn('Failed to fetch /meta/channels, falling back to static config', err);
@@ -99,6 +131,7 @@ export function useChannels() {
           source: 'static' as const,
           channels: fallbackChannels,
           apiData: null,
+          tagCatalog: [],
         };
       }
     },

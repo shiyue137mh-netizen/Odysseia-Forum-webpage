@@ -9,6 +9,17 @@ import {
 // 会话内已完整显示过的图片 URL。路由切换会重建组件、重置 isLoaded，
 // 浏览器 HTTP 缓存挡不住浮现动画重播；看过的图片重挂时凭这份记忆直出成品。
 const sessionLoadedImages = new Set<string>();
+const MAX_SESSION_LOADED_IMAGES = 500;
+
+function rememberLoadedImage(src: string) {
+  sessionLoadedImages.delete(src);
+  sessionLoadedImages.add(src);
+  if (sessionLoadedImages.size <= MAX_SESSION_LOADED_IMAGES) return;
+
+  // ponytail: 会话级图片记忆只保留最近 500 条；若需跨页持久命中率，再升级为有界 LRU。
+  const oldest = sessionLoadedImages.values().next().value;
+  if (oldest) sessionLoadedImages.delete(oldest);
+}
 
 export interface LazyImageProps {
   src: string;
@@ -21,6 +32,7 @@ export interface LazyImageProps {
   channelId?: string;
   index?: number; // Used for staggered animation delay
   imageIndex?: number; // Used to identify which picture in the sequence this is
+  subscribeToRecovery?: boolean;
   onNaturalSize?: (width: number, height: number) => void;
   onFallback?: () => void;
   onError?: () => void;
@@ -37,6 +49,7 @@ export function LazyImage({
   channelId,
   index = 0,
   imageIndex = 0,
+  subscribeToRecovery = true,
   onNaturalSize,
   onFallback,
   onError,
@@ -51,19 +64,19 @@ export function LazyImage({
   const isImageDisabled = imageMode === 'off';
 
   useEffect(() => {
-    if (!threadId) return;
+    if (isImageDisabled || !threadId || !subscribeToRecovery) return;
     return subscribeImageRecovery(threadId, (urls) => {
       const targetUrl = urls[imageIndex];
       if (targetUrl) setCurrentSrc(targetUrl);
     });
-  }, [imageIndex, threadId]);
+  }, [imageIndex, isImageDisabled, subscribeToRecovery, threadId]);
 
   useEffect(() => {
     onFallbackRef.current = onFallback;
   }, [onFallback]);
 
   useEffect(() => {
-    if (isInView) return;
+    if (isImageDisabled || isInView) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -82,7 +95,7 @@ export function LazyImage({
     }
 
     return () => observer.disconnect();
-  }, [isInView]);
+  }, [isImageDisabled, isInView]);
 
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -142,7 +155,7 @@ export function LazyImage({
                 transitionDelay: isLoaded ? `${(index % 24) * 60}ms` : '0ms',
               }}
               onLoad={() => {
-                sessionLoadedImages.add(currentSrc);
+                rememberLoadedImage(currentSrc);
                 if (imageRef.current) {
                   onNaturalSize?.(
                     imageRef.current.naturalWidth,

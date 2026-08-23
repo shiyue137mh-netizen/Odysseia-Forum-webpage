@@ -39,7 +39,7 @@ export function useBooklistsList(params: {
       isTournament: params.isTournament,
       ownerId: params.ownerId,
     }),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (params.scope === "public") {
         return booklistsApi.listPublic({
           keywords: params.keywords,
@@ -48,7 +48,7 @@ export function useBooklistsList(params: {
           pageSize: params.pageSize,
           isTournament: params.isTournament,
           ownerId: params.ownerId,
-        });
+        }, signal);
       }
 
       return booklistsApi.listMine({
@@ -59,7 +59,7 @@ export function useBooklistsList(params: {
         isTournament: params.isTournament,
         createByCurrentUser: params.scope === "mine",
         collectByCurrentUser: params.scope === "collected",
-      });
+      }, signal);
     },
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
@@ -79,14 +79,14 @@ export function useMyBooklistsList(
       "mine",
       { markThreadId: options.markThreadId },
     ],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       booklistsApi.listMine({
         createByCurrentUser: true,
         pageIndex: 0,
         pageSize: 18,
         sortMethod: 5,
         markThreadId: options.markThreadId,
-      }),
+      }, signal),
     enabled: options.enabled ?? true,
     staleTime: 60 * 1000,
   });
@@ -95,13 +95,13 @@ export function useMyBooklistsList(
 export function useCollectedBooklistsList() {
   return useQuery({
     queryKey: [...booklistKeys.mineLists(), "collected"],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       booklistsApi.listMine({
         collectByCurrentUser: true,
         pageIndex: 0,
         pageSize: 18,
         sortMethod: 6,
-      }),
+      }, signal),
     staleTime: 60 * 1000,
   });
 }
@@ -109,14 +109,14 @@ export function useCollectedBooklistsList() {
 export function useMyTournamentsList() {
   return useQuery({
     queryKey: [...booklistKeys.mineLists(), "tournaments"],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       booklistsApi.listMine({
         createByCurrentUser: true,
         pageIndex: 0,
         pageSize: 48,
         sortMethod: 5,
         isTournament: true,
-      }),
+      }, signal),
     select: (data) => ({
       ...data,
       results: (data.results || []).filter((item) => item.is_tournament),
@@ -128,7 +128,7 @@ export function useMyTournamentsList() {
 export function useBooklistDetail(booklistId: number | string) {
   return useQuery({
     queryKey: booklistKeys.detail(booklistId),
-    queryFn: () => booklistsApi.getDetail(booklistId),
+    queryFn: ({ signal }) => booklistsApi.getDetail(booklistId, signal),
     enabled: /^\d+$/.test(String(booklistId)),
     staleTime: 60 * 1000,
     refetchInterval: (query) =>
@@ -140,11 +140,11 @@ export function useBooklistDetail(booklistId: number | string) {
 export function useBooklistItems(booklistId: number | string) {
   return useInfiniteQuery({
     queryKey: booklistKeys.items(booklistId),
-    queryFn: ({ pageParam }) =>
+    queryFn: ({ pageParam, signal }) =>
       booklistsApi.listItems(booklistId, {
         limit: 24,
         offset: pageParam as number,
-      }),
+      }, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
       // 书单接口的 total 是总条目数，使用标准 offset 分页

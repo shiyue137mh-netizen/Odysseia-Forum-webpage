@@ -238,6 +238,7 @@ function ThreadCardImpl({
                   threadId={thread.thread_id}
                   channelId={thread.channel_id}
                   index={index}
+                  subscribeToRecovery={false}
                   onNaturalSize={(width, height) => {
                     if (!masonry || width <= 0 || height <= 0) return;
                     // ponytail: 瀑布流按图片自然比例排布，但限制极端长图，避免单卡占满整列。

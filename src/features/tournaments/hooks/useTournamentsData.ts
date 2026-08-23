@@ -32,7 +32,7 @@ export function useTournamentsList(params: {
 
   return useQuery({
     queryKey: booklistKeys.list(listParams),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       booklistsApi.listPublic({
         pageIndex: params.pageIndex,
         pageSize: params.pageSize,
@@ -40,7 +40,7 @@ export function useTournamentsList(params: {
         sortOrder: params.sortOrder,
         keywords: params.keywords,
         isTournament: true,
-      }),
+      }, signal),
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
   });
@@ -51,7 +51,7 @@ export function useTournamentDetail(booklistId: string | number) {
 
   return useQuery({
     queryKey: booklistKeys.detail(booklistId),
-    queryFn: () => booklistsApi.getDetail(booklistId),
+    queryFn: ({ signal }) => booklistsApi.getDetail(booklistId, signal),
     enabled,
     staleTime: 60 * 1000,
   });
@@ -62,11 +62,11 @@ export function useTournamentItems(booklistId: string | number) {
 
   return useInfiniteQuery({
     queryKey: booklistKeys.items(booklistId),
-    queryFn: ({ pageParam }) =>
+    queryFn: ({ pageParam, signal }) =>
       booklistsApi.listItems(booklistId, {
         limit: TOURNAMENT_ITEMS_PAGE_SIZE,
         offset: pageParam as number,
-      }),
+      }, signal),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => {
       if (!lastPage.results || lastPage.results.length === 0) return undefined;

@@ -73,10 +73,12 @@ export const booklistsApi = {
 
   listMine: async (
     params: MyBooklistListRequest = {},
+    signal?: AbortSignal,
   ): Promise<PaginatedResponse<Booklist>> => {
     const response = await apiClient.get<PaginatedResponse<Booklist>>(
       "/booklist/my/list/page",
       {
+        signal,
         params: {
           ...toPageParams(params.pageIndex, params.pageSize),
           keywords: params.keywords || undefined,

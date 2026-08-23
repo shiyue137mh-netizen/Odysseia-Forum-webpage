@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import ServerIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
+import ServerIcon from '@/assets/images/icon/forum-icon-256.png';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useServerIconSecret } from '@/features/easter-eggs/hooks/useServerIconSecret';
 import { MASCOT_IMAGES } from '@/features/mascot/assets';

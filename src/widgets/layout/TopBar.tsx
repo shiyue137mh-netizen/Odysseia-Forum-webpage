@@ -1,11 +1,7 @@
 import { NotificationCenter } from "@/features/notifications/components/NotificationCenter";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { getDiscoveryPreferenceContext } from "@/features/preferences/lib/discoveryPreferences";
-import { SearchFilterPanel } from "@/features/search/components/SearchFilterPanel";
-import {
-  SearchSuggestions,
-  type SearchSuggestionAction,
-} from "@/features/search/components/SearchSuggestions";
+import type { SearchSuggestionAction } from "@/features/search/components/SearchSuggestions";
 import { useSearchAutocomplete } from "@/features/search/hooks/useSearchAutocomplete";
 import { useAuthorProfiles } from "@/features/authors/hooks/useAuthorProfiles";
 import type { TagLogic } from "@/features/search/hooks/useSearchParams";
@@ -29,14 +25,21 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import { BrowseHistoryHoverPopup } from "@/features/history/components/BrowseHistoryHoverPopup";
 import {
   getBrowseHistory,
   clearBrowseHistory,
   type BrowseHistoryItem,
 } from "@/shared/lib/browseHistory";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface TopBarProps {
@@ -44,6 +47,22 @@ interface TopBarProps {
   onSidebarToggle: () => void;
   sidebarCollapsed?: boolean;
 }
+
+const SearchFilterPanel = lazy(() =>
+  import("@/features/search/components/SearchFilterPanel").then((module) => ({
+    default: module.SearchFilterPanel,
+  })),
+);
+const SearchSuggestions = lazy(() =>
+  import("@/features/search/components/SearchSuggestions").then((module) => ({
+    default: module.SearchSuggestions,
+  })),
+);
+const BrowseHistoryHoverPopup = lazy(() =>
+  import("@/features/history/components/BrowseHistoryHoverPopup").then(
+    (module) => ({ default: module.BrowseHistoryHoverPopup }),
+  ),
+);
 
 interface BreadcrumbSegment {
   label: string;
@@ -74,7 +93,9 @@ export function TopBar({
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   const [browseHistoryOpen, setBrowseHistoryOpen] = useState(false);
-  const [browseHistoryItems, setBrowseHistoryItems] = useState<BrowseHistoryItem[]>([]);
+  const [browseHistoryItems, setBrowseHistoryItems] = useState<
+    BrowseHistoryItem[]
+  >([]);
   const browseHistoryTimerRef = useRef<number | null>(null);
 
   const handleOpenBrowseHistory = useCallback(() => {
@@ -186,6 +207,7 @@ export function TopBar({
     searchInput,
     debouncedQuery,
     showSuggestions,
+    enabled: isPanelOpen,
   });
 
   const { toggleTagToken } = useTopBarFilterState({
@@ -559,56 +581,58 @@ export function TopBar({
                   </div>
                 )}
 
-                {showFilters ? (
-                  <SearchFilterPanel
-                    channelTagGroups={channelTagGroups}
-                    authorTokens={authorTokens}
-                    hasPanelFilters={hasPanelFilters}
-                    mergedExcludeTags={params.excludeTags}
-                    mergedIncludeTags={params.includeTags}
-                    onClearFilters={clearFilters}
-                    onRemoveAuthorToken={removeAuthorToken}
-                    onSelectAuthorToken={selectAuthorToken}
-                    onFilterTokenChange={setFilterToken}
-                    onTagLogicChange={(value: TagLogic) =>
-                      setParams({ tagLogic: value })
-                    }
-                    onToggleTagToken={toggleTagToken}
-                    preferenceExcludeTags={
-                      discoveryPreferenceContext?.excludeTags || []
-                    }
-                    preferenceIncludeTags={
-                      discoveryPreferenceContext?.includeTags || []
-                    }
-                    tagLogic={params.tagLogic}
-                    timeFrom={params.timeFrom}
-                    timeTo={params.timeTo}
-                    reactionMin={params.reactionMin}
-                    replyMin={params.replyMin}
-                  />
-                ) : (
-                  <SearchSuggestions
-                    currentQuery={searchInput}
-                    availableTags={availableTags}
-                    channels={[]}
-                    authors={suggestionAuthors}
-                    threads={suggestionThreads}
-                    booklists={suggestionBooklists}
-                    suggestedTags={suggestionQuery ? suggestionTags : []}
-                    history={historyItems}
-                    onSelect={handleSuggestionSelect}
-                    onRemoveHistory={(item) => {
-                      removeHistoryItem(item);
-                    }}
-                    onClearHistory={() => {
-                      clearHistory();
-                    }}
-                    onClose={closePanels}
-                    inputRef={searchInputRef}
-                    embedded
-                    preferenceAware={!!preferences}
-                  />
-                )}
+                <Suspense fallback={null}>
+                  {showFilters ? (
+                    <SearchFilterPanel
+                      channelTagGroups={channelTagGroups}
+                      authorTokens={authorTokens}
+                      hasPanelFilters={hasPanelFilters}
+                      mergedExcludeTags={params.excludeTags}
+                      mergedIncludeTags={params.includeTags}
+                      onClearFilters={clearFilters}
+                      onRemoveAuthorToken={removeAuthorToken}
+                      onSelectAuthorToken={selectAuthorToken}
+                      onFilterTokenChange={setFilterToken}
+                      onTagLogicChange={(value: TagLogic) =>
+                        setParams({ tagLogic: value })
+                      }
+                      onToggleTagToken={toggleTagToken}
+                      preferenceExcludeTags={
+                        discoveryPreferenceContext?.excludeTags || []
+                      }
+                      preferenceIncludeTags={
+                        discoveryPreferenceContext?.includeTags || []
+                      }
+                      tagLogic={params.tagLogic}
+                      timeFrom={params.timeFrom}
+                      timeTo={params.timeTo}
+                      reactionMin={params.reactionMin}
+                      replyMin={params.replyMin}
+                    />
+                  ) : (
+                    <SearchSuggestions
+                      currentQuery={searchInput}
+                      availableTags={availableTags}
+                      channels={[]}
+                      authors={suggestionAuthors}
+                      threads={suggestionThreads}
+                      booklists={suggestionBooklists}
+                      suggestedTags={suggestionQuery ? suggestionTags : []}
+                      history={historyItems}
+                      onSelect={handleSuggestionSelect}
+                      onRemoveHistory={(item) => {
+                        removeHistoryItem(item);
+                      }}
+                      onClearHistory={() => {
+                        clearHistory();
+                      }}
+                      onClose={closePanels}
+                      inputRef={searchInputRef}
+                      embedded
+                      preferenceAware={!!preferences}
+                    />
+                  )}
+                </Suspense>
               </motion.div>
             )}
           </AnimatePresence>
@@ -641,19 +665,23 @@ export function TopBar({
               trigger="hover"
             />
           </button>
-          <BrowseHistoryHoverPopup
-            open={browseHistoryOpen}
-            historyItems={browseHistoryItems}
-            onSelectThread={(threadId) => {
-              setPreviewThreadId(threadId);
-              handleCloseBrowseHistory();
-            }}
-            onClearHistory={() => {
-              clearBrowseHistory();
-              setBrowseHistoryItems([]);
-            }}
-            onClose={handleCloseBrowseHistory}
-          />
+          {browseHistoryOpen && (
+            <Suspense fallback={null}>
+              <BrowseHistoryHoverPopup
+                open
+                historyItems={browseHistoryItems}
+                onSelectThread={(threadId) => {
+                  setPreviewThreadId(threadId);
+                  handleCloseBrowseHistory();
+                }}
+                onClearHistory={() => {
+                  clearBrowseHistory();
+                  setBrowseHistoryItems([]);
+                }}
+                onClose={handleCloseBrowseHistory}
+              />
+            </Suspense>
+          )}
         </div>
 
         <div className="relative">

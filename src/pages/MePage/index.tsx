@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import {
   BookOpen,
   Bookmark,
@@ -14,7 +13,6 @@ import {
   useFollowsFeed,
   useUnfollowThread,
 } from "@/features/follows/hooks/useFollowsData";
-import { searchApi } from "@/features/search/api/searchApi";
 import type { Booklist } from "@/entities/booklist/types";
 import {
   useCollectedBooklistsList,
@@ -155,12 +153,10 @@ export function MePage() {
     () => channelsData?.channels || [],
     [channelsData?.channels],
   );
-  const { data: channelTagCatalog = [] } = useQuery({
-    queryKey: ["me", "preferences", "channel-tag-catalog"],
-    queryFn: () => searchApi.getChannelTagCatalog(),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
+  const channelTagCatalog = useMemo(
+    () => channelsData?.tagCatalog || [],
+    [channelsData?.tagCatalog],
+  );
   const availablePreferenceTags = useMemo(() => {
     const preferredChannels = new Set(form.preferredChannelIds);
     const scopedCatalog =

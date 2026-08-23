@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Author } from "@/entities/thread/types";
 import { authorsApi } from "@/features/authors/api/authorsApi";
+import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { searchApi } from "@/features/search/api/searchApi";
 import { AuthorWorksHoverCard } from "./AuthorWorksHoverCard";
 
@@ -12,6 +13,15 @@ vi.mock("@/features/search/api/searchApi", () => ({
 
 vi.mock("@/features/authors/api/authorsApi", () => ({
   authorsApi: { getAuthorProfile: vi.fn() },
+}));
+
+vi.mock("@/features/preferences/hooks/useUserPreferences", () => ({
+  useUserPreferences: vi.fn(() => ({
+    user: null,
+    preferences: null,
+    savePreferences: vi.fn(),
+    isSaving: false,
+  })),
 }));
 
 const author: Author = {
@@ -51,6 +61,7 @@ describe("AuthorWorksHoverCard", () => {
     act(() => vi.advanceTimersByTime(299));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(searchApi.search).not.toHaveBeenCalled();
+    expect(useUserPreferences).not.toHaveBeenCalled();
 
     await act(async () => vi.advanceTimersByTime(1));
 
@@ -64,6 +75,7 @@ describe("AuthorWorksHoverCard", () => {
       limit: 3,
       sort_method: "created_desc",
     });
+    expect(useUserPreferences).toHaveBeenCalled();
     expect(authorsApi.getAuthorProfile).toHaveBeenCalledWith("123456789");
     expect(screen.getByLabelText("作者名 的其他作品")).toHaveClass("od-floating-glass");
   });

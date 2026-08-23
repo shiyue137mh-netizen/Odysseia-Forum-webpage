@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import defaultIcon from '@/assets/images/icon/A90C044F8DDF1959B2E9078CB629C239.png';
+import defaultIcon from '@/assets/images/icon/forum-icon-64.png';
 import { MASCOT_IMAGES } from '@/features/mascot/assets';
 import { useMascotStore } from '@/features/mascot/store/mascotStore';
 

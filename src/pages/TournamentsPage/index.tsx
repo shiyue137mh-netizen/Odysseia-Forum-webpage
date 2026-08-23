@@ -23,6 +23,7 @@ import { useTournamentURLParams } from "@/features/tournaments/hooks/useTourname
 import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
+import { useAdjacentImagePreload } from "@/shared/hooks/useAdjacentImagePreload";
 
 const sortOptions = [
   { value: 1, label: "按参赛数" },
@@ -105,23 +106,24 @@ export function TournamentsPage() {
     setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
   };
   const activeBanner = bannerSlides[activeBannerIndex];
+  const bannerUrls = useMemo(
+    () => bannerSlides.map((slide) => slide.image),
+    [bannerSlides],
+  );
+  useAdjacentImagePreload(bannerUrls, activeBannerIndex);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <section className="relative w-full overflow-hidden">
         <div className="relative h-[min(62vh,660px)] min-h-[360px] sm:min-h-[460px]">
           <BannerFadeMedia>
-            {bannerSlides.length > 0 ? (
-              bannerSlides.map((slide, index) => (
-                <img
-                  key={slide.id}
-                  src={slide.image}
-                  alt={slide.title}
-                  className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
-                    index === activeBannerIndex ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-              ))
+            {activeBanner ? (
+              <img
+                key={activeBanner.id}
+                src={activeBanner.image}
+                alt={activeBanner.title}
+                className="absolute inset-0 h-full w-full animate-in object-cover fade-in duration-700"
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center bg-(--od-surface-shell)">
                 <Trophy className="h-20 w-20 text-(--od-text-tertiary)/20" />
@@ -328,7 +330,9 @@ export function TournamentsPage() {
                 {query ? "没有找到匹配赛事" : "暂无赛事"}
               </p>
               <p className="mt-1 text-sm text-(--od-text-secondary)">
-                {query ? "试试换一个关键词。" : "等活动开始后，这里会出现对应的赛事合集。"}
+                {query
+                  ? "试试换一个关键词。"
+                  : "等活动开始后，这里会出现对应的赛事合集。"}
               </p>
             </div>
           ) : (

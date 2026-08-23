@@ -1,5 +1,5 @@
 import { Clock3, Images, BookOpen } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { HighlightText } from "@/shared/ui/HighlightText";
@@ -16,6 +16,7 @@ import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges
 import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
 import { usePretextClampText } from "@/shared/hooks/usePretextClampText";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
+import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
 
 interface ThreadListItemProps {
   thread: Thread;
@@ -54,12 +55,31 @@ function ThreadListItemImpl({
   } = useThreadCardModel(thread, index);
   const imageMode = useImageModeSetting();
 
+  const initialThumbnailUrls = useMemo(
+    () => (imageMode === "off" ? [] : thread.thumbnail_urls || []),
+    [imageMode, thread.thumbnail_urls],
+  );
+  const [repairedThumbnailState, setRepairedThumbnailState] = useState<{
+    threadId: string;
+    urls: string[];
+  } | null>(null);
+  const thumbnailUrls =
+    repairedThumbnailState?.threadId === thread.thread_id
+      ? repairedThumbnailState.urls
+      : initialThumbnailUrls;
+
+  useEffect(() => {
+    if (imageMode === "off") return;
+    return subscribeThreadThumbnailRepair(thread.thread_id, (urls) => {
+      setRepairedThumbnailState({ threadId: thread.thread_id, urls });
+    });
+  }, [imageMode, thread.thread_id]);
+
   // 获取有效的去重缩略图列表，最多 4 张
   const thumbnails = useMemo(() => {
-    if (imageMode === "off") return [];
-    const urls = (thread.thumbnail_urls || []).filter(Boolean);
+    const urls = thumbnailUrls.filter(Boolean);
     return Array.from(new Set(urls)).slice(0, 4);
-  }, [thread.thumbnail_urls, imageMode]);
+  }, [thumbnailUrls]);
 
   const { measureRef: titleMeasureRef, clampedText: clampedTitle } =
     usePretextClampText<HTMLHeadingElement>(thread.title, { maxLines: 2 });
@@ -93,6 +113,7 @@ function ThreadListItemImpl({
                     threadId={thread.thread_id}
                     channelId={thread.channel_id}
                     imageIndex={0}
+                    subscribeToRecovery={false}
                   />
                 </div>
               )}
@@ -108,6 +129,7 @@ function ThreadListItemImpl({
                       threadId={thread.thread_id}
                       channelId={thread.channel_id}
                       imageIndex={0}
+                      subscribeToRecovery={false}
                     />
                   </div>
                   <div className="relative hidden overflow-hidden rounded-2xl bg-(--od-surface-shell) md:block">
@@ -119,6 +141,7 @@ function ThreadListItemImpl({
                       channelId={thread.channel_id}
                       index={index}
                       imageIndex={1}
+                      subscribeToRecovery={false}
                     />
                   </div>
                 </>
@@ -134,6 +157,7 @@ function ThreadListItemImpl({
                       threadId={thread.thread_id}
                       channelId={thread.channel_id}
                       imageIndex={0}
+                      subscribeToRecovery={false}
                     />
                   </div>
                   <div className="relative hidden overflow-hidden rounded-2xl bg-(--od-surface-shell) md:block">
@@ -145,6 +169,7 @@ function ThreadListItemImpl({
                       channelId={thread.channel_id}
                       index={index}
                       imageIndex={1}
+                      subscribeToRecovery={false}
                     />
                   </div>
                   <div className="relative hidden overflow-hidden rounded-2xl bg-(--od-surface-shell) md:block">
@@ -155,6 +180,7 @@ function ThreadListItemImpl({
                       threadId={thread.thread_id}
                       channelId={thread.channel_id}
                       imageIndex={2}
+                      subscribeToRecovery={false}
                     />
                   </div>
                 </>
@@ -171,6 +197,7 @@ function ThreadListItemImpl({
                       threadId={thread.thread_id}
                       channelId={thread.channel_id}
                       imageIndex={0}
+                      subscribeToRecovery={false}
                     />
                   </div>
                   {thumbnails.slice(1).map((src, idx) => (
@@ -186,6 +213,7 @@ function ThreadListItemImpl({
                         channelId={thread.channel_id}
                         index={index}
                         imageIndex={idx + 1}
+                        subscribeToRecovery={false}
                       />
                       {idx === 2 &&
                         (thread.thumbnail_urls?.length || 0) >

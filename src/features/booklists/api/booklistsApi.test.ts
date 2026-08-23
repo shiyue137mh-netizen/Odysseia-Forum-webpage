@@ -15,6 +15,7 @@ describe("booklistsApi", () => {
 
   it("marks a thread while keeping the quick list limited to 18 booklists", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: { results: [] } });
+    const controller = new AbortController();
 
     await booklistsApi.listMine({
       createByCurrentUser: true,
@@ -22,11 +23,12 @@ describe("booklistsApi", () => {
       pageSize: 18,
       sortMethod: 5,
       markThreadId: "1234567890123456789",
-    });
+    }, controller.signal);
 
     expect(apiClient.get).toHaveBeenCalledWith(
       "/booklist/my/list/page",
       expect.objectContaining({
+        signal: controller.signal,
         params: expect.objectContaining({
           limit: 18,
           offset: 0,

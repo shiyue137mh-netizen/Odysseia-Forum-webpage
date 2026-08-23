@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Check, Globe2, List, LogOut, ScrollText, Smartphone } from 'lucide-react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { authApi } from '@/features/auth/api/authApi';
 import { useOnboardingStore } from '@/features/onboarding/store/useOnboardingStore';
 import { useUserPreferences } from '@/features/preferences/hooks/useUserPreferences';
-import { searchApi } from '@/features/search/api/searchApi';
 import { GUILD_ID } from '@/shared/config/channelCategories.private';
 import { useChannels } from '@/shared/hooks/useChannels';
 import { useSettings } from '@/shared/hooks/useSettings';
@@ -55,12 +53,11 @@ export function RequiredSetupPage() {
   const { updateSettings } = useSettings();
   const preferencesQuery = useUserPreferences({ guildId: GUILD_ID });
   const channelsQuery = useChannels();
-  const { data: tagCatalog = [], isLoading: tagsLoading } = useQuery({
-    queryKey: ['required-setup', 'tag-catalog'],
-    queryFn: () => searchApi.getChannelTagCatalog(),
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  });
+  const tagCatalog = useMemo(
+    () => channelsQuery.data?.tagCatalog || [],
+    [channelsQuery.data?.tagCatalog],
+  );
+  const tagsLoading = channelsQuery.isLoading;
   const [stepIndex, setStepIndex] = useState(0);
   const [excludedChannelIds, setExcludedChannelIds] = useState<string[]>([]);
   const [excludedTags, setExcludedTags] = useState<string[]>([]);

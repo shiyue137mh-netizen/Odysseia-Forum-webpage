@@ -6,11 +6,16 @@ import {
   type SearchParams,
   useSearchURLParams,
 } from '@/features/search/hooks/useSearchParams';
+import { useUserPreferences } from '@/features/preferences/hooks/useUserPreferences';
 
 const mockUseSearchResults = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/search/hooks/useSearchResults', () => ({
   useSearchResults: mockUseSearchResults,
+}));
+
+vi.mock('@/features/preferences/hooks/useUserPreferences', () => ({
+  useUserPreferences: vi.fn(),
 }));
 
 // Mock 子组件和动画以简化环境
@@ -56,6 +61,18 @@ describe('SearchPage 交互测试', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useUserPreferences).mockReturnValue({
+      user: undefined,
+      preferences: null,
+      isFirstTime: false,
+      isLoading: false,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      savePreferences: vi.fn(),
+      isSaving: false,
+    });
     mockUseSearchResults.mockImplementation(({ params }) => ({
       discoveryPreferenceContext: null,
       hasSearchFilters: Boolean(params.query),
@@ -122,6 +139,28 @@ describe('SearchPage 交互测试', () => {
       }));
     },
   );
+
+  it('偏好初次加载完成前不启动帖子搜索', () => {
+    vi.mocked(useUserPreferences).mockReturnValue({
+      user: { id: 'user-1' } as never,
+      preferences: undefined,
+      isFirstTime: false,
+      isLoading: true,
+      isFetching: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      savePreferences: vi.fn(),
+      isSaving: false,
+    });
+
+    render(<SearchPage />);
+
+    expect(mockUseSearchResults).toHaveBeenCalledWith(expect.objectContaining({
+      params: DEFAULT_PARAMS,
+      enabled: false,
+    }));
+  });
 
   it('点击清除所有筛选时应该恢复默认搜索参数', async () => {
     // 模拟有活动筛选的状态

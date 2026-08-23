@@ -76,27 +76,7 @@ export interface SearchHistoryItem {
   timestamp: number;
 }
 
-export interface ChannelTagCatalogItem {
-  channel_id: string;
-  channel_name: string;
-  available_tags: string[];
-  virtual_tags: string[];
-}
-
 const DEFAULT_NUMERIC_RANGE = '[0, 10000000)';
-type ApiTagDetail = { name?: string | null };
-type ApiVirtualTagDetail = { tag_name?: string | null; name?: string | null };
-type ApiMappedSourceChannel = {
-  available_tags?: ApiTagDetail[] | null;
-};
-type ApiChannelDetail = {
-  channel_id?: string | number | null;
-  name?: string | null;
-  channel_name?: string | null;
-  available_tags?: ApiTagDetail[] | null;
-  virtual_tags?: ApiVirtualTagDetail[] | null;
-  mapped_source_channels?: ApiMappedSourceChannel[] | null;
-};
 
 function normalizeIdList(values?: Array<number | string> | null): string[] | null {
   if (!values || values.length === 0) return null;
@@ -132,31 +112,6 @@ function dedupeStrings(values: Array<string | number | null | undefined>) {
         .filter(Boolean),
     ),
   );
-}
-
-function normalizeTagNames(values: Array<string | number | null | undefined>) {
-  return dedupeStrings(values);
-}
-
-function normalizeChannelTagCatalogItem(channel: ApiChannelDetail): ChannelTagCatalogItem | null {
-  const channelId = String(channel.channel_id ?? '').trim();
-  if (!channelId) return null;
-
-  const sourceTags = (channel.mapped_source_channels || []).flatMap((source) =>
-    (source.available_tags || []).map((tag) => tag.name),
-  );
-
-  return {
-    channel_id: channelId,
-    channel_name: String(channel.name || channel.channel_name || channelId),
-    available_tags: normalizeTagNames([
-      ...(channel.available_tags || []).map((tag) => tag.name),
-      ...sourceTags,
-    ]),
-    virtual_tags: normalizeTagNames(
-      (channel.virtual_tags || []).map((tag) => tag.tag_name || tag.name),
-    ),
-  };
 }
 
 function escapeKeywordPhrase(value: string) {
@@ -277,32 +232,6 @@ export const searchApi = {
       params: { limit },
     });
     return response.data;
-  },
-
-  getChannelTagCatalog: async (channelId?: string | number | null): Promise<ChannelTagCatalogItem[]> => {
-    const response = await apiClient.get<ApiChannelDetail[]>('/meta/channels', {
-      params: channelId ? { channel_ids: String(channelId) } : undefined,
-    });
-
-    return (response.data || [])
-      .map(normalizeChannelTagCatalogItem)
-      .filter((item): item is ChannelTagCatalogItem => Boolean(item));
-  },
-
-  // 通过 /meta/channels 聚合全局标签
-  getGlobalTags: async (): Promise<string[]> => {
-    const tagSet = new Set<string>();
-    const catalog = await searchApi.getChannelTagCatalog();
-    for (const item of catalog) {
-      for (const tag of item.virtual_tags) {
-        if (tag?.trim()) tagSet.add(tag.trim());
-      }
-      for (const tag of item.available_tags) {
-        if (tag?.trim()) tagSet.add(tag.trim());
-      }
-    }
-
-    return Array.from(tagSet);
   },
 
   getSuggestions: async (

@@ -20,6 +20,7 @@ import {
   ContextMenuTrigger,
 } from "@/shared/ui/ContextMenu";
 import { toast } from "sonner";
+import { LazyImage } from "@/shared/ui/LazyImage";
 
 interface BooklistCardProps {
   booklist: Booklist;
@@ -75,7 +76,8 @@ export function BooklistCard({
           className="group relative flex h-full cursor-pointer flex-col rounded-[1.1rem] p-2 pb-5 text-(--od-text-primary) transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-(--od-accent)"
           style={{ WebkitTapHighlightColor: "transparent" }}
           onMouseDown={(e) => {
-            if (!(e.target as HTMLElement).closest("button, a")) e.preventDefault();
+            if (!(e.target as HTMLElement).closest("button, a"))
+              e.preventDefault();
           }}
           onClick={() => onOpen(booklist.id)}
         >
@@ -85,7 +87,9 @@ export function BooklistCard({
             className="pointer-events-auto flex h-full w-full flex-col"
             ref={(el) => {
               if (el) {
-                const focusables = el.querySelectorAll('a, button, [tabindex="0"]');
+                const focusables = el.querySelectorAll(
+                  'a, button, [tabindex="0"]',
+                );
                 focusables.forEach((node) => {
                   node.setAttribute("tabindex", "-1");
                 });
@@ -110,7 +114,7 @@ export function BooklistCard({
 
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[1.25rem] bg-[color-mix(in_srgb,var(--od-surface-content)_64%,transparent)]">
               {booklist.cover_image_url ? (
-                <img
+                <LazyImage
                   src={booklist.cover_image_url}
                   alt={booklist.title}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -163,7 +167,9 @@ export function BooklistCard({
               <div className="mt-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-4 text-[12px] text-(--od-text-secondary)">
                 <span className="inline-flex items-center gap-1.5">
                   <BookOpen className="h-3.5 w-3.5 text-(--od-text-tertiary)" />
-                  <span className="text-(--od-accent)">{booklist.item_count}</span>
+                  <span className="text-(--od-accent)">
+                    {booklist.item_count}
+                  </span>
                   <span>帖子</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
@@ -175,7 +181,9 @@ export function BooklistCard({
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <Eye className="h-3.5 w-3.5 text-(--od-text-tertiary)" />
-                  <span className="text-(--od-accent)">{booklist.view_count}</span>
+                  <span className="text-(--od-accent)">
+                    {booklist.view_count}
+                  </span>
                   <span>浏览</span>
                 </span>
               </div>

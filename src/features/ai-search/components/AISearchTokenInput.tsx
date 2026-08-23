@@ -121,7 +121,10 @@ export function AISearchTokenInput({
   }, [trigger?.query]);
 
   const { data: suggestedAuthors = [] } = useQuery({
-    queryKey: searchKeys.suggestions({ query: debouncedQuery, channel: null, preferenceSignature: 'ai-search' }),
+    queryKey: searchKeys.suggestions({
+      query: debouncedQuery,
+      applyPreferences: false,
+    }),
     queryFn: async () => (await searchApi.getSuggestions(debouncedQuery, false)).authors || [],
     enabled: Boolean(trigger && debouncedQuery),
     staleTime: 30_000,
