@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
 import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useNavigate, useParams } from "react-router-dom";
@@ -41,6 +41,7 @@ import { PageStatusMessage } from "@/shared/ui/PageStatusMessage";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { useAdjacentImagePreload } from "@/shared/hooks/useAdjacentImagePreload";
+import { useCarouselGestures } from "@/shared/hooks/useCarouselGestures";
 
 function toTournamentThread(
   item: TournamentItem,
@@ -101,6 +102,8 @@ export function TournamentDetailPage() {
       .slice(0, 8);
   }, [items]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [manualBannerVersion, setManualBannerVersion] = useState(0);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeBannerIndex < bannerSlides.length) return;
@@ -114,13 +117,28 @@ export function TournamentDetailPage() {
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [bannerSlides.length]);
+  }, [bannerSlides.length, manualBannerVersion]);
 
   const bannerUrls = useMemo(
     () => bannerSlides.map((slide) => slide.url),
     [bannerSlides],
   );
   useAdjacentImagePreload(bannerUrls, activeBannerIndex);
+  const showPreviousBanner = () => {
+    setActiveBannerIndex(
+      (index) => (index - 1 + bannerSlides.length) % bannerSlides.length,
+    );
+  };
+  const showNextBanner = () => {
+    setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
+  };
+  const bannerGestures = useCarouselGestures({
+    elementRef: bannerRef,
+    itemCount: bannerSlides.length,
+    onPrevious: showPreviousBanner,
+    onNext: showNextBanner,
+    onInteraction: () => setManualBannerVersion((value) => value + 1),
+  });
 
   if (!normalizedBooklistId) {
     return <PageStatusMessage tone="error">无效赛事 ID</PageStatusMessage>;
@@ -145,14 +163,6 @@ export function TournamentDetailPage() {
   const hasDiscordChannel = Boolean(tournament.tournament_channel_id);
   const activeBannerSlide = bannerSlides[activeBannerIndex];
   const isOwner = String(tournament.owner_id ?? "") === String(user?.id ?? "");
-  const showPreviousBanner = () => {
-    setActiveBannerIndex(
-      (index) => (index - 1 + bannerSlides.length) % bannerSlides.length,
-    );
-  };
-  const showNextBanner = () => {
-    setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
-  };
 
   const handleCopyShareText = async () => {
     if (!shareText) return;
@@ -168,7 +178,15 @@ export function TournamentDetailPage() {
     <>
       <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <section className="relative w-full overflow-hidden">
-          <div className="relative h-[min(78vh,860px)] min-h-[420px] sm:min-h-[560px]">
+          <div
+            ref={bannerRef}
+            className="relative h-[min(78vh,860px)] min-h-[420px] touch-pan-y sm:min-h-[560px]"
+            onPointerEnter={bannerGestures.onPointerEnter}
+            onPointerLeave={bannerGestures.onPointerLeave}
+            onPointerDown={bannerGestures.onPointerDown}
+            onPointerUp={bannerGestures.onPointerUp}
+            onPointerCancel={bannerGestures.onPointerCancel}
+          >
             <BannerFadeMedia>
               {activeBannerSlide ? (
                 <img
@@ -218,14 +236,22 @@ export function TournamentDetailPage() {
                   type="button"
                   tabIndex={-1}
                   aria-hidden="true"
-                  onClick={showPreviousBanner}
+                  onClick={() => {
+                    if (bannerGestures.shouldSuppressClick()) return;
+                    setManualBannerVersion((value) => value + 1);
+                    showPreviousBanner();
+                  }}
                   className="absolute inset-y-0 left-0 z-5 w-1/2 cursor-w-resize"
                 />
                 <button
                   type="button"
                   tabIndex={-1}
                   aria-hidden="true"
-                  onClick={showNextBanner}
+                  onClick={() => {
+                    if (bannerGestures.shouldSuppressClick()) return;
+                    setManualBannerVersion((value) => value + 1);
+                    showNextBanner();
+                  }}
                   className="absolute inset-y-0 right-0 z-5 w-1/2 cursor-e-resize"
                 />
               </>
@@ -237,7 +263,10 @@ export function TournamentDetailPage() {
                   <button
                     key={`${slide.threadId}-${slide.url}-dot`}
                     type="button"
-                    onClick={() => setActiveBannerIndex(index)}
+                    onClick={() => {
+                      setManualBannerVersion((value) => value + 1);
+                      setActiveBannerIndex(index);
+                    }}
                     className={`h-1.5 rounded-full transition-all ${
                       index === activeBannerIndex
                         ? "w-6 bg-white"

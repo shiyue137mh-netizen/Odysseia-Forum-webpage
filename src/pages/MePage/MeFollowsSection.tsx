@@ -1,10 +1,17 @@
-import { BellOff, Bookmark, CheckCircle2, RefreshCw, Search } from 'lucide-react';
+import {
+  BellOff,
+  Bookmark,
+  CheckCircle2,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 
-import { ThreadListItem } from '@/features/threads/components/ThreadListItem';
-import type { Thread } from '@/entities/thread/types';
-import { useListEntranceAnimation } from '@/shared/hooks/useListEntranceAnimation';
+import { ThreadListItem } from "@/features/threads/components/ThreadListItem";
+import type { FollowedThread, Thread } from "@/entities/thread/types";
+import type { FollowSort } from "@/features/follows/lib/sortFollows";
+import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 
-type FollowStatusFilter = 'current' | 'past' | 'all';
+type FollowStatusFilter = "current" | "past" | "all";
 
 type FollowChannelOption = {
   id: string;
@@ -19,11 +26,13 @@ interface MeFollowsSectionProps {
   isLoading: boolean;
   selectedChannel?: string | null;
   searchQuery: string;
-  threads: Thread[];
+  sort: FollowSort;
+  threads: FollowedThread[];
   onClearChannel: () => void;
   onPreview: (thread: Thread) => void;
   onRefresh: () => void;
   onSearchQueryChange: (value: string) => void;
+  onSortChange: (sort: FollowSort) => void;
   onSetChannel: (channelId: string | null) => void;
   onSetFollowStatus: (status: FollowStatusFilter) => void;
   onUnfollow: (thread: Thread) => void;
@@ -38,11 +47,13 @@ export function MeFollowsSection({
   isLoading,
   selectedChannel,
   searchQuery,
+  sort,
   threads,
   onClearChannel,
   onPreview,
   onRefresh,
   onSearchQueryChange,
+  onSortChange,
   onSetChannel,
   onSetFollowStatus,
   onUnfollow,
@@ -51,12 +62,12 @@ export function MeFollowsSection({
   const animateIn = useListEntranceAnimation(isLoading);
 
   const emptyMessage = selectedChannel
-    ? '这个频道里暂时没有符合筛选的关注内容。'
-    : followStatus === 'past'
-      ? '还没有历史关注记录。'
-      : followStatus === 'all'
-        ? '还没有关注记录，去 Discord 里参与帖子后会自动出现在这里。'
-        : '还没有当前关注内容，去 Discord 里参与帖子后会自动出现在这里。';
+    ? "这个频道里暂时没有符合筛选的关注内容。"
+    : followStatus === "past"
+      ? "还没有历史关注记录。"
+      : followStatus === "all"
+        ? "还没有关注记录，去 Discord 里参与帖子后会自动出现在这里。"
+        : "还没有当前关注内容，去 Discord 里参与帖子后会自动出现在这里。";
 
   return (
     <section className="px-1">
@@ -85,7 +96,7 @@ export function MeFollowsSection({
           </label>
           <select
             id="follow-channel-filter"
-            value={selectedChannel || ''}
+            value={selectedChannel || ""}
             onChange={(event) => onSetChannel(event.target.value || null)}
             className="od-ghost-input min-h-10 w-full px-1 text-sm"
           >
@@ -96,19 +107,38 @@ export function MeFollowsSection({
               </option>
             ))}
           </select>
+          <label htmlFor="follow-sort" className="sr-only">
+            关注排序
+          </label>
+          <select
+            id="follow-sort"
+            value={sort}
+            onChange={(event) => onSortChange(event.target.value as FollowSort)}
+            className="od-ghost-input mt-2 min-h-10 w-full px-1 text-sm"
+          >
+            <option value="updated">最近更新</option>
+            <option value="unread">有更新优先</option>
+            <option value="followed-newest">最近关注</option>
+            <option value="followed-oldest">最早关注</option>
+            <option value="created">最近创建</option>
+          </select>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {([
-            { value: 'current', label: '当前关注' },
-            { value: 'past', label: '历史关注' },
-            { value: 'all', label: '全部' },
-          ] as const).map((option) => (
+          {(
+            [
+              { value: "current", label: "当前关注" },
+              { value: "past", label: "历史关注" },
+              { value: "all", label: "全部" },
+            ] as const
+          ).map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => onSetFollowStatus(option.value)}
               className={`od-inline-action ${
-                followStatus === option.value ? 'od-inline-action-soft' : 'od-inline-action-ghost'
+                followStatus === option.value
+                  ? "od-inline-action-soft"
+                  : "od-inline-action-ghost"
               }`}
             >
               {option.label}
@@ -143,12 +173,16 @@ export function MeFollowsSection({
       {isLoading ? (
         <p className="od-text-body">正在加载关注列表...</p>
       ) : isError ? (
-        <p className="od-text-body text-(--od-text-emphasis)">关注列表加载失败了，稍后试试看。</p>
+        <p className="od-text-body text-(--od-text-emphasis)">
+          关注列表加载失败了，稍后试试看。
+        </p>
       ) : !hasAnyResults ? (
         <p className="od-text-body">{emptyMessage}</p>
       ) : threads.length === 0 ? (
         <p className="od-text-body">
-          {searchQuery.trim() ? '当前已加载的关注内容里没有匹配结果。' : emptyMessage}
+          {searchQuery.trim()
+            ? "当前已加载的关注内容里没有匹配结果。"
+            : emptyMessage}
         </p>
       ) : (
         <div className="flex flex-col space-y-od-list-gap">
@@ -173,7 +207,7 @@ export function MeFollowsSection({
                       className="od-inline-action od-inline-action-ghost text-(--od-text-tertiary) hover:text-(--od-error) disabled:pointer-events-none disabled:opacity-55"
                     >
                       <BellOff className="h-3.5 w-3.5" />
-                      {isPending ? '取消中' : '取消关注'}
+                      {isPending ? "取消中" : "取消关注"}
                     </button>
                   ) : (
                     <span className="od-inline-action bg-(--od-surface-soft) text-(--od-text-tertiary)">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutGrid,
   Medal,
@@ -24,6 +24,7 @@ import { useCardGridClass } from "@/shared/hooks/useSettings";
 import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 import { useAdjacentImagePreload } from "@/shared/hooks/useAdjacentImagePreload";
+import { useCarouselGestures } from "@/shared/hooks/useCarouselGestures";
 
 const sortOptions = [
   { value: 1, label: "按参赛数" },
@@ -43,6 +44,8 @@ export function TournamentsPage() {
   const gridClass = useCardGridClass();
   const collectMutation = useToggleBooklistCollection();
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const [manualBannerVersion, setManualBannerVersion] = useState(0);
+  const bannerRef = useRef<HTMLDivElement>(null);
 
   const { sort: sortMethod, page, query } = params;
   const [searchDraft, setSearchDraft] = useState(query);
@@ -92,7 +95,7 @@ export function TournamentsPage() {
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [bannerSlides.length]);
+  }, [bannerSlides.length, manualBannerVersion]);
 
   const openTournament = (tournament: Tournament) => {
     navigate(`/tournaments/${tournament.id}`);
@@ -105,6 +108,13 @@ export function TournamentsPage() {
   const showNextBanner = () => {
     setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
   };
+  const bannerGestures = useCarouselGestures({
+    elementRef: bannerRef,
+    itemCount: bannerSlides.length,
+    onPrevious: showPreviousBanner,
+    onNext: showNextBanner,
+    onInteraction: () => setManualBannerVersion((value) => value + 1),
+  });
   const activeBanner = bannerSlides[activeBannerIndex];
   const bannerUrls = useMemo(
     () => bannerSlides.map((slide) => slide.image),
@@ -115,7 +125,15 @@ export function TournamentsPage() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <section className="relative w-full overflow-hidden">
-        <div className="relative h-[min(62vh,660px)] min-h-[360px] sm:min-h-[460px]">
+        <div
+          ref={bannerRef}
+          className="relative h-[min(62vh,660px)] min-h-[360px] touch-pan-y sm:min-h-[460px]"
+          onPointerEnter={bannerGestures.onPointerEnter}
+          onPointerLeave={bannerGestures.onPointerLeave}
+          onPointerDown={bannerGestures.onPointerDown}
+          onPointerUp={bannerGestures.onPointerUp}
+          onPointerCancel={bannerGestures.onPointerCancel}
+        >
           <BannerFadeMedia>
             {activeBanner ? (
               <img
@@ -153,14 +171,22 @@ export function TournamentsPage() {
                 type="button"
                 tabIndex={-1}
                 aria-hidden="true"
-                onClick={showPreviousBanner}
+                onClick={() => {
+                  if (bannerGestures.shouldSuppressClick()) return;
+                  setManualBannerVersion((value) => value + 1);
+                  showPreviousBanner();
+                }}
                 className="absolute inset-y-0 left-0 z-5 w-1/2 cursor-w-resize"
               />
               <button
                 type="button"
                 tabIndex={-1}
                 aria-hidden="true"
-                onClick={showNextBanner}
+                onClick={() => {
+                  if (bannerGestures.shouldSuppressClick()) return;
+                  setManualBannerVersion((value) => value + 1);
+                  showNextBanner();
+                }}
                 className="absolute inset-y-0 right-0 z-5 w-1/2 cursor-e-resize"
               />
             </>
@@ -172,7 +198,10 @@ export function TournamentsPage() {
                 <button
                   key={`${slide.id}-dot`}
                   type="button"
-                  onClick={() => setActiveBannerIndex(index)}
+                  onClick={() => {
+                    setManualBannerVersion((value) => value + 1);
+                    setActiveBannerIndex(index);
+                  }}
                   className={`h-1.5 rounded-full transition-all ${
                     index === activeBannerIndex
                       ? "w-6 bg-white"

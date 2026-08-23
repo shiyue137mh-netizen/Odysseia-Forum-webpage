@@ -12,6 +12,7 @@ import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentity
 import { getWrappedCarouselIndex } from "@/features/search/lib/discoveryCarousel";
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import { LazyImage } from "@/shared/ui/LazyImage";
+import { useCarouselGestures } from "@/shared/hooks/useCarouselGestures";
 
 export type DiscoveryRankingMetric =
   | "reaction"
@@ -50,12 +51,7 @@ export function DiscoveryThreadCarousel({
     [threads],
   );
   const [activeIndex, setActiveIndex] = useState(0);
-  const wheelDeltaRef = useRef(0);
-  const wheelLockedRef = useRef(false);
-  const wheelTimerRef = useRef<number | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const pointerStartXRef = useRef<number | null>(null);
-  const swipeHandledRef = useRef(false);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -66,47 +62,20 @@ export function DiscoveryThreadCarousel({
     if (activeThread) onActiveChange?.(activeThread, activeIndex);
   }, [activeIndex, onActiveChange, threads]);
 
-  useEffect(() => {
-    const carousel = carouselRef.current;
-    if (!carousel) return;
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      if (wheelLockedRef.current) return;
-      wheelDeltaRef.current +=
-        Math.abs(event.deltaX) > Math.abs(event.deltaY)
-          ? event.deltaX
-          : event.deltaY;
-      if (Math.abs(wheelDeltaRef.current) < 40) return;
-      const direction = wheelDeltaRef.current > 0 ? 1 : -1;
-      setActiveIndex((current) =>
-        getWrappedCarouselIndex(current, direction, threads.length),
-      );
-      wheelDeltaRef.current = 0;
-      wheelLockedRef.current = true;
-      wheelTimerRef.current = window.setTimeout(() => {
-        wheelLockedRef.current = false;
-        wheelDeltaRef.current = 0;
-        wheelTimerRef.current = null;
-      }, 820);
-    };
-    carousel.addEventListener("wheel", handleWheel, { passive: false });
-    return () => carousel.removeEventListener("wheel", handleWheel);
-  }, [threads.length]);
-
-  useEffect(
-    () => () => {
-      if (wheelTimerRef.current !== null) {
-        window.clearTimeout(wheelTimerRef.current);
-      }
-    },
-    [],
-  );
-
   const move = (direction: number) => {
     setActiveIndex((current) =>
       getWrappedCarouselIndex(current, direction, threads.length),
     );
   };
+  const gestures = useCarouselGestures({
+    elementRef: carouselRef,
+    itemCount: threads.length,
+    onPrevious: () => move(-1),
+    onNext: () => move(1),
+    captureVerticalWheel: true,
+    verticalActivationDelayMs: 650,
+    wheelLockMs: 100,
+  });
 
   if (loading) {
     return (
@@ -128,25 +97,11 @@ export function DiscoveryThreadCarousel({
         ref={carouselRef}
         role="region"
         aria-label={ariaLabel}
-        onPointerDown={(event) => {
-          pointerStartXRef.current = event.clientX;
-          swipeHandledRef.current = false;
-        }}
-        onPointerUp={(event) => {
-          if (pointerStartXRef.current === null) return;
-          const distance = event.clientX - pointerStartXRef.current;
-          pointerStartXRef.current = null;
-          if (Math.abs(distance) >= 42) {
-            swipeHandledRef.current = true;
-            move(distance < 0 ? 1 : -1);
-            window.setTimeout(() => {
-              swipeHandledRef.current = false;
-            }, 0);
-          }
-        }}
-        onPointerCancel={() => {
-          pointerStartXRef.current = null;
-        }}
+        onPointerEnter={gestures.onPointerEnter}
+        onPointerLeave={gestures.onPointerLeave}
+        onPointerDown={gestures.onPointerDown}
+        onPointerUp={gestures.onPointerUp}
+        onPointerCancel={gestures.onPointerCancel}
         className="relative mx-auto mt-8 h-[calc(clamp(12rem,20vw,20rem)+10rem)] max-w-7xl touch-pan-y overflow-hidden select-none"
       >
         {threads.map((thread, index) => {
@@ -177,10 +132,7 @@ export function DiscoveryThreadCarousel({
               <button
                 type="button"
                 onClick={() => {
-                  if (swipeHandledRef.current) {
-                    swipeHandledRef.current = false;
-                    return;
-                  }
+                  if (gestures.shouldSuppressClick()) return;
                   if (isActive) onOpen(thread);
                   else setActiveIndex(index);
                 }}

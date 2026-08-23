@@ -1,17 +1,17 @@
-import { apiClient } from '@/shared/api/client';
-import type { Thread } from '@/entities/thread/types';
+import { apiClient } from "@/shared/api/client";
+import type { FollowedThread } from "@/entities/thread/types";
 
 // 后端 /v1/follows/ 原始返回结构
 export interface FollowsThreadsResponse {
   total: number;
-  threads: Thread[];
+  threads: FollowedThread[];
   limit: number;
   offset: number;
 }
 
 // 通知中心 & 关注页使用的便捷结构
 export interface FollowsResponse {
-  results: Thread[];
+  results: FollowedThread[];
   total: number;
   unread_count: number;
 }
@@ -32,8 +32,10 @@ export const followsApi = {
    * 获取关注的帖子列表（后端原始结构）
    * GET /v1/follows/
    */
-  getFollowsRaw: async (params: FollowsQueryParams = {}): Promise<FollowsThreadsResponse> => {
-    const response = await apiClient.get<FollowsThreadsResponse>('/follows/', {
+  getFollowsRaw: async (
+    params: FollowsQueryParams = {},
+  ): Promise<FollowsThreadsResponse> => {
+    const response = await apiClient.get<FollowsThreadsResponse>("/follows/", {
       params: {
         limit: params.limit,
         offset: params.offset,
@@ -52,7 +54,9 @@ export const followsApi = {
    * GET /v1/follows/unread-count
    */
   getUnreadCount: async (): Promise<UnreadCountResponse> => {
-    const response = await apiClient.get<UnreadCountResponse>('/follows/unread-count');
+    const response = await apiClient.get<UnreadCountResponse>(
+      "/follows/unread-count",
+    );
     return response.data;
   },
 
@@ -61,14 +65,16 @@ export const followsApi = {
    * POST /v1/follows/mark-viewed
    */
   markAllViewed: async (): Promise<void> => {
-    await apiClient.post('/follows/mark-viewed');
+    await apiClient.post("/follows/mark-viewed");
   },
 
   /**
    * 获取关注列表 + 未读数量的组合数据
    * 兼容 MePage 关注 tab 使用的结构
    */
-  getFollows: async (params: FollowsQueryParams = {}): Promise<FollowsResponse> => {
+  getFollows: async (
+    params: FollowsQueryParams = {},
+  ): Promise<FollowsResponse> => {
     const [follows, unread] = await Promise.all([
       followsApi.getFollowsRaw(params),
       followsApi.getUnreadCount(),

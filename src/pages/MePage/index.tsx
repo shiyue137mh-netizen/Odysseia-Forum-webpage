@@ -35,6 +35,10 @@ import {
   type BooklistSubTab,
 } from "@/pages/MePage/MeBooklistsSection";
 import { MeFollowsSection } from "@/pages/MePage/MeFollowsSection";
+import {
+  sortFollowedThreads,
+  type FollowSort,
+} from "@/features/follows/lib/sortFollows";
 import { MeHistorySection } from "@/pages/MePage/MeHistorySection";
 import {
   MePageHeader,
@@ -110,6 +114,7 @@ export function MePage() {
   const [editingBooklist, setEditingBooklist] = useState<Booklist | null>(null);
   const [browseHistoryVersion, setBrowseHistoryVersion] = useState(0);
   const [followSearchQuery, setFollowSearchQuery] = useState("");
+  const [followSort, setFollowSort] = useState<FollowSort>("updated");
 
   const {
     preferences,
@@ -207,8 +212,7 @@ export function MePage() {
   const filteredFollowedThreads = useMemo(() => {
     const followedThreads = followsQuery.data?.results || [];
     const query = followSearchQuery.trim().toLocaleLowerCase();
-    if (!query) return followedThreads;
-    return followedThreads.filter((thread) => {
+    const filteredThreads = query ? followedThreads.filter((thread) => {
       const author = thread.author;
       const searchableText = [
         thread.title,
@@ -223,8 +227,9 @@ export function MePage() {
         .join("\n")
         .toLocaleLowerCase();
       return searchableText.includes(query);
-    });
-  }, [followSearchQuery, followsQuery.data?.results]);
+    }) : followedThreads;
+    return sortFollowedThreads(filteredThreads, followSort);
+  }, [followSearchQuery, followSort, followsQuery.data?.results]);
   const setTab = (next: MeTab) => {
     const sp = new URLSearchParams(searchParams);
     sp.set("tab", next);
@@ -357,8 +362,10 @@ export function MePage() {
             isLoading={followsQuery.isLoading}
             selectedChannel={selectedFollowChannel}
             searchQuery={followSearchQuery}
+            sort={followSort}
             threads={filteredFollowedThreads}
             onSearchQueryChange={setFollowSearchQuery}
+            onSortChange={setFollowSort}
             onClearChannel={() => {
               const nextParams = new URLSearchParams(searchParams);
               nextParams.delete("channel");

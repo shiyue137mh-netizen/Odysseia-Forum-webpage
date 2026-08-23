@@ -1,6 +1,6 @@
 # Odysseia Forum 性能与代码冗余专项审计（2026-08-23）
 
-> 状态：阶段一、阶段二完成；阶段三前端项完成，后端接口项待确认
+> 状态：阶段一、阶段二完成；阶段三前端项完成、后端接口项待确认；阶段四局部减负完成、长列表实测基准待人工采集
 > 范围：加载速度、网络请求、渲染与内存、长列表生命周期、重复逻辑
 > 非目标：新增功能、删除现有功能、无证据的风格重构、机械消除 Lint warning
 
@@ -230,11 +230,46 @@ PERF-302 如果需要改变后端接口，本轮前端专项不得自行扩展�
 
 本阶段面向深度滚动后的 DOM、React 实例、Observer、Query 数据和内存增长。先做不改变用户体验的局部减负；虚拟化或窗口化需单独设计，不直接引入新依赖。
 
+> 实施状态：PERF-402、PERF-403 已完成；PERF-401 保持测量项，当前证据不足以引入窗口化。
+
 | ID | 已确认问题 | 建议边界 | 关闭证据 |
 | --- | --- | --- | --- |
 | PERF-401 | 无限搜索持续保留全部已加载 DOM、React 实例和 Query 数据 | 先建立 10/50 页基准，再决定是否需要窗口化；不凭静态判断引入虚拟列表 | DOM 数、堆内存、长任务和滚动帧率基准 |
 | PERF-402 | 移动端 CSS 隐藏卡片第 2–4 张图片，但组件和 IntersectionObserver 仍已挂载 | 在渲染层不创建不可见图片，保持桌面布局与首图行为 | 移动端 DOM、Observer 和图片请求数量；桌面及断点视觉验收 |
 | PERF-403 | 页码追踪在每次追加页面后全量 disconnect、查询并重新 observe；50 页累计约 30,600 次 observe | 改为增量观察新页面节点，不增加新的全局状态系统 | 10/50 页 Observer 调用计数和页码追踪正确性 |
+
+实际实施与验证结果：
+
+- `ThreadResultsCollection` 只建立一个 `min-width: 768px` 媒体查询订阅，并把是否创建次要图片传给列表项；移动端不再创建第 2–4 张 `LazyImage`，桌面布局和首图逻辑不变。
+- 以每页 24 条、每条最多 3 张次要图片计算，10 页最多减少 720 个 `LazyImage` / IntersectionObserver 实例，50 页最多减少 3,600 个。该数值是上限模型，不等同于实际图片请求数。
+- 页码追踪 Observer 改为单实例：追加页面时只观察新增卡片；结果移除或布局切换时只 `unobserve` 已离开 DOM 的节点，卸载或关闭追踪时才 `disconnect`。
+- 旧实现的累计 `observe` 次数为 `24 × (1 + ... + n)`：10 页约 1,320 次，50 页约 30,600 次；新实现为 `24 × n`：10 页 240 次，50 页 1,200 次，分别减少约 81.8% 与 96.1%。
+- 新增组件定向测试，确认追加结果时复用同一个 Observer、只观察新增节点，并确认移动端列表向条目传递“不创建次要图片”。
+- PERF-401 反向确认列表卡片已经使用 `content-visibility: auto`，React 与 Query 仍保留全部历史结果。是否继续窗口化必须在真实 10/50 页场景采集 DOM 数、JS heap、长任务和滚动帧率后决定；本轮没有新增依赖或窗口化状态。
+- TypeScript：通过。
+- 定向 Vitest：3 个测试文件、5 条测试通过。
+- 定向 ESLint：0 error、0 warning；仅输出本地 Browserslist 数据过期提示，没有为此升级依赖。
+- Prettier 与 `git diff --check`：通过。
+- 未执行真实浏览器 10/50 页堆内存、长任务与滚动帧率采集；PERF-401 保持开放，不以静态模型替代实测。
+
+PERF-401 后续采用固定搜索条件、列表布局和正常图片模式，分别加载到 10 页与 50 页。每个节点先在控制台执行以下只读探针记录规模，再使用 Performance 面板录制同一段 20 秒往返滚动，并分别保存 Heap Snapshot：
+
+```js
+(() => {
+  const cards = [...document.querySelectorAll("[data-result-page]")];
+  return {
+    loadedPages: new Set(cards.map((el) => el.dataset.resultPage)).size,
+    resultCards: cards.length,
+    imageElements: document.images.length,
+    domNodes: document.querySelectorAll("*").length,
+    jsHeapMB: performance.memory
+      ? Math.round((performance.memory.usedJSHeapSize / 1024 / 1024) * 10) / 10
+      : "当前浏览器不提供",
+  };
+})();
+```
+
+只有 50 页相对 10 页出现不可接受的堆增长、长任务或滚动掉帧，并且现有 `content-visibility` 不足以控制成本时，才进入窗口化方案设计。
 
 ## 7. 中央复核后排除或降级的扫描结论
 
