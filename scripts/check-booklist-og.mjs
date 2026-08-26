@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 
 import { onRequestGet as onBooklistRequestGet } from '../functions/booklists/[id].js';
-import { onRequestGet as onShareBooklistRequestGet } from '../functions/share/booklists/[id].js';
-import { onRequestGet as onShareTournamentRequestGet } from '../functions/share/tournaments/[id].js';
 import { onRequestGet as onThreadRequestGet } from '../functions/threads/[id].js';
+import { onRequestGet as onTournamentRequestGet } from '../functions/tournaments/[id].js';
 import {
   buildAuthorOgMetadata,
   buildBooklistOgMetadata,
@@ -167,8 +166,8 @@ globalThis.fetch = async (input, init) => {
 };
 
 try {
-  const response = await onShareBooklistRequestGet({
-    request: new Request('https://example.com/share/booklists/42?from=share', {
+  const response = await onBooklistRequestGet({
+    request: new Request('https://example.com/booklists/42', {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Discordbot/2.0)' },
     }),
     env: {
@@ -183,23 +182,10 @@ try {
   assert.match(html, /<title>《夏夜收藏》· 类脑索引<\/title>/);
   assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。 · 收录 1 个帖子 · 2 次收藏 · 30 次浏览"/);
   assert.match(html, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z-20260826-standard"/);
-  assert.match(html, /property="og:url" content="https:\/\/example\.com\/share\/booklists\/42"/);
+  assert.match(html, /property="og:url" content="https:\/\/example\.com\/booklists\/42"/);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
   assert.equal(requests[0].init.headers.Authorization, 'Bearer test-service-token');
-
-  const redirectResponse = await onShareBooklistRequestGet({
-    request: new Request('https://example.com/share/booklists/42'),
-    env: {
-      API_BASE_URL: 'https://api.example.com/v1/',
-      OG_SERVICE_TOKEN: 'test-service-token',
-      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
-    },
-    params: { id: '42' },
-  });
-  assert.equal(redirectResponse.status, 302);
-  assert.equal(redirectResponse.headers.get('location'), 'https://example.com/booklists/42');
-  assert.equal(requests.length, 1);
 
   const canonicalResponse = await onBooklistRequestGet({
     request: new Request('https://example.com/booklists/42'),
@@ -237,8 +223,8 @@ try {
   assert.match(crawlerThreadHtml, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/threads\/99\?v=2026-08-06T12%3A00%3A00Z-20260826-standard"/);
   assert.equal(requests.length, 2);
 
-  const tournamentResponse = await onShareTournamentRequestGet({
-    request: new Request('https://example.com/share/tournaments/42?from=share', {
+  const tournamentResponse = await onTournamentRequestGet({
+    request: new Request('https://example.com/tournaments/42', {
       headers: { 'User-Agent': 'Discordbot/2.0' },
     }),
     env: {
@@ -250,21 +236,9 @@ try {
   });
   const tournamentHtml = await tournamentResponse.text();
   assert.match(tournamentHtml, /<title>《夏夜收藏》· 类脑索引赛事<\/title>/);
-  assert.match(tournamentHtml, /property="og:url" content="https:\/\/example\.com\/share\/tournaments\/42"/);
+  assert.match(tournamentHtml, /property="og:url" content="https:\/\/example\.com\/tournaments\/42"/);
   assert.equal(requests.length, 3);
   assert.equal(requests[2].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
-
-  const tournamentRedirect = await onShareTournamentRequestGet({
-    request: new Request('https://example.com/share/tournaments/42'),
-    env: {
-      OG_SERVICE_TOKEN: 'test-service-token',
-      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
-    },
-    params: { id: '42' },
-  });
-  assert.equal(tournamentRedirect.status, 302);
-  assert.equal(tournamentRedirect.headers.get('location'), 'https://example.com/tournaments/42');
-  assert.equal(requests.length, 3);
 
   let missingTokenLogged = false;
   console.error = (message) => {
@@ -272,8 +246,8 @@ try {
       missingTokenLogged = true;
     }
   };
-  const fallbackResponse = await onShareBooklistRequestGet({
-    request: new Request('https://example.com/share/booklists/42', {
+  const fallbackResponse = await onBooklistRequestGet({
+    request: new Request('https://example.com/booklists/42', {
       headers: { 'User-Agent': 'Discordbot/2.0' },
     }),
     env: {

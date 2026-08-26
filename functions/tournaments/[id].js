@@ -1,5 +1,9 @@
-import { fetchAppShell } from '../_shared/og.js';
+import { buildTournamentOgMetadata, createShareMetadataHandler } from '../_shared/og.js';
 
-export function onRequestGet({ request, env }) {
-  return fetchAppShell(request, env);
-}
+export const onRequestGet = createShareMetadataHandler({
+  resourceName: 'Tournament',
+  endpoint: (id) => `/internal/share-metadata/booklists/${id}`,
+  buildMetadata: buildTournamentOgMetadata,
+  imageType: 'tournaments',
+  crawlerOnly: true,
+});

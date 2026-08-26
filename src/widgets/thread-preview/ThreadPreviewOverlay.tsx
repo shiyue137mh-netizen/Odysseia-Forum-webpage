@@ -5,6 +5,7 @@ import {
   Eye,
   Hash,
   MessageCircle,
+  Share2,
   ThumbsUp,
   X,
 } from "lucide-react";
@@ -27,12 +28,14 @@ import {
 } from "@/shared/lib/dateTime";
 import { addToken, tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
 import { fontSizeMap } from "@/shared/lib/settings";
+import { copyTextToClipboard } from "@/shared/lib/shareText";
 import { MarkdownText } from "@/shared/ui/MarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { AuthorRecommendations } from "@/features/threads/components/AuthorRecommendations";
 import { SimilarRecommendations } from "@/features/threads/components/SimilarRecommendations";
 
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 
 interface ThreadPreviewOverlayProps {
   thread: Thread;
@@ -179,6 +182,15 @@ export function ThreadPreviewOverlay({
     (tag) => !thread.tags?.includes(tag),
   );
   const images = thread.thumbnail_urls || [];
+  const handleShare = async () => {
+    const url = `${window.location.origin}/threads/${thread.thread_id}`;
+    const copied = await copyTextToClipboard(url);
+    if (copied) {
+      toast.success("已复制帖子链接");
+      return;
+    }
+    toast.error("复制帖子链接失败");
+  };
   const searchHighlight = useMemo(
     () => tokenizeSearchPayload(params.query || "").text.trim(),
     [params.query],
@@ -231,7 +243,7 @@ export function ThreadPreviewOverlay({
       >
         {/* Header */}
         <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-3 sm:px-6">
-          <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-2">
+          <div className="grid grid-cols-[7.5rem_minmax(0,1fr)_7.5rem] items-center gap-2">
             <button
               ref={closeButtonRef}
               type="button"
@@ -281,7 +293,16 @@ export function ThreadPreviewOverlay({
               </div>
             </div>
 
-            <div className="flex w-22 items-center justify-end gap-2 justify-self-end">
+            <div className="flex w-30 items-center justify-end gap-0 justify-self-end">
+              <button
+                type="button"
+                onClick={() => void handleShare()}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+                aria-label="分享帖子"
+                title="复制帖子链接"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
               <button
                 type="button"
                 onClick={() => setQuickAddOpen(true)}

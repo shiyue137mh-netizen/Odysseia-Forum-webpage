@@ -40,11 +40,11 @@ function buildCollectionShareText(
 }
 
 export function buildBooklistShareText(booklist: BooklistShareSource) {
-  return buildCollectionShareText(booklist, '书单', `/share/booklists/${booklist.id}`);
+  return buildCollectionShareText(booklist, '书单', `/booklists/${booklist.id}`);
 }
 
 export function buildTournamentShareText(tournament: BooklistShareSource) {
-  return buildCollectionShareText(tournament, '赛事', `/share/tournaments/${tournament.id}`);
+  return buildCollectionShareText(tournament, '赛事', `/tournaments/${tournament.id}`);
 }
 
 export function buildAuthorShareText({ userId, authorName, stats }: AuthorShareSource) {

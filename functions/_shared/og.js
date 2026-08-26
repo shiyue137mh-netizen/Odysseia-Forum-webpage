@@ -176,7 +176,6 @@ export function createShareMetadataHandler({
   resourceName,
   endpoint,
   buildMetadata,
-  canonicalPath,
   imageType,
   crawlerOnly = false,
 }) {
@@ -186,10 +185,6 @@ export function createShareMetadataHandler({
     if (!/^\d+$/.test(resourceId)) return fetchAppShell(request, env);
 
     if (crawlerOnly && !isSocialCrawler(request)) return fetchAppShell(request, env);
-
-    if (canonicalPath && !isSocialCrawler(request)) {
-      return Response.redirect(new URL(canonicalPath(resourceId), requestUrl), 302);
-    }
 
     const shellResponse = await fetchAppShell(request, env);
 
