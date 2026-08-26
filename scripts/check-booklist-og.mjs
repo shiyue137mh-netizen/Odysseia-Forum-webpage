@@ -181,7 +181,7 @@ try {
 
   assert.match(html, /<title>《夏夜收藏》· 类脑索引<\/title>/);
   assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。 · 收录 1 个帖子 · 2 次收藏 · 30 次浏览"/);
-  assert.match(html, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z-20260827-cleanbg"/);
+  assert.match(html, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z-20260827-1\.5x"/);
   assert.match(html, /property="og:url" content="https:\/\/example\.com\/booklists\/42"/);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
@@ -220,7 +220,7 @@ try {
   });
   const crawlerThreadHtml = await crawlerThreadResponse.text();
   assert.match(crawlerThreadHtml, /<title>《海边角色卡》· 类脑索引<\/title>/);
-  assert.match(crawlerThreadHtml, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/threads\/99\?v=2026-08-06T12%3A00%3A00Z-20260827-cleanbg"/);
+  assert.match(crawlerThreadHtml, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/threads\/99\?v=2026-08-06T12%3A00%3A00Z-20260827-1\.5x"/);
   assert.equal(requests.length, 2);
 
   const tournamentResponse = await onTournamentRequestGet({

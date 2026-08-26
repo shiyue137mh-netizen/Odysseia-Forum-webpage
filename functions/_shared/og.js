@@ -1,7 +1,7 @@
 export const DEFAULT_API_BASE_URL = 'https://forum.shimmerday.top/v1';
 export const DEFAULT_OG_IMAGE_BASE_URL = 'https://odysseia-forum-og.vercel.app';
 const SITE_NAME = '类脑索引';
-const OG_IMAGE_REVISION = '20260827-cleanbg';
+const OG_IMAGE_REVISION = '20260827-1.5x';
 
 export function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
