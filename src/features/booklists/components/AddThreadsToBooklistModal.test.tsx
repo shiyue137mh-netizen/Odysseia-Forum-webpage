@@ -16,6 +16,9 @@ describe("AddThreadsToBooklistModal", () => {
     );
 
     const textboxes = screen.getAllByRole("textbox");
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.tagName).toBe("DIALOG");
+    expect(dialog.parentElement).toBe(document.body);
     fireEvent.change(textboxes[0], {
       target: { value: "123456789012345678" },
     });

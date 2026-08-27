@@ -43,6 +43,11 @@ type AISearchLiveResponse = AISearchAgentProgress & {
   startedAt: number;
 };
 
+type ModelFetchFeedback = {
+  tone: 'success' | 'error';
+  message: string;
+};
+
 const QUICK_QUESTIONS = [
   '上周最热门的是什么？',
   '帮我在一周内的作品里搜索一下我喜欢的东西。',
@@ -69,6 +74,7 @@ export function AISearchPage() {
   const [draftSettings, setDraftSettings] = useState(settings);
   const [modelIds, setModelIds] = useState<string[]>([]);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
+  const [modelFetchFeedback, setModelFetchFeedback] = useState<ModelFetchFeedback | null>(null);
   const [input, setInput] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(
     () => Math.floor(Math.random() * INPUT_PLACEHOLDERS.length),
@@ -231,6 +237,7 @@ export function AISearchPage() {
   const openSettings = () => {
     setDraftSettings(settings);
     setSettingsTab('api');
+    setModelFetchFeedback(null);
     settingsDialogRef.current?.showModal();
   };
 
@@ -252,6 +259,7 @@ export function AISearchPage() {
 
   const handleFetchModels = async () => {
     setIsFetchingModels(true);
+    setModelFetchFeedback(null);
     try {
       const nextModelIds = await fetchModelIds({
         baseUrl: draftSettings.baseUrl,
@@ -262,9 +270,15 @@ export function AISearchPage() {
       if (!nextModelIds.includes(draftSettings.model)) {
         updateDraft('model', nextModelIds[0]);
       }
-      toast.success(`获取到 ${nextModelIds.length} 个模型`);
+      setModelFetchFeedback({
+        tone: 'success',
+        message: `获取到 ${nextModelIds.length} 个模型`,
+      });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '获取模型失败');
+      setModelFetchFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : '获取模型失败',
+      });
     } finally {
       setIsFetchingModels(false);
     }
@@ -1040,6 +1054,18 @@ export function AISearchPage() {
                       {isFetchingModels ? '获取中' : '获取模型'}
                     </button>
                   </div>
+                  {modelFetchFeedback && (
+                    <p
+                      role={modelFetchFeedback.tone === 'error' ? 'alert' : 'status'}
+                      className={`text-xs leading-5 ${
+                        modelFetchFeedback.tone === 'error'
+                          ? 'text-(--od-error)'
+                          : 'text-(--od-success)'
+                      }`}
+                    >
+                      {modelFetchFeedback.message}
+                    </p>
+                  )}
                 </div>
               </div>
 

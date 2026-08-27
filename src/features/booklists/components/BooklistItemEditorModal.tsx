@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,6 +43,7 @@ export function BooklistItemEditorModal({
   onClose,
   onSubmit,
 }: BooklistItemEditorModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const {
     register,
     handleSubmit,
@@ -65,16 +67,35 @@ export function BooklistItemEditorModal({
     });
   }, [isOpen, item, reset]);
 
+  useEffect(() => {
+    if (!isOpen || !item) return;
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  }, [isOpen, item]);
+
   if (!isOpen || !item) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs" onClick={onClose}>
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="booklist-item-editor-title"
+      className="fixed inset-0 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-black/60 p-4 text-(--od-text-primary) backdrop:bg-transparent backdrop-blur-xs"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!submitting) onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !submitting) onClose();
+      }}
+    >
       <div
         className="w-full max-w-lg rounded-xl border border-(--od-border) bg-(--od-bg) shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-(--od-border) px-5 py-4">
-          <h2 className="text-base font-bold text-(--od-text-primary)">{title}</h2>
+          <h2 id="booklist-item-editor-title" className="text-base font-bold text-(--od-text-primary)">{title}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -153,6 +174,7 @@ export function BooklistItemEditorModal({
           </div>
         </form>
       </div>
-    </div>
+    </dialog>,
+    document.body,
   );
 }

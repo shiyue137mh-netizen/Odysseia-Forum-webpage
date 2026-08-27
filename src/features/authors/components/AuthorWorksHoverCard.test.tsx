@@ -104,4 +104,40 @@ describe("AuthorWorksHoverCard", () => {
     act(() => vi.advanceTimersByTime(180));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("屏蔽确认使用顶层 dialog，确认期间不会被 Hover 延迟关闭", async () => {
+    vi.mocked(useUserPreferences).mockReturnValue({
+      user: { id: "viewer-1" },
+      preferences: { exclude_authors: [], include_authors: [], preferred_channels: [] },
+      savePreferences: vi.fn(),
+      isSaving: false,
+    } as never);
+
+    render(
+      <AuthorWorksHoverCard author={author}>
+        <button type="button">作者头像</button>
+      </AuthorWorksHoverCard>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "作者头像",
+    }).parentElement!;
+    fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+    await act(async () => vi.advanceTimersByTime(300));
+
+    const panel = screen.getByLabelText("作者名 的其他作品");
+    fireEvent.click(screen.getByRole("button", { name: "屏蔽作者" }));
+
+    const confirmation = screen.getByRole("alertdialog");
+    expect(confirmation.tagName).toBe("DIALOG");
+    expect(confirmation.parentElement).toBe(document.body);
+
+    fireEvent.pointerLeave(panel);
+    act(() => vi.advanceTimersByTime(180));
+    expect(confirmation).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(panel).toBeInTheDocument();
+  });
 });

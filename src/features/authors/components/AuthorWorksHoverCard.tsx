@@ -60,6 +60,7 @@ function AuthorWorksPanel({
     (state) => state.setPreviewThreadId,
   );
   const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
+  const confirmDialogRef = useRef<HTMLDialogElement>(null);
   const { user, preferences, savePreferences, isSaving } = useUserPreferences({
     guildId: GUILD_ID,
   });
@@ -76,11 +77,10 @@ function AuthorWorksPanel({
 
   useEffect(() => {
     if (!confirmBlockOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setConfirmBlockOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    const dialog = confirmDialogRef.current;
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
   }, [confirmBlockOpen]);
 
   const openThread = (threadId: string) => {
@@ -129,9 +129,9 @@ function AuthorWorksPanel({
         style={panelStyle}
         onClick={(event) => event.stopPropagation()}
         onPointerEnter={keepOpen}
-        onPointerLeave={closeSoon}
+        onPointerLeave={confirmBlockOpen ? keepOpen : closeSoon}
         onFocus={keepOpen}
-        onBlur={closeSoon}
+        onBlur={confirmBlockOpen ? keepOpen : closeSoon}
         className="od-floating-glass fixed inset-auto z-[9999] m-0 overflow-hidden rounded-2xl border border-(--od-border-strong) p-0 shadow-(--od-shadow-floating) animate-in fade-in zoom-in-95 duration-150"
       >
         <div className="flex items-start gap-2 border-b border-(--od-shell-line) px-2 py-2">
@@ -288,17 +288,27 @@ function AuthorWorksPanel({
 
       {confirmBlockOpen &&
         createPortal(
-          <div
+          <dialog
+            ref={confirmDialogRef}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="author-block-confirm-title"
-            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/65 p-4 backdrop-blur-xs"
-            onClick={() => setConfirmBlockOpen(false)}
+            className="fixed inset-0 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-black/65 p-4 text-(--od-text-primary) backdrop:bg-transparent backdrop-blur-xs"
+            onCancel={(event) => {
+              event.preventDefault();
+              setConfirmBlockOpen(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") event.stopPropagation();
+            }}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setConfirmBlockOpen(false);
+              }
+            }}
           >
-            <div
-              className="od-floating-panel-solid w-full max-w-sm rounded-2xl border border-(--od-border-strong) p-5 shadow-2xl"
-              onClick={(event) => event.stopPropagation()}
-            >
+            <div className="od-floating-panel-solid m-auto w-full max-w-sm rounded-2xl border border-(--od-border-strong) p-5 shadow-2xl">
               <div className="flex items-center gap-3">
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-400">
                   <UserRoundX className="h-5 w-5" />
@@ -341,7 +351,7 @@ function AuthorWorksPanel({
                 </button>
               </div>
             </div>
-          </div>,
+          </dialog>,
           document.body,
         )}
     </>

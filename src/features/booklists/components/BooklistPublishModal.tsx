@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link2, LoaderCircle, X } from "lucide-react";
 
 interface BooklistPublishModalProps {
@@ -52,6 +53,7 @@ export function BooklistPublishModal({
 }: BooklistPublishModalProps) {
   const [threadUrl, setThreadUrl] = useState(initialUrl || "");
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -61,12 +63,11 @@ export function BooklistPublishModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !submitting) onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose, submitting]);
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -79,13 +80,18 @@ export function BooklistPublishModal({
     onSubmit(normalizeDiscordThreadUrl(threadUrl));
   };
 
-  return (
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-black/60 p-4 text-(--od-text-primary) backdrop:bg-transparent backdrop-blur-sm"
       aria-labelledby="booklist-publish-title"
-      onClick={() => !submitting && onClose()}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!submitting) onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !submitting) onClose();
+      }}
     >
       <form
         className="od-floating-panel-solid w-full max-w-lg rounded-2xl border border-(--od-border) p-6 shadow-2xl"
@@ -170,6 +176,7 @@ export function BooklistPublishModal({
           </button>
         </div>
       </form>
-    </div>
+    </dialog>,
+    document.body,
   );
 }

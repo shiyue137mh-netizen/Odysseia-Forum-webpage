@@ -1,3 +1,6 @@
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+
 interface ShareTextDialogProps {
   title: string;
   text: string;
@@ -6,13 +9,27 @@ interface ShareTextDialogProps {
 }
 
 export function ShareTextDialog({ title, text, onClose, onCopy }: ShareTextDialogProps) {
-  return (
-    <div
-      className="fixed inset-0 z-90 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
-      role="dialog"
-      aria-modal="true"
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  }, []);
+
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      className="fixed inset-0 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-black/60 p-4 text-(--od-text-primary) backdrop:bg-transparent backdrop-blur-xs"
       aria-labelledby="share-text-dialog-title"
-      onClick={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       <div
         className="od-floating-panel-solid w-full max-w-xl rounded-2xl border border-(--od-border) p-6 shadow-2xl"
@@ -50,6 +67,7 @@ export function ShareTextDialog({ title, text, onClose, onCopy }: ShareTextDialo
           </button>
         </div>
       </div>
-    </div>
+    </dialog>,
+    document.body,
   );
 }

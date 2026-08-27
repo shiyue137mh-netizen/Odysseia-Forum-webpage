@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, Plus, X } from "lucide-react";
 import type { BooklistItemAddInput } from "@/entities/booklist/types";
 import { fromDateTimeLocal } from "@/features/booklists/lib/tournamentDateTime";
@@ -44,20 +45,36 @@ function AddThreadsToBooklistModalContent({
   const [comment, setComment] = useState("");
   const [displayOrder, setDisplayOrder] = useState("");
   const [participatedAt, setParticipatedAt] = useState("");
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   const parsedIds = useMemo(() => parseThreadIds(rawIds), [rawIds]);
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
-      onClick={onClose}
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) return;
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "");
+  }, []);
+
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="add-threads-to-booklist-title"
+      className="fixed inset-0 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-black/60 p-4 text-(--od-text-primary) backdrop:bg-transparent backdrop-blur-xs"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!submitting) onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !submitting) onClose();
+      }}
     >
       <div
         className="od-floating-panel-solid w-full max-w-lg rounded-xl border border-(--od-border) shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-(--od-border) px-5 py-4">
-          <h2 className="text-base font-bold text-(--od-text-primary)">
+          <h2 id="add-threads-to-booklist-title" className="text-base font-bold text-(--od-text-primary)">
             {title}
           </h2>
           <button
@@ -161,6 +178,7 @@ function AddThreadsToBooklistModalContent({
           </div>
         </div>
       </div>
-    </div>
+    </dialog>,
+    document.body,
   );
 }

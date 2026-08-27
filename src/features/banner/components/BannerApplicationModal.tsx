@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -27,6 +28,7 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
     const { user } = useAuth();
     const channelsQuery = useChannels();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const dialogRef = useRef<HTMLDialogElement>(null);
 
     const {
         register,
@@ -81,14 +83,27 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
         }
     };
 
+    useEffect(() => {
+        if (!isOpen) return;
+        const dialog = dialogRef.current;
+        if (!dialog || dialog.open) return;
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else dialog.setAttribute('open', '');
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+    return createPortal(
+        <dialog
+            ref={dialogRef}
+            aria-labelledby="banner-application-title"
+            className="fixed inset-0 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-black/50 p-4 text-(--od-text-primary) backdrop:bg-transparent backdrop-blur-xs animate-in fade-in duration-200"
+            onCancel={(event) => {
+                event.preventDefault();
+                if (!isSubmitting) onClose();
+            }}
             onClick={(e) => {
-                e.stopPropagation();
-                onClose();
+                if (e.target === e.currentTarget && !isSubmitting) onClose();
             }}
         >
             <div
@@ -99,7 +114,7 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
                 <div className="flex items-center justify-between border-b border-(--od-border) bg-(--od-bg-secondary) px-6 py-4">
                     <div className="flex items-center gap-2">
                         <ImageIcon className="h-5 w-5 text-(--od-accent)" />
-                        <h2 className="text-lg font-bold text-(--od-text-primary)">申请 Banner 展示位</h2>
+                        <h2 id="banner-application-title" className="text-lg font-bold text-(--od-text-primary)">申请 Banner 展示位</h2>
                     </div>
                     <button
                         type="button"
@@ -219,6 +234,7 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
                     </form>
                 </div>
             </div>
-        </div>
+        </dialog>,
+        document.body,
     );
 }
