@@ -36,8 +36,17 @@ export function BooklistListItem({
 
   return (
     <article
-      className="group relative w-full cursor-pointer py-3 text-(--od-text-primary) transition-colors duration-200"
+      role="link"
+      tabIndex={0}
+      aria-label={`打开书单：${booklist.title}`}
+      className="group relative w-full cursor-pointer py-3 text-(--od-text-primary) transition-colors duration-200 focus:outline-hidden focus:ring-2 focus:ring-(--od-accent)"
       onClick={() => onOpen(booklist.id)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onOpen(booklist.id);
+      }}
     >
       <div className="absolute inset-x-0 bottom-0 h-px bg-[linear-gradient(90deg,transparent,color-mix(in_srgb,var(--od-divider-strong)_60%,transparent),transparent)]" />
 

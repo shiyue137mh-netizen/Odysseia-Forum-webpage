@@ -90,9 +90,8 @@ export function toPreferencesUpdatePayload(
     include_keywords: value.includeKeywordsText.trim(),
     exclude_keywords: value.excludeKeywordsText.trim(),
     preview_image_mode: value.previewImageMode,
-    results_per_page: 5,
-    ui_page_size: value.resultsPerPage === '' ? 24 : value.resultsPerPage,
+    results_per_page: value.resultsPerPage === '' ? 5 : value.resultsPerPage,
+    ui_page_size: value.uiPageSize,
     sort_method: sortUiToApiMap[value.sortMethod] || 'last_active',
   };
 }
-

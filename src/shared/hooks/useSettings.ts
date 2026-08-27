@@ -9,9 +9,7 @@ export function useSettings() {
   const storeUpdateSettings = useSettingsStore((state) => state.updateSettings);
 
   const updateSettings = useCallback(
-    (updates: Partial<UserSettings>) => {
-      storeUpdateSettings(updates);
-    },
+    (updates: Partial<UserSettings>) => storeUpdateSettings(updates),
     [storeUpdateSettings],
   );
 

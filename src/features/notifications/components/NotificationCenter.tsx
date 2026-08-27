@@ -137,7 +137,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
   // 本组件由 TopBar 常驻挂载，而 `if (!open) return null` 在 hook 之后，
   // 所以此前不论面板是否展开、用户是否登录，全站每 30 秒都会打一次 /follows/。
   // 走 feature 自己的 hook：未登录完全不拉；完整列表只在面板展开时拉，未读数常驻（红点依赖它）。
-  const { data, isLoading, isError } = useFollowsFeed(
+  const { data, isLoading, isError, refetch: refetchFollows } = useFollowsFeed(
     {},
     { enabled: isAuthenticated, listEnabled: open },
   );
@@ -176,7 +176,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
       .filter((thread) => thread.has_update)
       .filter((thread) => {
         const id = `follow-${thread.thread_id}`;
-        const currentUpdateStamp = thread.last_active_at ?? thread.created_at;
+        const currentUpdateStamp = thread.latest_update_at ?? thread.last_active_at ?? thread.created_at;
         const dismissedStamp = dismissedFollowUpdates[id];
         return dismissedStamp !== currentUpdateStamp;
       })
@@ -185,7 +185,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
         kind: 'follow_update' as const,
         title: thread.title,
         message: thread.first_message_excerpt ?? '该帖子有新的更新。',
-        created_at: thread.last_active_at ?? undefined,
+        created_at: thread.latest_update_at ?? thread.last_active_at ?? undefined,
         thread,
       })),
     [follows, dismissedFollowUpdates],
@@ -253,7 +253,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
 
   const handleNotificationClick = (item: NotificationItem) => {
     if (item.kind === 'follow_update' && item.thread) {
-      const currentUpdateStamp = item.thread.last_active_at ?? item.thread.created_at;
+      const currentUpdateStamp = item.thread.latest_update_at ?? item.thread.last_active_at ?? item.thread.created_at;
       setDismissedFollowUpdates((prev) => ({
         ...prev,
         [item.id]: currentUpdateStamp,
@@ -281,6 +281,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
   };
 
   const handleClearAllNotifications = async () => {
+    if (markAllViewed.isPending) return;
     // 静态通知：更新 last_opened_at 即可标记全部已读
     const latestCreatedAt = staticNotifications.reduce((latest, item) => {
       if (!item.created_at) return latest;
@@ -295,21 +296,21 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
     }
 
     // 关注帖子通知：标记已读
-    setDismissedFollowUpdates((prev) => {
-      const next = { ...prev };
-      for (const thread of follows) {
-        if (!thread.has_update) continue;
-        const id = `follow-${thread.thread_id}`;
-        next[id] = thread.last_active_at ?? thread.created_at;
-      }
-      return next;
-    });
+    const dismissedSnapshot = dismissedFollowUpdates;
+    const nextDismissedFollowUpdates = { ...dismissedSnapshot };
+    for (const thread of follows) {
+      if (!thread.has_update) continue;
+      const id = `follow-${thread.thread_id}`;
+      nextDismissedFollowUpdates[id] = thread.latest_update_at ?? thread.last_active_at ?? thread.created_at;
+    }
+    setDismissedFollowUpdates(nextDismissedFollowUpdates);
 
     try {
       // useMarkAllFollowsViewed 内部会失效 followsKeys.all
       await markAllViewed.mutateAsync();
     } catch (error) {
-      // 本地已经乐观清空，接口失败必须让用户知道，否则会以为真的清干净了
+      setDismissedFollowUpdates(dismissedSnapshot);
+      void refetchFollows();
       notifyError(extractErrorMessage(error, '标记已读失败，请稍后再试'));
     }
   };
@@ -352,7 +353,8 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
           <button
             type="button"
             onClick={handleClearAllNotifications}
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-(--od-text-tertiary) hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary)"
+            disabled={markAllViewed.isPending}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-(--od-text-tertiary) hover:bg-(--od-bg-secondary) hover:text-(--od-text-primary) disabled:cursor-wait disabled:opacity-50"
             title="全部标记已读"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -379,14 +381,26 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
           </div>
         )}
 
-        {(isError || isStaticError) && !(isLoading || isStaticLoading) && (
+        {isError && isStaticError && !(isLoading || isStaticLoading) && (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-xs text-(--od-text-secondary)">
             <AlertCircle className="h-5 w-5 text-(--od-error)" />
             <p>加载通知失败，请稍后重试。</p>
           </div>
         )}
 
-        {!isLoading && !isStaticLoading && !isError && !isStaticError && !hasAnyNotification && (
+        {!(isError && isStaticError) && isError && (
+          <div className="mb-2 rounded-lg border border-(--od-error)/30 px-3 py-2 text-xs text-(--od-error)">
+            关注更新加载失败，静态公告仍可查看。
+          </div>
+        )}
+
+        {!(isError && isStaticError) && isStaticError && (
+          <div className="mb-2 rounded-lg border border-(--od-error)/30 px-3 py-2 text-xs text-(--od-error)">
+            系统公告加载失败，关注更新仍可查看。
+          </div>
+        )}
+
+        {!isLoading && !isStaticLoading && !(isError && isStaticError) && !hasAnyNotification && (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-xs text-(--od-text-secondary)">
             <Bell className="h-6 w-6 text-(--od-border-strong)" />
             <p>当前没有新的通知。</p>
@@ -394,7 +408,7 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
           </div>
         )}
 
-        {!isLoading && !isStaticLoading && !isError && !isStaticError && hasAnyNotification && (
+        {!(isError && isStaticError) && hasAnyNotification && (
           <div className="space-y-2">
             {allNotifications.map((item) => {
               const unread = isUnread(item);
@@ -408,6 +422,14 @@ export function NotificationCenter({ open, onClose, onUnreadChange }: Notificati
                 <div
                   key={item.id}
                   onClick={() => handleNotificationClick(item)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    handleNotificationClick(item);
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className={`group relative cursor-pointer rounded-lg border p-3 text-xs transition-colors hover:border-(--od-accent) hover:bg-[color-mix(in_oklab,var(--od-bg-secondary)_85%,transparent)] ${
                     unread
                       ? 'border-l-2 border-l-(--od-accent) border-t-(--od-border) border-r-(--od-border) border-b-(--od-border) bg-(--od-card)'

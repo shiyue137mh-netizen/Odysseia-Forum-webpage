@@ -5,6 +5,7 @@ import { LazyImage } from "@/shared/ui/LazyImage";
 
 import { useImageViewerStore } from "@/shared/store/useImageViewerStore";
 import { useCarouselGestures } from "@/shared/hooks/useCarouselGestures";
+import { usePrefersReducedMotion } from "@/shared/hooks/usePrefersReducedMotion";
 
 interface ImageCarouselProps {
   images: string[];
@@ -21,10 +22,12 @@ export function ImageCarousel({
 }: ImageCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocusWithin, setIsFocusWithin] = useState(false);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [manualInteractionVersion, setManualInteractionVersion] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
   const openViewer = useImageViewerStore((state) => state.open);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const goToNext = useCallback(() => {
     setDirection(1);
@@ -50,13 +53,15 @@ export function ImageCarousel({
 
   // 自动轮播逻辑
   useEffect(() => {
-    if (images.length <= 1 || isHovered) return;
+    if (images.length <= 1 || isHovered || isFocusWithin || prefersReducedMotion) return;
 
     const timer = setInterval(goToNext, autoPlayInterval);
     return () => clearInterval(timer);
   }, [
     images.length,
     isHovered,
+    isFocusWithin,
+    prefersReducedMotion,
     autoPlayInterval,
     goToNext,
     manualInteractionVersion,
@@ -78,7 +83,11 @@ export function ImageCarousel({
   }
 
   // 多图轮播模式
-  const variants = {
+  const variants = prefersReducedMotion ? {
+    enter: { opacity: 0 },
+    center: { opacity: 1 },
+    exit: { opacity: 0 },
+  } : {
     enter: (direction: number) => ({
       x: direction > 0 ? "100%" : "-100%",
       opacity: 0,
@@ -101,6 +110,10 @@ export function ImageCarousel({
       className={`group relative flex w-full touch-pan-y overflow-hidden bg-(--od-bg-tertiary) ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setIsFocusWithin(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsFocusWithin(false);
+      }}
       onPointerEnter={gestures.onPointerEnter}
       onPointerLeave={gestures.onPointerLeave}
       onPointerDown={gestures.onPointerDown}
@@ -117,8 +130,8 @@ export function ImageCarousel({
           animate="center"
           exit="exit"
           transition={{
-            x: { type: "spring", stiffness: 300, damping: 30 },
-            opacity: { duration: 0.2 },
+            x: prefersReducedMotion ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 30 },
+            opacity: { duration: prefersReducedMotion ? 0 : 0.2 },
           }}
           className="absolute inset-0 h-full w-full"
         >

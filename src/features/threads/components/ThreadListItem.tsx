@@ -115,6 +115,7 @@ function ThreadListItemImpl({
     <ContextMenu>
       <ContextMenuTrigger className="w-full" disabled={!managementActions}>
         <article
+          tabIndex={-1}
           data-result-page={resultPage}
           className={`group relative w-full cursor-pointer py-3 text-(--od-text-primary) [content-visibility:auto] [contain-intrinsic-size:auto_200px] transition-colors duration-200${trailingAction ? " md:pr-32" : ""}${entranceClass}`}
           style={animateIn ? { animationDelay } : undefined}

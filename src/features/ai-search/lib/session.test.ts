@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   AI_SEARCH_CONVERSATIONS_KEY,
+  AI_SEARCH_MAX_MESSAGE_LENGTH,
   AI_SEARCH_SESSION_KEY,
   abortAISearchConversation,
   createConversationTitle,
@@ -47,6 +48,35 @@ describe('AI 搜索会话历史', () => {
       unreadConversationIds: [],
     });
     expect(window.localStorage.getItem(AI_SEARCH_CONVERSATIONS_KEY)).toBeNull();
+  });
+
+  it('只隔离超长消息所在会话并保留其他历史', () => {
+    window.localStorage.setItem(AI_SEARCH_CONVERSATIONS_KEY, JSON.stringify({
+      activeConversationId: 'broken',
+      unreadConversationIds: ['broken', 'healthy'],
+      conversations: [
+        {
+          id: 'broken',
+          title: '损坏会话',
+          createdAt: 1,
+          updatedAt: 2,
+          messages: [{ role: 'user', content: 'x'.repeat(AI_SEARCH_MAX_MESSAGE_LENGTH + 1) }],
+        },
+        {
+          id: 'healthy',
+          title: '正常会话',
+          createdAt: 3,
+          updatedAt: 4,
+          messages: [{ role: 'user', content: '保留我' }],
+        },
+      ],
+    }));
+
+    const state = loadAISearchConversationState();
+
+    expect(state.activeConversationId).toBe('healthy');
+    expect(state.conversations.map((conversation) => conversation.id)).toEqual(['healthy']);
+    expect(state.unreadConversationIds).toEqual(['healthy']);
   });
 
   it('恢复 Assistant 消息中的快捷追问', () => {

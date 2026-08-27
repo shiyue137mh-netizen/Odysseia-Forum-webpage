@@ -7,7 +7,6 @@ import { useSearchURLParams } from '@/features/search/hooks/useSearchParams';
 import { useChannels } from '@/shared/hooks/useChannels';
 import { useAISearchConversationStore } from '@/features/ai-search/lib/session';
 import { formatAISearchTimestamp } from '@/features/ai-search/lib/time';
-import { clearStoredAuthToken } from '@/shared/lib/authSession';
 import { withViewTransition } from '@/shared/lib/viewTransition';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { AnimatedIcon } from '@/shared/ui/animation/AnimatedIcon';
@@ -70,7 +69,6 @@ export function AppSidebar() {
     } catch (error) {
       console.error('Backend logout failed:', error);
     }
-    clearStoredAuthToken();
     window.location.href = '/login';
   };
 

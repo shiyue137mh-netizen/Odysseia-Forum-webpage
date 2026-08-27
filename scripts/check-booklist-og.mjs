@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { onRequestGet as onBooklistRequestGet } from '../functions/booklists/[id].js';
 import { onRequestGet as onThreadRequestGet } from '../functions/threads/[id].js';
 import { onRequestGet as onTournamentRequestGet } from '../functions/tournaments/[id].js';
+import { onRequestGet as onAuthorRequestGet } from '../functions/u/[id].js';
 import {
   buildAuthorOgMetadata,
   buildBooklistOgMetadata,
@@ -162,6 +163,15 @@ globalThis.fetch = async (input, init) => {
       updated_at: '2026-08-06T12:00:00Z',
     });
   }
+  if (url.endsWith('/internal/share-metadata/authors/123')) {
+    return Response.json({
+      display_name: '秋青子',
+      avatar_url: 'https://example.com/avatar.png',
+      stats: { thread_count: 12, reaction_count: 345, reply_count: 67 },
+      latest_work: { title: '蛇与夏夜' },
+      updated_at: '2026-08-07T12:00:00Z',
+    });
+  }
   return new Response('not found', { status: 404 });
 };
 
@@ -172,6 +182,7 @@ try {
     }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
+      OG_IMAGE_BASE_URL: 'https://odysseia-forum-og.vercel.app',
       OG_SERVICE_TOKEN: 'test-service-token',
       ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
     },
@@ -179,6 +190,8 @@ try {
   });
   const html = await response.text();
 
+  assert.equal(response.headers.get('Content-Security-Policy'), "frame-ancestors 'none'");
+  assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
   assert.match(html, /<title>《夏夜收藏》· 类脑索引<\/title>/);
   assert.match(html, /property="og:description" content="沿着晚风整理的一组角色卡。 · 收录 1 个帖子 · 2 次收藏 · 30 次浏览"/);
   assert.match(html, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/booklists\/42\?v=2026-08-05T12%3A00%3A00Z-20260827-1\.5x-textfix"/);
@@ -194,6 +207,8 @@ try {
     },
     params: { id: '42' },
   });
+  assert.equal(canonicalResponse.headers.get('Content-Security-Policy'), "frame-ancestors 'none'");
+  assert.equal(canonicalResponse.headers.get('X-Frame-Options'), 'DENY');
   assert.match(await canonicalResponse.text(), /<title>default<\/title>/);
   assert.equal(requests.length, 1);
 
@@ -213,6 +228,7 @@ try {
     }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
+      OG_IMAGE_BASE_URL: 'https://odysseia-forum-og.vercel.app',
       OG_SERVICE_TOKEN: 'test-service-token',
       ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
     },
@@ -229,6 +245,7 @@ try {
     }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
+      OG_IMAGE_BASE_URL: 'https://odysseia-forum-og.vercel.app',
       OG_SERVICE_TOKEN: 'test-service-token',
       ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
     },
@@ -239,6 +256,24 @@ try {
   assert.match(tournamentHtml, /property="og:url" content="https:\/\/example\.com\/tournaments\/42"/);
   assert.equal(requests.length, 3);
   assert.equal(requests[2].url, 'https://api.example.com/v1/internal/share-metadata/booklists/42');
+
+  const authorResponse = await onAuthorRequestGet({
+    request: new Request('https://example.com/u/123', {
+      headers: { 'User-Agent': 'Discordbot/2.0' },
+    }),
+    env: {
+      API_BASE_URL: 'https://api.example.com/v1/',
+      OG_IMAGE_BASE_URL: 'https://odysseia-forum-og.vercel.app',
+      OG_SERVICE_TOKEN: 'test-service-token',
+      ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
+    },
+    params: { id: '123' },
+  });
+  const authorHtml = await authorResponse.text();
+  assert.match(authorHtml, /<title>秋青子 · 类脑索引<\/title>/);
+  assert.match(authorHtml, /property="og:url" content="https:\/\/example\.com\/u\/123"/);
+  assert.match(authorHtml, /property="og:image" content="https:\/\/odysseia-forum-og\.vercel\.app\/api\/og\/authors\/123\?v=2026-08-07T12%3A00%3A00Z-20260827-1\.5x-textfix"/);
+  assert.equal(requests.length, 4);
 
   let missingTokenLogged = false;
   console.error = (message) => {
@@ -258,7 +293,7 @@ try {
   });
   assert.match(await fallbackResponse.text(), /<title>default<\/title>/);
   assert.equal(missingTokenLogged, true);
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 4);
 } finally {
   globalThis.fetch = originalFetch;
   globalThis.HTMLRewriter = originalHTMLRewriter;

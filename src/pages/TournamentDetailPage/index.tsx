@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteScrollTrigger } from "@/shared/hooks/useInfiniteScrollTrigger";
+import { usePrefersReducedMotion } from "@/shared/hooks/usePrefersReducedMotion";
 import { useListEntranceAnimation } from "@/shared/hooks/useListEntranceAnimation";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -103,7 +104,9 @@ export function TournamentDetailPage() {
   }, [items]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [manualBannerVersion, setManualBannerVersion] = useState(0);
+  const [isBannerFocusWithin, setIsBannerFocusWithin] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     if (activeBannerIndex < bannerSlides.length) return;
@@ -111,13 +114,13 @@ export function TournamentDetailPage() {
   }, [activeBannerIndex, bannerSlides.length]);
 
   useEffect(() => {
-    if (bannerSlides.length <= 1) return;
+    if (bannerSlides.length <= 1 || isBannerFocusWithin || prefersReducedMotion) return;
     const timer = window.setInterval(() => {
       setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [bannerSlides.length, manualBannerVersion]);
+  }, [bannerSlides.length, isBannerFocusWithin, manualBannerVersion, prefersReducedMotion]);
 
   const bannerUrls = useMemo(
     () => bannerSlides.map((slide) => slide.url),
@@ -151,7 +154,12 @@ export function TournamentDetailPage() {
   if (detailQuery.isError || !tournament) {
     return (
       <PageStatusMessage tone="error">
-        赛事加载出错了，可能不存在或已经被删除了
+        <div className="space-y-3">
+          <p>赛事加载出错了，可能不存在或已经被删除了</p>
+          <button type="button" onClick={() => void detailQuery.refetch()} className="underline">
+            重试
+          </button>
+        </div>
       </PageStatusMessage>
     );
   }
@@ -186,6 +194,10 @@ export function TournamentDetailPage() {
             onPointerDown={bannerGestures.onPointerDown}
             onPointerUp={bannerGestures.onPointerUp}
             onPointerCancel={bannerGestures.onPointerCancel}
+            onFocusCapture={() => setIsBannerFocusWithin(true)}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsBannerFocusWithin(false);
+            }}
           >
             <BannerFadeMedia>
               {activeBannerSlide ? (
@@ -386,7 +398,14 @@ export function TournamentDetailPage() {
               </div>
             </section>
 
-            {items.length === 0 ? (
+            {itemsQuery.isError ? (
+              <div className="rounded-xl border border-(--od-error)/40 bg-(--od-card) p-10 text-center">
+                <p className="text-base font-semibold text-(--od-error)">参赛作品加载失败</p>
+                <button type="button" onClick={() => void itemsQuery.refetch()} className="mt-3 text-sm text-(--od-accent) underline">
+                  重试作品列表
+                </button>
+              </div>
+            ) : items.length === 0 ? (
               <div className="rounded-xl border border-(--od-border) bg-(--od-card) p-10 text-center">
                 <p className="text-base font-semibold text-(--od-text-primary)">
                   暂无参赛作品
@@ -434,7 +453,13 @@ export function TournamentDetailPage() {
 
             {itemsQuery.hasNextPage && (
               <div ref={loadMoreRef} className="flex justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-(--od-text-tertiary)" />
+                {itemsQuery.isFetchNextPageError ? (
+                  <button type="button" onClick={() => void itemsQuery.fetchNextPage()} className="text-sm text-(--od-accent) underline">
+                    加载更多失败，点击重试
+                  </button>
+                ) : (
+                  <RefreshCw className="h-6 w-6 animate-spin text-(--od-text-tertiary)" />
+                )}
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Loader2, Plus, X } from "lucide-react";
 import type { BooklistItemAddInput } from "@/entities/booklist/types";
+import { fromDateTimeLocal } from "@/features/booklists/lib/tournamentDateTime";
 
 interface AddThreadsToBooklistModalProps {
   isOpen: boolean;
@@ -24,6 +25,13 @@ function parseThreadIds(raw: string): string[] {
 
 export function AddThreadsToBooklistModal({
   isOpen,
+  ...contentProps
+}: AddThreadsToBooklistModalProps) {
+  if (!isOpen) return null;
+  return <AddThreadsToBooklistModalContent {...contentProps} />;
+}
+
+function AddThreadsToBooklistModalContent({
   submitting,
   title = "批量添加帖子",
   submitLabel = "添加到书单",
@@ -31,15 +39,13 @@ export function AddThreadsToBooklistModal({
   enableTournamentFields = false,
   onClose,
   onSubmit,
-}: AddThreadsToBooklistModalProps) {
+}: Omit<AddThreadsToBooklistModalProps, "isOpen">) {
   const [rawIds, setRawIds] = useState("");
   const [comment, setComment] = useState("");
   const [displayOrder, setDisplayOrder] = useState("");
   const [participatedAt, setParticipatedAt] = useState("");
 
   const parsedIds = useMemo(() => parseThreadIds(rawIds), [rawIds]);
-
-  if (!isOpen) return null;
 
   return (
     <div
@@ -138,7 +144,7 @@ export function AddThreadsToBooklistModal({
                   display_order: hasOrder ? orderStart + index : undefined,
                   tournament_participated_at:
                     enableTournamentFields && participatedAt
-                      ? participatedAt
+                      ? fromDateTimeLocal(participatedAt)
                       : undefined,
                 }));
                 onSubmit(items);

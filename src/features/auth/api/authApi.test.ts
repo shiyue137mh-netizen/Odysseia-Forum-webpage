@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { authApi } from "./authApi";
 import { apiClient } from "@/shared/api/client";
 import {
-  clearStoredAuthToken,
   getStoredAuthToken,
+  invalidateAuthSession,
   setUseAuthHeader,
 } from "@/shared/lib/authSession";
 
@@ -13,8 +13,8 @@ vi.mock("@/shared/api/client", () => ({
 }));
 
 vi.mock("@/shared/lib/authSession", () => ({
-  clearStoredAuthToken: vi.fn(),
   getStoredAuthToken: vi.fn(),
+  invalidateAuthSession: vi.fn(),
   setUseAuthHeader: vi.fn(),
 }));
 
@@ -100,13 +100,23 @@ describe("authApi.checkAuth", () => {
 });
 
 describe("authApi.logout", () => {
-  it("调用登出接口并清理本地会话状态", async () => {
-    mockedGet.mockResolvedValueOnce({ data: {} });
+  it("调用现有 GET 登出接口，绕过全局 JSON 解析并清理本地会话状态", async () => {
+    mockedGet.mockResolvedValueOnce({ data: "<html></html>" });
 
     await authApi.logout();
 
-    expect(mockedGet).toHaveBeenCalledWith("/auth/logout");
-    expect(clearStoredAuthToken).toHaveBeenCalledTimes(1);
-    expect(setUseAuthHeader).toHaveBeenCalledWith(false);
+    expect(mockedGet).toHaveBeenCalledWith(
+      "/auth/logout",
+      expect.objectContaining({ transformResponse: expect.any(Function) }),
+    );
+    expect(invalidateAuthSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("后端登出失败时仍清理本地会话状态", async () => {
+    mockedGet.mockRejectedValueOnce(new Error("network down"));
+
+    await expect(authApi.logout()).rejects.toThrow("network down");
+
+    expect(invalidateAuthSession).toHaveBeenCalledTimes(1);
   });
 });

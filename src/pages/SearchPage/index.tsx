@@ -175,6 +175,7 @@ export function SearchPage() {
   const loadMoreRef = useInfiniteScrollTrigger({
     hasNextPage: infiniteQueryState.hasNextPage,
     isFetchingNextPage: infiniteQueryState.isFetchingNextPage,
+    isFetchNextPageError: infiniteQueryState.isFetchNextPageError,
     fetchNextPage: requestNextPage,
   }, {
     rootMargin: "360px",
@@ -626,7 +627,15 @@ export function SearchPage() {
                   ref={loadMoreRef}
                   className="flex justify-center py-8 text-sm text-(--od-text-secondary)"
                 >
-                  {infiniteQueryState.isFetchingNextPage
+                  {infiniteQueryState.isFetchNextPageError ? (
+                    <button
+                      type="button"
+                      onClick={requestNextPage}
+                      className="rounded-full border border-(--od-border) px-4 py-2 text-(--od-accent) hover:bg-(--od-bg-secondary)"
+                    >
+                      加载失败，点击重试
+                    </button>
+                  ) : infiniteQueryState.isFetchingNextPage
                     ? "正在加载更多帖子..."
                     : infiniteQueryState.hasNextPage
                       ? "继续向下滚动加载更多"

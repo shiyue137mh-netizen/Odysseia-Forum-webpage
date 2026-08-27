@@ -5,6 +5,7 @@ import { parallaxScenes } from "@/shared/config/parallaxScenes";
 import { LazyImage } from "@/shared/ui/LazyImage";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 import { useCarouselGestures } from "@/shared/hooks/useCarouselGestures";
+import { usePrefersReducedMotion } from "@/shared/hooks/usePrefersReducedMotion";
 
 const BANNER_LOAD_TIMEOUT_MS = 4500;
 const bannerMediaClass =
@@ -75,12 +76,14 @@ export function BannerCarousel({
   const carouselRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocusWithin, setIsFocusWithin] = useState(false);
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [manualInteractionVersion, setManualInteractionVersion] = useState(0);
   const [fallbackBannerKey, setFallbackBannerKey] = useState<string | null>(
     null,
   );
   const hasRealBanners = banners.length > 0;
+  const prefersReducedMotion = usePrefersReducedMotion();
   const displayBanners = hasRealBanners
     ? banners.map((banner) => {
         if (banner.image.trim()) return banner;
@@ -94,7 +97,7 @@ export function BannerCarousel({
     : fallbackBanners;
 
   useEffect(() => {
-    if (isHovered || displayBanners.length <= 1) return;
+    if (isHovered || isFocusWithin || prefersReducedMotion || displayBanners.length <= 1) return;
 
     const timer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % displayBanners.length);
@@ -103,6 +106,8 @@ export function BannerCarousel({
     return () => clearInterval(timer);
   }, [
     isHovered,
+    isFocusWithin,
+    prefersReducedMotion,
     displayBanners.length,
     autoPlayInterval,
     manualInteractionVersion,
@@ -225,6 +230,10 @@ export function BannerCarousel({
       onMouseLeave={() => {
         setIsHovered(false);
         resetBannerParallax();
+      }}
+      onFocusCapture={() => setIsFocusWithin(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsFocusWithin(false);
       }}
       onClick={() => {
         if (gestures.shouldSuppressClick()) return;

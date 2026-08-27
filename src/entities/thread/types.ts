@@ -18,6 +18,8 @@ export type Thread = Omit<
   collection_count?: number;
   is_tournament?: boolean;
   tournament_info_list?: components["schemas"]["TournamentInfo-Output"][];
+  /** 关注帖子最近一次有新消息的时间。 */
+  latest_update_at?: string | null;
   id?: string; // 兼容旧版代码使用的 id (即 thread_id)
   is_following?: boolean; // 兼容旧版关注状态 (后端目前使用 active_flag)
   active_flag?: boolean; // 关注状态（True=当前关注，False=过去关注），来自 FollowedThreadResponse

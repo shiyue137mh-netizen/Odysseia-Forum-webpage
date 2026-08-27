@@ -7,6 +7,7 @@ import type { AISearchToolCall } from '@/features/ai-search/lib/tools';
 
 export const AI_SEARCH_SESSION_KEY = 'odysseia_ai_search_session_v1';
 export const AI_SEARCH_CONVERSATIONS_KEY = 'odysseia_ai_search_conversations_v1';
+export const AI_SEARCH_MAX_MESSAGE_LENGTH = 100_000;
 
 export interface AISearchReasoningTraceItem {
   type: 'reasoning';
@@ -99,7 +100,7 @@ const threadSchema = z.object({
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant', 'tool']),
-  content: z.string().max(100_000),
+  content: z.string().max(AI_SEARCH_MAX_MESSAGE_LENGTH),
   hidden: z.boolean().optional(),
   tool_call_id: z.string().max(200).optional(),
   tool_calls: z.array(z.object({
@@ -163,6 +164,12 @@ const storedStateSchema = z.object({
   unreadConversationIds: z.array(z.string()).max(5).default([]),
 });
 
+const storedStateEnvelopeSchema = z.object({
+  activeConversationId: z.string().nullable(),
+  conversations: z.array(z.unknown()),
+  unreadConversationIds: z.array(z.string()).default([]),
+});
+
 interface StoredConversationState {
   activeConversationId: string | null;
   conversations: AISearchConversation[];
@@ -218,12 +225,26 @@ export function loadAISearchConversationState(): StoredConversationState {
   try {
     const stored = window.localStorage.getItem(AI_SEARCH_CONVERSATIONS_KEY);
     if (stored) {
-      const parsed = storedStateSchema.parse(JSON.parse(stored)) as StoredConversationState;
-      const conversationIds = new Set(parsed.conversations.map((conversation) => conversation.id));
-      return {
-        ...parsed,
-        unreadConversationIds: parsed.unreadConversationIds.filter((id) => conversationIds.has(id)),
+      const envelope = storedStateEnvelopeSchema.parse(JSON.parse(stored));
+      const conversations = envelope.conversations
+        .slice(0, 5)
+        .flatMap((conversation) => {
+          const parsed = conversationSchema.safeParse(conversation);
+          return parsed.success ? [parsed.data as AISearchConversation] : [];
+        });
+      const conversationIds = new Set(conversations.map((conversation) => conversation.id));
+      const parsed: StoredConversationState = {
+        activeConversationId: envelope.activeConversationId && conversationIds.has(envelope.activeConversationId)
+          ? envelope.activeConversationId
+          : conversations[0]?.id ?? null,
+        conversations,
+        unreadConversationIds: envelope.unreadConversationIds.filter((id) => conversationIds.has(id)),
       };
+      storedStateSchema.parse(parsed);
+      if (conversations.length !== envelope.conversations.length) {
+        window.localStorage.setItem(AI_SEARCH_CONVERSATIONS_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     }
 
     const legacyMessages = z.array(messageSchema).max(48).parse(

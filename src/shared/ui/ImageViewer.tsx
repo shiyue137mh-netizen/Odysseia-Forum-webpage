@@ -57,6 +57,7 @@ export function ImageViewer() {
       {isOpen && (
         <dialog
           ref={dialogRef}
+          aria-labelledby="image-viewer-title"
           className="fixed inset-0 z-10000 m-0 h-screen w-screen max-h-none max-w-none border-none bg-black/90 p-0 backdrop-blur-sm backdrop:bg-black/90 backdrop:backdrop-blur-sm outline-hidden"
           onClick={(e) => {
             if (e.target === dialogRef.current) close();
@@ -76,7 +77,7 @@ export function ImageViewer() {
               exit={{ y: -20, opacity: 0 }}
               className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 bg-linear-to-b from-black/50 to-transparent"
             >
-              <div className="text-white/80 text-sm font-medium truncate max-w-[50%] ml-4">
+              <div id="image-viewer-title" className="text-white/80 text-sm font-medium truncate max-w-[50%] ml-4">
                 {alt || '查看图片'}
               </div>
               <div className="flex items-center gap-2 mr-4">

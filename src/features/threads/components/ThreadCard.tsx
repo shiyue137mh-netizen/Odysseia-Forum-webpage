@@ -167,6 +167,7 @@ function ThreadCardImpl({
       <ContextMenu>
         <ContextMenuTrigger className={masonry ? "h-auto w-full" : "h-full w-full"}>
           <article
+            tabIndex={-1}
             data-result-page={resultPage}
             className={`group flex w-full flex-col [content-visibility:auto] [contain-intrinsic-size:auto_560px]${entranceClass} ${masonry ? "h-auto" : "h-full"}`}
         style={{

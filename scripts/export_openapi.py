@@ -1,6 +1,5 @@
 import json
 import os
-import ssl
 import sys
 import urllib.request
 
@@ -14,15 +13,11 @@ remote_openapi_url = f"{backend_url}/openapi.json"
 # 优先尝试从在线后端获取
 try:
     print(f"Attempting to fetch openapi.json from {remote_openapi_url}...")
-    ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
-
     req = urllib.request.Request(
         remote_openapi_url,
         headers={'User-Agent': 'Odysseia-Web-Build/1.0'}
     )
-    with urllib.request.urlopen(req, context=ctx, timeout=10) as resp:
+    with urllib.request.urlopen(req, timeout=10) as resp:
         if resp.status == 200:
             openapi_data = json.loads(resp.read().decode('utf-8'))
             with open(output_path, 'w', encoding='utf-8') as f:
@@ -53,4 +48,3 @@ if os.path.exists(root_dir):
 else:
     print(f"Error: Could neither fetch from {remote_openapi_url} nor find local backend at {root_dir}")
     sys.exit(1)
-

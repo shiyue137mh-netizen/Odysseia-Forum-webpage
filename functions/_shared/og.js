@@ -1,7 +1,10 @@
 export const DEFAULT_API_BASE_URL = 'https://forum.shimmerday.top/v1';
-export const DEFAULT_OG_IMAGE_BASE_URL = 'https://odysseia-forum-og.vercel.app';
 const SITE_NAME = '类脑索引';
 const OG_IMAGE_REVISION = '20260827-1.5x-textfix';
+const CLICKJACKING_HEADERS = {
+  'Content-Security-Policy': "frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+};
 
 export function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -115,8 +118,17 @@ export function buildAuthorOgMetadata(author, pageUrl, fallbackImage) {
   };
 }
 
-export function fetchAppShell(request, env) {
-  return env.ASSETS.fetch(new URL('/', request.url));
+function withClickjackingHeaders(response) {
+  const securedResponse = new Response(response.body, response);
+  for (const [name, value] of Object.entries(CLICKJACKING_HEADERS)) {
+    securedResponse.headers.set(name, value);
+  }
+  return securedResponse;
+}
+
+export async function fetchAppShell(request, env) {
+  const response = await env.ASSETS.fetch(new URL('/', request.url));
+  return withClickjackingHeaders(response);
 }
 
 export function isSocialCrawler(request) {
@@ -157,8 +169,8 @@ class TitleHandler {
   }
 }
 
-function rewriteMetadata(response, metadata) {
-  return new HTMLRewriter()
+async function rewriteMetadata(response, metadata) {
+  const rewrittenResponse = await new HTMLRewriter()
     .on('title', new TitleHandler(metadata.title))
     .on('meta[name="description"]', new ContentAttributeHandler(metadata.description))
     .on('meta[property="og:type"]', new ContentAttributeHandler('website'))
@@ -170,6 +182,7 @@ function rewriteMetadata(response, metadata) {
     .on('meta[name="twitter:description"]', new ContentAttributeHandler(metadata.description))
     .on('meta[name="twitter:image"]', new ContentAttributeHandler(metadata.image))
     .transform(response);
+  return withClickjackingHeaders(rewrittenResponse);
 }
 
 export function createShareMetadataHandler({
@@ -202,8 +215,8 @@ export function createShareMetadataHandler({
       requestUrl.hash = '';
       const fallbackImage = new URL('/og-image-202608.png', requestUrl).href;
       const metadata = buildMetadata(data, requestUrl.href, fallbackImage);
-      if (imageType) {
-        const imageBaseUrl = cleanText(env.OG_IMAGE_BASE_URL || DEFAULT_OG_IMAGE_BASE_URL);
+      const imageBaseUrl = cleanText(env.OG_IMAGE_BASE_URL);
+      if (imageType && imageBaseUrl) {
         const imageUrl = new URL(`/api/og/${imageType}/${resourceId}`, imageBaseUrl);
         imageUrl.searchParams.set('v', `${cleanText(data?.updated_at) || 'unknown'}-${OG_IMAGE_REVISION}`);
         metadata.image = imageUrl.href;

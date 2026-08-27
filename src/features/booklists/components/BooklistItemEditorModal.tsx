@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, X } from 'lucide-react';
 import type { BooklistItem } from '@/entities/booklist/types';
+import { fromDateTimeLocal, toDateTimeLocal } from '@/features/booklists/lib/tournamentDateTime';
 
 const schema = z.object({
   comment: z.string().max(800, '备注最多 800 字').optional(),
@@ -29,14 +30,6 @@ interface BooklistItemEditorModalProps {
     display_order?: number;
     tournament_participated_at?: string | null;
   }) => void;
-}
-
-function toDateTimeLocal(value?: string | null) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
-  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
 export function BooklistItemEditorModal({
@@ -98,7 +91,7 @@ export function BooklistItemEditorModal({
               comment: values.comment?.trim() || undefined,
               display_order: Number.isFinite(order) ? order : undefined,
               tournament_participated_at: enableTournamentFields
-                ? values.tournament_participated_at || null
+                ? fromDateTimeLocal(values.tournament_participated_at)
                 : undefined,
             });
           })}

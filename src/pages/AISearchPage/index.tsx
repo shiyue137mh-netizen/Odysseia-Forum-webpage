@@ -13,6 +13,7 @@ import type { AISearchInlineToken } from '@/features/ai-search/lib/inlineTokens'
 import { findPendingAISearchQuestion, type AISearchStatus } from '@/features/ai-search/lib/tools';
 import {
   abortAISearchConversation,
+  AI_SEARCH_MAX_MESSAGE_LENGTH,
   registerAISearchController,
   unregisterAISearchController,
   useAISearchConversationStore,
@@ -46,6 +47,12 @@ const QUICK_QUESTIONS = [
   '上周最热门的是什么？',
   '帮我在一周内的作品里搜索一下我喜欢的东西。',
 ] as const;
+
+function isAISearchMessageLengthValid(message: string) {
+  if (message.length <= AI_SEARCH_MAX_MESSAGE_LENGTH) return true;
+  toast.error(`输入最多 ${AI_SEARCH_MAX_MESSAGE_LENGTH.toLocaleString()} 个字符`);
+  return false;
+}
 
 const INPUT_PLACEHOLDERS = [
   '你今天想搜什么？',
@@ -393,6 +400,8 @@ export function AISearchPage() {
       const userMessage = prompt.trim();
       setInput(userMessage);
 
+      if (!isAISearchMessageLengthValid(userMessage)) return;
+
       // 如果已配置模型，则立即新建会话并开始执行
       if (settings.baseUrl && settings.model) {
         const conversationId = startConversation(userMessage);
@@ -413,6 +422,7 @@ export function AISearchPage() {
   const handleQuestionAnswer = async (answer: string) => {
     const normalizedAnswer = answer.trim();
     if (!normalizedAnswer || !pendingQuestion || !activeConversationId || isRunning) return;
+    if (!isAISearchMessageLengthValid(normalizedAnswer)) return;
     const toolMessage: AISearchDisplayMessage = {
       role: 'tool',
       content: JSON.stringify({ answer: normalizedAnswer }),
@@ -428,6 +438,7 @@ export function AISearchPage() {
   const handleSubmit = async () => {
     const userMessage = input.trim();
     if (!userMessage || isRunning || pendingQuestion || !ensureModelConfigured()) return;
+    if (!isAISearchMessageLengthValid(userMessage)) return;
 
     const history = messages;
     const conversationId = activeConversationId || startConversation(userMessage);
@@ -447,7 +458,6 @@ export function AISearchPage() {
       latestUserMessageIndex < 0 ||
       !ensureModelConfigured()
     ) return;
-
     const userMessage = messages[latestUserMessageIndex].content;
     const userMessageRecord = messages[latestUserMessageIndex];
     const history = messages.slice(0, latestUserMessageIndex);
@@ -465,6 +475,7 @@ export function AISearchPage() {
       editingMessageIndex !== latestUserMessageIndex ||
       !ensureModelConfigured()
     ) return;
+    if (!isAISearchMessageLengthValid(userMessage)) return;
 
     const history = messages.slice(0, editingMessageIndex);
     replaceMessages(

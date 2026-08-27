@@ -8,7 +8,7 @@ import {
 
 interface SettingsState {
   settings: UserSettings;
-  updateSettings: (updates: Partial<UserSettings>) => void;
+  updateSettings: (updates: Partial<UserSettings>) => boolean;
   resetSettingsState: (nextSettings?: UserSettings) => void;
 }
 
@@ -25,8 +25,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   updateSettings: (updates) => {
     const nextSettings = { ...get().settings, ...updates };
-    saveUserSettings(nextSettings);
+    if (!saveUserSettings(nextSettings)) return false;
     set({ settings: nextSettings });
+    return true;
   },
 
   resetSettingsState: (nextSettings) => {

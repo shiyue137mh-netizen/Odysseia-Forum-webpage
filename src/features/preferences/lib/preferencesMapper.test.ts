@@ -25,4 +25,20 @@ describe("preferencesMapper 作者偏好", () => {
       }),
     );
   });
+
+  it("把 BOT 每页条数写入 results_per_page 并保留 UI 页大小", () => {
+    const form = toPreferencesFormValue({
+      results_per_page: 7,
+      ui_page_size: 48,
+    } as UserPreferencesResponse);
+
+    form.resultsPerPage = 12;
+
+    expect(toPreferencesUpdatePayload(form)).toEqual(
+      expect.objectContaining({
+        results_per_page: 12,
+        ui_page_size: 48,
+      }),
+    );
+  });
 });

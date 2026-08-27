@@ -58,6 +58,7 @@ export function ThreadPreviewOverlay({
   const [isVisible, setIsVisible] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isClosingRef = useRef(false);
   const wheelGestureActiveRef = useRef(false);
@@ -79,6 +80,7 @@ export function ThreadPreviewOverlay({
   }, [onClose]);
 
   useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setIsVisible(true);
     closeButtonRef.current?.focus({ preventScroll: true });
 
@@ -86,11 +88,32 @@ export function ThreadPreviewOverlay({
       if (e.key === "Escape") {
         e.preventDefault();
         handleClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog || !dialog.contains(document.activeElement)) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )).filter((element) => !element.hasAttribute('inert') && element.getAttribute('aria-hidden') !== 'true');
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      opener?.focus({ preventScroll: true });
+    };
   }, [handleClose]);
 
   // 打开或切换帖子时预先露出一部分正文；这只是初始位置，用户仍可滑回图片顶部。
@@ -232,6 +255,7 @@ export function ThreadPreviewOverlay({
 
       {/* 弹窗主体卡片 */}
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="thread-preview-title"

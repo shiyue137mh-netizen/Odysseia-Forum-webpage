@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 interface InfiniteQueryLike {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  isFetchNextPageError?: boolean;
   fetchNextPage: () => unknown;
 }
 
@@ -25,17 +26,17 @@ export function useInfiniteScrollTrigger(
   { rootMargin = '200px', enabled = true }: Options = {},
 ) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError = false, fetchNextPage } = query;
 
   useEffect(() => {
     if (!enabled) return;
 
     const target = sentinelRef.current;
-    if (!target || !hasNextPage) return;
+    if (!target || !hasNextPage || isFetchNextPageError) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        if (entry.isIntersecting && hasNextPage && !isFetchingNextPage && !isFetchNextPageError) {
           fetchNextPage();
         }
       },
@@ -44,7 +45,7 @@ export function useInfiniteScrollTrigger(
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [enabled, hasNextPage, isFetchingNextPage, fetchNextPage, rootMargin]);
+  }, [enabled, hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage, rootMargin]);
 
   return sentinelRef;
 }

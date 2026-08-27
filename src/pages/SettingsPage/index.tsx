@@ -60,14 +60,14 @@ export function SettingsPage() {
         return;
       }
 
-      try {
-        updateSettings({
-          backgroundImageBase64: result,
-          backgroundImageUrl: '',
-          backgroundImageEnabled: true,
-        });
+      const saved = updateSettings({
+        backgroundImageBase64: result,
+        backgroundImageUrl: '',
+        backgroundImageEnabled: true,
+      });
+      if (saved) {
         notifySuccess('本地背景图已保存（base64）');
-      } catch {
+      } else {
         notifyError('保存失败，可能是本地存储空间不足');
       }
     };
@@ -76,19 +76,23 @@ export function SettingsPage() {
   };
 
   const handleClearBackgroundImage = () => {
-    updateSettings({
+    const cleared = updateSettings({
       backgroundImageEnabled: false,
       backgroundImageUrl: '',
       backgroundImageBase64: '',
     });
-    notifySuccess('背景图已清除');
+    if (cleared) notifySuccess('背景图已清除');
+    else notifyError('清除失败，浏览器存储暂时不可用');
   };
 
   const handleResetSettings = () => {
     if (confirm('确定要重置所有设置为默认值吗？')) {
-      resetUserSettings();
-      notifySuccess('设置已重置为默认值');
-      setTimeout(() => window.location.reload(), 1000);
+      if (resetUserSettings()) {
+        notifySuccess('设置已重置为默认值');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        notifyError('重置失败，浏览器存储暂时不可用');
+      }
     }
   };
 

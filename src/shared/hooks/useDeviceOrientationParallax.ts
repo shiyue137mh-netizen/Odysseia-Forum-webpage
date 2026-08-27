@@ -15,6 +15,7 @@ export function useDeviceOrientationParallax(
     )
       return;
 
+    let cancelled = false;
     let baselineBeta: number | null = null;
     const handleOrientation = (event: DeviceOrientationEvent) => {
       if (event.beta === null || event.gamma === null) return;
@@ -32,14 +33,14 @@ export function useDeviceOrientationParallax(
       };
     let isListening = false;
     const startListening = () => {
-      if (isListening) return;
+      if (cancelled || isListening) return;
       isListening = true;
       window.addEventListener("deviceorientation", handleOrientation);
     };
 
     const requestPermission = async () => {
       try {
-        if ((await orientationEvent.requestPermission?.()) === "granted")
+        if (!cancelled && (await orientationEvent.requestPermission?.()) === "granted")
           startListening();
       } catch {
         // iOS 拒绝权限时保持静态背景即可。
@@ -53,6 +54,7 @@ export function useDeviceOrientationParallax(
     }
 
     return () => {
+      cancelled = true;
       window.removeEventListener("pointerdown", requestPermission);
       if (isListening)
         window.removeEventListener("deviceorientation", handleOrientation);

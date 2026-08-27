@@ -1,7 +1,7 @@
 import { apiClient } from '@/shared/api/client';
 import {
-  clearStoredAuthToken,
   getStoredAuthToken,
+  invalidateAuthSession,
   setUseAuthHeader,
 } from '@/shared/lib/authSession';
 
@@ -40,9 +40,14 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
-    await apiClient.get('/auth/logout');
-    clearStoredAuthToken();
-    setUseAuthHeader(false);
+    try {
+      await apiClient.get('/auth/logout', {
+        // 当前后端会 302 到前端 HTML；登出已成功，不能再交给全局 JSON 解析器。
+        transformResponse: (data) => data,
+      });
+    } finally {
+      invalidateAuthSession();
+    }
   },
 };
 

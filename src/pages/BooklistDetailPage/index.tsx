@@ -147,7 +147,12 @@ export function BooklistDetailPage() {
   if (detailQuery.isError || !detailQuery.data) {
     return (
       <PageStatusMessage tone="error">
-        书单加载出错了，可能不存在或已经被删除了
+        <div className="space-y-3">
+          <p>书单加载出错了，可能不存在或已经被删除了</p>
+          <button type="button" onClick={() => void detailQuery.refetch()} className="underline">
+            重试
+          </button>
+        </div>
       </PageStatusMessage>
     );
   }
@@ -463,7 +468,14 @@ export function BooklistDetailPage() {
             </p>
           )}
 
-          {items.length === 0 ? (
+          {itemsQuery.isError ? (
+            <div className="rounded-xl border border-(--od-error)/40 bg-(--od-card) p-10 text-center">
+              <p className="text-base font-semibold text-(--od-error)">帖子加载失败</p>
+              <button type="button" onClick={() => void itemsQuery.refetch()} className="mt-3 text-sm text-(--od-accent) underline">
+                重试帖子列表
+              </button>
+            </div>
+          ) : items.length === 0 ? (
             <div className="rounded-xl border border-(--od-border) bg-(--od-card) p-10 text-center">
               <p className="text-base font-semibold text-(--od-text-primary)">
                 书单里还没有帖子
@@ -532,7 +544,13 @@ export function BooklistDetailPage() {
           {/* 无限滚动探测器 */}
           {itemsQuery.hasNextPage && (
             <div ref={loadMoreRef} className="flex justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin text-(--od-text-tertiary)" />
+              {itemsQuery.isFetchNextPageError ? (
+                <button type="button" onClick={() => void itemsQuery.fetchNextPage()} className="text-sm text-(--od-accent) underline">
+                  加载更多失败，点击重试
+                </button>
+              ) : (
+                <RefreshCw className="h-6 w-6 animate-spin text-(--od-text-tertiary)" />
+              )}
             </div>
           )}
         </div>

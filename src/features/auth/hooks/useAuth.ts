@@ -27,8 +27,6 @@ export function useAuth() {
 // 用于登录后刷新认证状态的 hook
 export function useRefreshAuth() {
   const queryClient = useQueryClient();
-  
-  return () => {
-    queryClient.invalidateQueries({ queryKey: ['auth'] });
-  };
+
+  return () => queryClient.invalidateQueries({ queryKey: ['auth'] });
 }

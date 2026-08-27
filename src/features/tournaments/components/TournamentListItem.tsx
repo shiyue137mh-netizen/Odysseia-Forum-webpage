@@ -41,8 +41,17 @@ export function TournamentListItem({
 
   return (
     <article
-      className="group relative w-full cursor-pointer overflow-hidden rounded-2xl bg-(--od-surface-card) text-(--od-text-primary) transition-colors focus-within:ring-2 focus-within:ring-(--od-accent)"
+      role="link"
+      tabIndex={0}
+      aria-label={`打开赛事：${tournament.title}`}
+      className="group relative w-full cursor-pointer overflow-hidden rounded-2xl bg-(--od-surface-card) text-(--od-text-primary) transition-colors focus:outline-hidden focus:ring-2 focus:ring-(--od-accent)"
       onClick={() => onOpen(tournament)}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onOpen(tournament);
+      }}
     >
       <div className="relative h-56 overflow-hidden bg-(--od-surface-shell) sm:h-72 lg:h-[21.5rem]">
         {coverImageUrl ? (

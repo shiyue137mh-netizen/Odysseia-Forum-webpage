@@ -1,4 +1,5 @@
 const AUTH_TOKEN_STORAGE_KEY = 'auth_token';
+const authInvalidationListeners = new Set<() => void>();
 
 function getLocationHash(): string {
   if (typeof window === 'undefined') return '';
@@ -37,7 +38,12 @@ export function clearStoredAuthToken(): void {
 
 export function extractAuthTokenFromHash(hash = getLocationHash()): string | null {
   const match = hash.match(/[#&]token=([^&]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
 }
 
 export function consumeAuthTokenFromHash(): string | null {
@@ -77,4 +83,15 @@ export function setUseAuthHeader(use: boolean): void {
   } catch {
     // ignore storage failures
   }
+}
+
+export function invalidateAuthSession(): void {
+  clearStoredAuthToken();
+  setUseAuthHeader(false);
+  authInvalidationListeners.forEach((listener) => listener());
+}
+
+export function subscribeAuthInvalidation(listener: () => void): () => void {
+  authInvalidationListeners.add(listener);
+  return () => authInvalidationListeners.delete(listener);
 }

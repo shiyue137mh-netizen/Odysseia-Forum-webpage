@@ -25,6 +25,7 @@ import { useLayoutPreference } from "@/shared/hooks/useLayoutPreference";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 import { useAdjacentImagePreload } from "@/shared/hooks/useAdjacentImagePreload";
 import { useCarouselGestures } from "@/shared/hooks/useCarouselGestures";
+import { usePrefersReducedMotion } from "@/shared/hooks/usePrefersReducedMotion";
 
 const sortOptions = [
   { value: 1, label: "按参赛数" },
@@ -45,7 +46,9 @@ export function TournamentsPage() {
   const collectMutation = useToggleBooklistCollection();
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [manualBannerVersion, setManualBannerVersion] = useState(0);
+  const [isBannerFocusWithin, setIsBannerFocusWithin] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const { sort: sortMethod, page, query } = params;
   const [searchDraft, setSearchDraft] = useState(query);
@@ -89,13 +92,13 @@ export function TournamentsPage() {
   }, [activeBannerIndex, bannerSlides.length]);
 
   useEffect(() => {
-    if (bannerSlides.length <= 1) return;
+    if (bannerSlides.length <= 1 || isBannerFocusWithin || prefersReducedMotion) return;
     const timer = window.setInterval(() => {
       setActiveBannerIndex((index) => (index + 1) % bannerSlides.length);
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [bannerSlides.length, manualBannerVersion]);
+  }, [bannerSlides.length, isBannerFocusWithin, manualBannerVersion, prefersReducedMotion]);
 
   const openTournament = (tournament: Tournament) => {
     navigate(`/tournaments/${tournament.id}`);
@@ -133,6 +136,10 @@ export function TournamentsPage() {
           onPointerDown={bannerGestures.onPointerDown}
           onPointerUp={bannerGestures.onPointerUp}
           onPointerCancel={bannerGestures.onPointerCancel}
+          onFocusCapture={() => setIsBannerFocusWithin(true)}
+          onBlurCapture={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsBannerFocusWithin(false);
+          }}
         >
           <BannerFadeMedia>
             {activeBanner ? (

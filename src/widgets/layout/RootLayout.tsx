@@ -50,22 +50,47 @@ export function RootLayout() {
   const navigate = useNavigate();
   const hasShownResumePromptRef = useRef(false);
   const initialPathnameRef = useRef(location.pathname);
+  const restoreTimerRef = useRef<number | null>(null);
+  const restoreTargetUrlRef = useRef<string | null>(null);
   const currentUrl = `${location.pathname}${location.search}${location.hash}`;
 
-  const restoreScrollPosition = useCallback((scrollTop: number) => {
+  const cancelScrollRestore = useCallback(() => {
+    if (restoreTimerRef.current !== null) window.clearTimeout(restoreTimerRef.current);
+    restoreTimerRef.current = null;
+    restoreTargetUrlRef.current = null;
+  }, []);
+
+  const restoreScrollPosition = useCallback((scrollTop: number, targetUrl: string) => {
+    cancelScrollRestore();
+    restoreTargetUrlRef.current = targetUrl;
     let attempts = 0;
     const restore = () => {
+      const liveUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      if (liveUrl !== targetUrl) {
+        cancelScrollRestore();
+        return;
+      }
       const container = document.getElementById("main-scroll-container");
       if (!container) return;
 
       container.scrollTop = scrollTop;
       attempts += 1;
       if (container.scrollTop + 2 < scrollTop && attempts < 20) {
-        window.setTimeout(restore, 100);
+        restoreTimerRef.current = window.setTimeout(restore, 100);
+      } else {
+        restoreTimerRef.current = null;
+        restoreTargetUrlRef.current = null;
       }
     };
-    window.setTimeout(restore, 100);
-  }, []);
+    restoreTimerRef.current = window.setTimeout(restore, 100);
+  }, [cancelScrollRestore]);
+
+  useEffect(() => {
+    const targetUrl = restoreTargetUrlRef.current;
+    if (targetUrl && currentUrl !== targetUrl) cancelScrollRestore();
+  }, [cancelScrollRestore, currentUrl]);
+
+  useEffect(() => cancelScrollRestore, [cancelScrollRestore]);
 
   useEffect(() => {
     if (hasShownResumePromptRef.current) return;
@@ -86,7 +111,7 @@ export function RootLayout() {
       duration: 10000,
       onAction: () => {
         navigate(position.url);
-        restoreScrollPosition(position.scrollTop);
+        restoreScrollPosition(position.scrollTop, position.url);
       },
     });
   }, [navigate, restoreScrollPosition]);
@@ -143,16 +168,20 @@ export function RootLayout() {
       </ResizableSidebar>
 
       {/* TopBar 与 Sidebar 处于同一操作层 */}
-      <TopBar
-        onMenuClick={() => setIsMobileOpen(true)}
-        onSidebarToggle={() =>
-          updateSettings({ sidebarCollapsed: !sidebarCollapsed })
-        }
-        sidebarCollapsed={sidebarCollapsed}
-      />
+      <div inert={isMobileOpen} aria-hidden={isMobileOpen || undefined}>
+        <TopBar
+          onMenuClick={() => setIsMobileOpen(true)}
+          onSidebarToggle={() =>
+            updateSettings({ sidebarCollapsed: !sidebarCollapsed })
+          }
+          sidebarCollapsed={sidebarCollapsed}
+        />
+      </div>
 
       {/* ── 主内容列 ── */}
       <div
+        inert={isMobileOpen}
+        aria-hidden={isMobileOpen || undefined}
         className={`relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${
           sidebarCollapsed ? "lg:ml-0" : "lg:ml-[170px]"
         }`}
@@ -241,7 +270,9 @@ export function RootLayout() {
       </div>
 
       {/* ── 移动端底部 Tab 栏 ── */}
-      <MobileTabBar />
+      <div inert={isMobileOpen} aria-hidden={isMobileOpen || undefined}>
+        <MobileTabBar />
+      </div>
 
       {/* ── 全局辅助层 ── */}
       <GlobalThreadPreview />

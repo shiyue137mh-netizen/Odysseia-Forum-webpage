@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown } from 'lucide-react';
@@ -37,7 +37,13 @@ export function Select({
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLUListElement>(null);
+  const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
   const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
+  const generatedId = useId().replace(/:/g, '');
+  const triggerId = id ?? `select-${generatedId}`;
+  const listboxId = `${triggerId}-listbox`;
+  const selectedIndex = options.findIndex((option) => option.value === value);
+  const [activeIndex, setActiveIndex] = useState(Math.max(selectedIndex, 0));
 
   const selectedLabel = options.find((o) => o.value === value)?.label ?? value;
 
@@ -45,8 +51,32 @@ export function Select({
     (optionValue: string) => {
       onChange(optionValue);
       setIsOpen(false);
+      triggerRef.current?.focus();
     },
     [onChange],
+  );
+
+  const moveToOption = useCallback(
+    (index: number) => {
+      if (options.length === 0) return;
+      const nextIndex = Math.max(0, Math.min(index, options.length - 1));
+      setActiveIndex(nextIndex);
+      optionRefs.current[nextIndex]?.focus();
+    },
+    [options.length],
+  );
+
+  const closeSelect = useCallback((restoreFocus = false) => {
+    setIsOpen(false);
+    if (restoreFocus) triggerRef.current?.focus();
+  }, []);
+
+  const openSelect = useCallback(
+    (index = selectedIndex >= 0 ? selectedIndex : 0) => {
+      setActiveIndex(Math.max(0, Math.min(index, Math.max(options.length - 1, 0))));
+      setIsOpen(true);
+    },
+    [options.length, selectedIndex],
   );
 
   // 计算下拉面板的位置，使其贴在触发按钮下方
@@ -76,6 +106,13 @@ export function Select({
     };
   }, [isOpen, updatePanelPosition]);
 
+  // 打开后把焦点移入列表，键盘用户可以直接浏览选项。
+  useEffect(() => {
+    if (!isOpen || options.length === 0) return;
+    const nextIndex = Math.max(0, Math.min(activeIndex, options.length - 1));
+    optionRefs.current[nextIndex]?.focus();
+  }, [activeIndex, isOpen, options.length]);
+
   // 点击外部关闭
   useEffect(() => {
     if (!isOpen) return;
@@ -88,24 +125,24 @@ export function Select({
       ) {
         return;
       }
-      setIsOpen(false);
+      closeSelect();
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, [closeSelect, isOpen]);
 
   // ESC 关闭
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsOpen(false);
+      if (e.key === 'Escape') closeSelect(true);
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [closeSelect, isOpen]);
 
   const isInline = variant === 'inline';
 
@@ -118,6 +155,9 @@ export function Select({
       {isOpen && (
         <motion.ul
           ref={panelRef}
+          id={listboxId}
+          role="listbox"
+          aria-labelledby={triggerId}
           initial={{ opacity: 0, y: -4, scaleY: 0.96 }}
           animate={{ opacity: 1, y: 0, scaleY: 1 }}
           exit={{ opacity: 0, y: -4, scaleY: 0.96 }}
@@ -125,16 +165,53 @@ export function Select({
           style={{ ...panelStyle, transformOrigin: 'top' }}
           className="od-floating-panel-solid fixed z-[9999] overflow-hidden rounded-xl py-1"
         >
-          {options.map((option) => {
+          {options.map((option, index) => {
             const isSelected = option.value === value;
+            const isActive = index === activeIndex;
             return (
               <li
                 key={option.value}
+                ref={(element) => { optionRefs.current[index] = element; }}
+                id={`${listboxId}-option-${index}`}
                 role="option"
                 aria-selected={isSelected}
+                tabIndex={isActive ? 0 : -1}
+                onMouseEnter={() => setActiveIndex(index)}
+                onKeyDown={(event) => {
+                  switch (event.key) {
+                    case 'ArrowDown':
+                      event.preventDefault();
+                      moveToOption((index + 1) % options.length);
+                      break;
+                    case 'ArrowUp':
+                      event.preventDefault();
+                      moveToOption((index - 1 + options.length) % options.length);
+                      break;
+                    case 'Home':
+                      event.preventDefault();
+                      moveToOption(0);
+                      break;
+                    case 'End':
+                      event.preventDefault();
+                      moveToOption(options.length - 1);
+                      break;
+                    case 'Enter':
+                    case ' ':
+                      event.preventDefault();
+                      handleSelect(option.value);
+                      break;
+                    case 'Escape':
+                      event.preventDefault();
+                      closeSelect(true);
+                      break;
+                    case 'Tab':
+                      closeSelect();
+                      break;
+                  }
+                }}
                 onClick={() => handleSelect(option.value)}
                 className={`cursor-pointer whitespace-nowrap px-4 py-2.5 text-sm transition-colors duration-100 ${
-                  isSelected
+                  isActive
                     ? 'bg-(--od-accent)/12 font-medium text-(--od-accent)'
                     : 'text-(--od-text-primary) hover:bg-(--od-interactive-hover)'
                 }`}
@@ -153,11 +230,32 @@ export function Select({
       <div className={`relative ${className}`}>
         <button
           ref={triggerRef}
-          id={id}
+          id={triggerId}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
           type="button"
           aria-label={ariaLabel}
           disabled={disabled}
-          onClick={() => !disabled && setIsOpen((prev) => !prev)}
+          onClick={() => !disabled && (isOpen ? closeSelect() : openSelect())}
+          onKeyDown={(event) => {
+            if (disabled) return;
+            if (event.key === 'Escape' && isOpen) {
+              event.preventDefault();
+              closeSelect(true);
+              return;
+            }
+            if (isOpen) return;
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End' || event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              const index = event.key === 'ArrowDown' ? selectedIndex + 1
+                : event.key === 'ArrowUp' ? selectedIndex - 1
+                  : event.key === 'Home' ? 0
+                    : event.key === 'End' ? options.length - 1
+                      : selectedIndex;
+              openSelect(index >= 0 ? index : 0);
+            }
+          }}
           className={`${triggerClass} ${disabled ? 'cursor-not-allowed opacity-45' : ''}`}
         >
           <span className="truncate">{selectedLabel}</span>

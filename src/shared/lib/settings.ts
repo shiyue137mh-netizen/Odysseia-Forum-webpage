@@ -118,17 +118,19 @@ export function getUserSettings(): UserSettings {
 }
 
 // 保存用户设置
-export function saveUserSettings(settings: UserSettings): void {
+export function saveUserSettings(settings: UserSettings): boolean {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return true;
   } catch (error) {
     console.error('Failed to save user settings:', error);
+    return false;
   }
 }
 
 // 重置设置
-export function resetUserSettings(): void {
-  saveUserSettings(defaultSettings);
+export function resetUserSettings(): boolean {
+  return saveUserSettings(defaultSettings);
 }
 
 // 字体大小映射（拉大差异，让设置切换有明显体感）

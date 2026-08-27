@@ -152,6 +152,7 @@ export function AboutPage() {
 
   // 苏醒序列动画：仅在进入背景模式时触发
   useEffect(() => {
+    let cancelled = false;
     if (!isUiHidden) {
       setIsWakingUp(false);
       setIsSharpening(false);
@@ -164,18 +165,25 @@ export function AboutPage() {
       setIsWakingUp(true); // 闭眼
 
       await new Promise((r) => setTimeout(r, 600));
+      if (cancelled) return;
       setIsWakingUp(false); // 第一次睁眼
       await new Promise((r) => setTimeout(r, 300));
+      if (cancelled) return;
       setIsWakingUp(true); // 再次闭眼
       await new Promise((r) => setTimeout(r, 500));
+      if (cancelled) return;
       setIsWakingUp(false); // 最终睁眼
 
       // 睁眼后逐渐变清晰
       await new Promise((r) => setTimeout(r, 400));
+      if (cancelled) return;
       setIsSharpening(false);
     };
 
-    sequence();
+    void sequence();
+    return () => {
+      cancelled = true;
+    };
   }, [isUiHidden]);
   const [contributors, setContributors] = useState<GithubContributor[]>([]);
   const [contributorsError, setContributorsError] = useState(false);

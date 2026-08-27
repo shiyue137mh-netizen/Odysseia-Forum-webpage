@@ -248,7 +248,13 @@ export function TournamentManagePage() {
 
           {itemsQuery.hasNextPage && (
             <div ref={loadMoreRef} className="flex justify-center py-8">
-              <RefreshCw className="h-6 w-6 animate-spin text-(--od-text-tertiary)" />
+              {itemsQuery.isFetchNextPageError ? (
+                <button type="button" onClick={() => void itemsQuery.fetchNextPage()} className="text-sm text-(--od-accent) underline">
+                  加载更多失败，点击重试
+                </button>
+              ) : (
+                <RefreshCw className="h-6 w-6 animate-spin text-(--od-text-tertiary)" />
+              )}
             </div>
           )}
 

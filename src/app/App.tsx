@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { QueryClient, QueryClientProvider, QueryCache } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -13,7 +13,11 @@ import {
   reportBrokenThreadThumbnail,
   subscribeThreadThumbnailRepair,
 } from '@/features/threads/lib/thumbnailRepairQueue';
-import { consumeAuthTokenFromHash } from '@/shared/lib/authSession';
+import {
+  consumeAuthTokenFromHash,
+  hasAuthTokenInHash,
+  subscribeAuthInvalidation,
+} from '@/shared/lib/authSession';
 import {
   getRateLimitInfo,
   isSilentPreloadRateLimit,
@@ -23,6 +27,7 @@ import { notifyRateLimit } from '@/features/mascot/lib/notify';
 import { configureImageRecovery } from '@/shared/lib/imageRecovery';
 import { router } from './router';
 import { useMascotStore } from '@/features/mascot/store/mascotStore';
+import { OmicronLoader } from '@/shared/ui/loaders/OmicronLoader';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -72,11 +77,20 @@ if (import.meta.env.DEV) {
 }
 
 export function App() {
+  const [isAuthBootstrapPending, setIsAuthBootstrapPending] = useState(() => hasAuthTokenInHash());
+
   useEffect(() => {
     bindThumbnailRepairQueryClient(queryClient);
     configureImageRecovery({
       report: reportBrokenThreadThumbnail,
       subscribe: subscribeThreadThumbnailRepair,
+    });
+  }, []);
+
+  useEffect(() => {
+    return subscribeAuthInvalidation(() => {
+      void queryClient.cancelQueries({ queryKey: ['auth'] });
+      queryClient.setQueryData(['auth'], { loggedIn: false });
     });
   }, []);
 
@@ -87,18 +101,32 @@ export function App() {
       mascotStore.markWelcomed();
     }
 
-    const token = consumeAuthTokenFromHash();
-    if (token) {
-      // Invalidate auth queries to load user data
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
-    }
   }, []);
+
+  useEffect(() => {
+    if (!isAuthBootstrapPending) return;
+
+    const token = consumeAuthTokenFromHash();
+    const refresh = token
+      ? queryClient.invalidateQueries({ queryKey: ['auth'] })
+      : Promise.resolve();
+    void refresh.finally(() => setIsAuthBootstrapPending(false));
+  }, [isAuthBootstrapPending]);
 
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <RouterProvider router={router} />
+          {isAuthBootstrapPending ? (
+            <div className="flex min-h-screen items-center justify-center bg-(--od-bg)">
+              <div className="text-center">
+                <OmicronLoader className="mx-auto mb-4 h-12 w-12" />
+                <p className="text-sm text-(--od-text-secondary)">验证登录状态...</p>
+              </div>
+            </div>
+          ) : (
+            <RouterProvider router={router} />
+          )}
           {createPortal(
             <Toaster
               position="top-center"
