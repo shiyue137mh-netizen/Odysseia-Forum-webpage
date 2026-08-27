@@ -194,6 +194,7 @@ export function TopBar({
   const {
     activeVirtualTag,
     availableTags,
+    preferredTags,
     channelTagGroups,
     suggestionAuthors,
     suggestionTags,
@@ -613,6 +614,7 @@ export function TopBar({
                     <SearchSuggestions
                       currentQuery={searchInput}
                       availableTags={availableTags}
+                      preferredTags={preferredTags}
                       channels={[]}
                       authors={suggestionAuthors}
                       threads={suggestionThreads}

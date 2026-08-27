@@ -243,7 +243,7 @@ export function ThreadPreviewOverlay({
       >
         {/* Header */}
         <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-3 sm:px-6">
-          <div className="grid grid-cols-[7.5rem_minmax(0,1fr)_7.5rem] items-center gap-2">
+          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:grid-cols-[7.5rem_minmax(0,1fr)_7.5rem]">
             <button
               ref={closeButtonRef}
               type="button"
@@ -254,7 +254,7 @@ export function ThreadPreviewOverlay({
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex min-w-0 max-w-full items-center justify-self-center gap-2">
+            <div className="col-span-3 row-start-2 flex min-w-0 max-w-full items-center justify-self-start gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-center">
               <AuthorIdentityLink
                 author={thread.author}
                 currentThreadId={thread.thread_id}
@@ -293,7 +293,7 @@ export function ThreadPreviewOverlay({
               </div>
             </div>
 
-            <div className="flex w-30 items-center justify-end gap-0 justify-self-end">
+            <div className="col-start-3 row-start-1 flex w-30 items-center justify-end gap-0 justify-self-end">
               <button
                 type="button"
                 onClick={() => void handleShare()}

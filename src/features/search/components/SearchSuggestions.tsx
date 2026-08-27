@@ -28,6 +28,7 @@ import {
   buildYesterdayPopularQuery,
   YESTERDAY_POPULAR_LABEL,
 } from "@/features/search/lib/searchPresets";
+import { chooseSuggestedTags } from "@/features/search/lib/searchDiscoveryTags";
 
 export type SearchSuggestionAction =
   | { type: "append"; value: string }
@@ -54,6 +55,7 @@ interface SearchSuggestionsProps {
   booklists?: ApiSearchSuggestionBooklist[];
   history?: SearchHistoryItem[];
   suggestedTags?: string[];
+  preferredTags?: string[];
   onSelect: (action: SearchSuggestionAction) => void;
   onClose: () => void;
   onRemoveHistory?: (item: SearchHistoryItem) => void;
@@ -72,6 +74,7 @@ export function SearchSuggestions({
   booklists = [],
   history = [],
   suggestedTags = [],
+  preferredTags = [],
   onSelect,
   onClose,
   onRemoveHistory,
@@ -84,10 +87,8 @@ export function SearchSuggestions({
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const randomTags = useMemo(() => {
-    if (availableTags.length === 0) return [];
-    const shuffled = [...availableTags].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, 5);
-  }, [availableTags]);
+    return chooseSuggestedTags(availableTags, preferredTags);
+  }, [availableTags, preferredTags]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -68,13 +68,24 @@ export function useSearchAutocomplete({
   const channelTagCatalog =
     channelsData?.tagCatalog || EMPTY_CHANNEL_TAG_CATALOG;
 
+  const preferredTags = useMemo(() => {
+    if (!params.channel) return [];
+    const currentChannel = channelTagCatalog.find(
+      (channel) => channel.channel_id === params.channel,
+    );
+    return currentChannel
+      ? mergeUnique([
+          ...currentChannel.virtual_tags,
+          ...currentChannel.available_tags,
+        ])
+      : [];
+  }, [channelTagCatalog, params.channel]);
+
   const globalAvailableTags = useMemo(() => {
     const tagSet = new Set<string>();
-    const scopedCatalog = params.channel
-      ? channelTagCatalog.filter((channel) => channel.channel_id === params.channel)
-      : channelTagCatalog;
 
-    for (const channel of scopedCatalog) {
+    for (const tag of preferredTags) tagSet.add(tag);
+    for (const channel of channelTagCatalog) {
       for (const tag of channel.available_tags || []) {
         if (tag?.trim()) tagSet.add(tag.trim());
       }
@@ -83,7 +94,7 @@ export function useSearchAutocomplete({
       }
     }
     return Array.from(tagSet);
-  }, [channelTagCatalog, params.channel]);
+  }, [channelTagCatalog, preferredTags]);
 
   const virtualTagOriginChannelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -191,6 +202,7 @@ export function useSearchAutocomplete({
   return {
     activeVirtualTag,
     availableTags,
+    preferredTags,
     channelTagGroups,
     discoveryPreferenceContext,
     suggestionAuthors,

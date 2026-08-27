@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   chooseDiscoveryTags,
+  chooseSuggestedTags,
   getStoredDiscoveryTags,
   saveDiscoveryTags,
 } from "@/features/search/lib/searchDiscoveryTags";
@@ -22,5 +23,18 @@ describe("searchDiscoveryTags", () => {
     expect(
       chooseDiscoveryTags(["A", "B", "C", "D"], ["A", "B"], () => 0),
     ).toEqual(["D", "C"]);
+  });
+
+  it("搜索建议优先当前频道，同时保留其他频道标签", () => {
+    const result = chooseSuggestedTags(
+      ["当前A", "当前B", "当前C", "当前D", "当前E", "其他"],
+      ["当前A", "当前B", "当前C", "当前D", "当前E"],
+      5,
+      () => 0,
+    );
+
+    expect(result).toHaveLength(5);
+    expect(result.filter((tag) => tag.startsWith("当前"))).toHaveLength(4);
+    expect(result).toContain("其他");
   });
 });

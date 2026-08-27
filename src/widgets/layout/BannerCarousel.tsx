@@ -139,7 +139,7 @@ export function BannerCarousel({
 
   const renderApplicationOverlay = () => (
     <div
-      className="absolute inset-x-6 bottom-5 z-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+      className="absolute inset-x-4 bottom-5 z-20 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] sm:inset-x-6 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
       onClick={(e) => e.stopPropagation()}
     >
       <p className="min-w-0 truncate justify-self-start text-xs text-white/80">
@@ -148,7 +148,7 @@ export function BannerCarousel({
           想推荐自己的帖子到展示位？提交 Banner 申请后等待审核即可。
         </span>
       </p>
-      <div className="flex justify-self-center gap-2">
+      <div className="col-span-2 row-start-2 flex max-w-full justify-self-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:col-span-1 sm:col-start-2 sm:row-start-1">
         {displayBanners.length > 1 &&
           displayBanners.map((_, index) => (
             <button
@@ -159,7 +159,7 @@ export function BannerCarousel({
                 setManualInteractionVersion((value) => value + 1);
                 setCurrentIndex(index);
               }}
-              className={`h-2 rounded-full transition-all ${
+              className={`h-2 shrink-0 rounded-full transition-all ${
                 index === currentIndex
                   ? "w-8 bg-white"
                   : "w-2 bg-white/50 hover:bg-white/75"
@@ -171,7 +171,7 @@ export function BannerCarousel({
       <button
         type="button"
         onClick={openApplyModal}
-        className="inline-flex shrink-0 justify-self-end items-center gap-2 text-xs font-semibold text-white transition-colors hover:text-(--od-accent) hover:underline"
+        className="col-start-2 row-start-1 inline-flex shrink-0 items-center justify-self-end gap-2 text-xs font-semibold text-white transition-colors hover:text-(--od-accent) hover:underline sm:col-start-3"
       >
         <ImageIcon className="h-4 w-4" />
         申请 Banner

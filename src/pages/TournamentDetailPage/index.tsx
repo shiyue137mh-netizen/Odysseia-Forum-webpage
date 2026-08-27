@@ -258,7 +258,7 @@ export function TournamentDetailPage() {
             )}
 
             {bannerSlides.length > 1 && (
-              <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
+              <div className="absolute bottom-5 left-1/2 z-20 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {bannerSlides.map((slide, index) => (
                   <button
                     key={`${slide.threadId}-${slide.url}-dot`}
@@ -267,7 +267,7 @@ export function TournamentDetailPage() {
                       setManualBannerVersion((value) => value + 1);
                       setActiveBannerIndex(index);
                     }}
-                    className={`h-1.5 rounded-full transition-all ${
+                    className={`h-1.5 shrink-0 rounded-full transition-all ${
                       index === activeBannerIndex
                         ? "w-6 bg-white"
                         : "w-1.5 bg-white/50 hover:bg-white/80"

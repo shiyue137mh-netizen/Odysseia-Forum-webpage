@@ -54,3 +54,40 @@ export function chooseDiscoveryTags(
   }
   return source.slice(0, 2);
 }
+
+function shuffled(values: string[], random: () => number) {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const nextIndex = Math.floor(random() * (index + 1));
+    [result[index], result[nextIndex]] = [result[nextIndex], result[index]];
+  }
+  return result;
+}
+
+export function chooseSuggestedTags(
+  availableTags: string[],
+  preferredTags: string[] = [],
+  limit = 5,
+  random = Math.random,
+) {
+  const available = Array.from(new Set(availableTags.filter(Boolean)));
+  if (preferredTags.length === 0) {
+    return shuffled(available, random).slice(0, limit);
+  }
+
+  const preferredSet = new Set(preferredTags);
+  const preferred = shuffled(
+    preferredTags.filter((tag) => available.includes(tag)),
+    random,
+  );
+  const others = shuffled(
+    available.filter((tag) => !preferredSet.has(tag)),
+    random,
+  );
+  const preferredLimit = others.length > 0 ? Math.max(0, limit - 1) : limit;
+  const selectedPreferred = preferred.slice(0, preferredLimit);
+  return [
+    ...selectedPreferred,
+    ...others.slice(0, limit - selectedPreferred.length),
+  ];
+}

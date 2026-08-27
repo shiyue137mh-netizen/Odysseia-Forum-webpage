@@ -191,31 +191,34 @@ export function MeFollowsSection({
             const isPending = unfollowPendingThreadId === thread.thread_id;
 
             return (
-              <div key={thread.thread_id} className="relative md:pr-36">
+              <div key={thread.thread_id}>
                 <ThreadListItem
                   thread={thread}
                   index={index}
                   onPreview={onPreview}
                   animateIn={animateIn}
+                  trailingAction={
+                    isCurrentFollow ? (
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onUnfollow(thread);
+                        }}
+                        className="od-inline-action od-inline-action-ghost text-(--od-text-tertiary) hover:text-(--od-error) disabled:pointer-events-none disabled:opacity-55"
+                      >
+                        <BellOff className="h-3.5 w-3.5" />
+                        {isPending ? "取消中" : "取消关注"}
+                      </button>
+                    ) : (
+                      <span className="od-inline-action bg-(--od-surface-soft) text-(--od-text-tertiary)">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        已取消
+                      </span>
+                    )
+                  }
                 />
-                <div className="mt-2 flex justify-end md:absolute md:right-0 md:top-3 md:mt-0">
-                  {isCurrentFollow ? (
-                    <button
-                      type="button"
-                      disabled={isPending}
-                      onClick={() => onUnfollow(thread)}
-                      className="od-inline-action od-inline-action-ghost text-(--od-text-tertiary) hover:text-(--od-error) disabled:pointer-events-none disabled:opacity-55"
-                    >
-                      <BellOff className="h-3.5 w-3.5" />
-                      {isPending ? "取消中" : "取消关注"}
-                    </button>
-                  ) : (
-                    <span className="od-inline-action bg-(--od-surface-soft) text-(--od-text-tertiary)">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      已取消
-                    </span>
-                  )}
-                </div>
               </div>
             );
           })}

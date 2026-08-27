@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ButtonHTMLAttributes,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type TouchEvent as ReactTouchEvent,
@@ -145,6 +146,13 @@ export function ContextMenuTrigger({
     touchStartPosRef.current = null;
   }, [clearLongPress]);
 
+  const handleClickCapture = useCallback((e: ReactMouseEvent) => {
+    if (!isLongPressTriggeredRef.current) return;
+    isLongPressTriggeredRef.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
   return (
     <div
       onContextMenu={handleContextMenu}
@@ -152,10 +160,37 @@ export function ContextMenuTrigger({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
+      onClickCapture={handleClickCapture}
       className={className}
     >
       {children}
     </div>
+  );
+}
+
+type ContextMenuButtonProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  "onClick"
+>;
+
+export function ContextMenuButton({
+  children,
+  ...props
+}: ContextMenuButtonProps) {
+  const { openMenu } = useContextMenu();
+
+  return (
+    <button
+      type="button"
+      {...props}
+      onClick={(event) => {
+        event.stopPropagation();
+        const rect = event.currentTarget.getBoundingClientRect();
+        openMenu({ x: rect.right, y: rect.bottom + 4 });
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -240,7 +275,7 @@ export function ContextMenuContent({
           top: `${adjustedPos.y}px`,
         }}
         className={clsx(
-          "z-50 min-w-[180px] overflow-hidden rounded-xl border border-(--od-border-subtle) bg-(--od-surface-content) p-1.5 text-(--od-text-primary) shadow-2xl shadow-black/35",
+          "od-floating-glass z-50 min-w-[180px] overflow-hidden rounded-xl border border-(--od-border-subtle) p-1.5 text-(--od-text-primary) shadow-2xl shadow-black/35",
           className,
         )}
         role="menu"

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, act } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   ContextMenu,
+  ContextMenuButton,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -38,13 +39,31 @@ describe("ContextMenu 通用上下文菜单组件", () => {
     expect(screen.queryByText("编辑书单")).not.toBeInTheDocument();
   });
 
+  it("点击显式操作按钮时应该展示同一个菜单", () => {
+    render(
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div>卡片</div>
+          <ContextMenuButton aria-label="更多操作">...</ContextMenuButton>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem>编辑备注</ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "更多操作" }));
+    expect(screen.getByText("编辑备注")).toBeInTheDocument();
+  });
+
   it("在移动端长按 500ms 时应该触发菜单呼起", () => {
     vi.useFakeTimers();
+    const handleClick = vi.fn();
 
     render(
       <ContextMenu>
         <ContextMenuTrigger>
-          <div data-testid="touch-card">长按目标</div>
+          <div data-testid="touch-card" onClick={handleClick}>长按目标</div>
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem>操作项</ContextMenuItem>
@@ -69,6 +88,8 @@ describe("ContextMenu 通用上下文菜单组件", () => {
       vi.advanceTimersByTime(250);
     });
     expect(screen.getByText("操作项")).toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(handleClick).not.toHaveBeenCalled();
 
     vi.useRealTimers();
   });

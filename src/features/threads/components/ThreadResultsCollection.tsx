@@ -27,7 +27,7 @@ function getMasonryColumnCount(width: number) {
   if (width < 640) return 1;
   if (width < 900) return 2;
   if (width < 1200) return 3;
-  return 5;
+  return 4;
 }
 
 function MasonryItem({

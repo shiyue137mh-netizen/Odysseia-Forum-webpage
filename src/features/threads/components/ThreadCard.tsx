@@ -3,10 +3,13 @@ import {
   Calendar,
   Clock3,
   Copy,
+  Edit3,
   ExternalLink,
   Image as ImageIcon,
+  MoreHorizontal,
   Search,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +25,7 @@ import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
+import type { ThreadItemManagementActions } from "@/features/threads/components/threadItemActions";
 import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
 import { useImageModeSetting } from "@/shared/hooks/useSettings";
 import { DiscordMarkdownText } from "@/shared/ui/DiscordMarkdownText";
@@ -30,6 +34,7 @@ import { LazyImage } from "@/shared/ui/LazyImage";
 import { BannerFadeMedia } from "@/shared/ui/BannerFadeMedia";
 import {
   ContextMenu,
+  ContextMenuButton,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -47,6 +52,7 @@ interface ThreadCardProps {
   masonry?: boolean;
   animateIn?: boolean;
   resultPage?: number;
+  managementActions?: ThreadItemManagementActions;
 }
 
 const thumbnailAspectRatioCache = new Map<string, number>();
@@ -62,6 +68,7 @@ function ThreadCardImpl({
   masonry = false,
   animateIn = true,
   resultPage,
+  managementActions,
 }: ThreadCardProps) {
   const navigate = useNavigate();
   const handleCopyLink = async () => {
@@ -255,6 +262,15 @@ function ThreadCardImpl({
             </BannerFadeMedia>
 
             <div className="absolute right-3 top-3 z-20 flex items-center gap-2 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100">
+              {managementActions && (
+                <ContextMenuButton
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
+                  aria-label="管理书单内帖子"
+                  title="更多操作"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </ContextMenuButton>
+              )}
               <button
                 type="button"
                 onClick={(e) => {
@@ -345,6 +361,25 @@ function ThreadCardImpl({
           >
             在新标签页打开
           </ContextMenuItem>
+          {managementActions && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                icon={<Edit3 className="h-4 w-4" />}
+                onClick={managementActions.onEdit}
+              >
+                编辑书单备注
+              </ContextMenuItem>
+              <ContextMenuItem
+                variant="danger"
+                disabled={managementActions.removePending}
+                icon={<Trash2 className="h-4 w-4" />}
+                onClick={managementActions.onRemove}
+              >
+                {managementActions.removePending ? "移除中…" : "从书单移除"}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
       </ContextMenu>
 

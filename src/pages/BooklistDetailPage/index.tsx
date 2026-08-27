@@ -402,7 +402,7 @@ export function BooklistDetailPage() {
 
                 <div className="order-2 flex w-full min-w-0 items-center gap-1 lg:w-auto lg:justify-end">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       <LayoutModeToggle
                         value={layoutMode}
                         onChange={setLayoutMode}
@@ -457,6 +457,12 @@ export function BooklistDetailPage() {
             </div>
           </div>
 
+          {isOwner && items.length > 0 && (
+            <p className="text-xs text-(--od-text-tertiary)">
+              右键、长按或点击卡片上的“…”可以编辑备注或移除帖子。
+            </p>
+          )}
+
           {items.length === 0 ? (
             <div className="rounded-xl border border-(--od-border) bg-(--od-card) p-10 text-center">
               <p className="text-base font-semibold text-(--od-text-primary)">
@@ -489,6 +495,16 @@ export function BooklistDetailPage() {
                       onPreview={openPreview}
                       booklistComment={item.comment || ""}
                       animateIn={animateIn}
+                      managementActions={
+                        isOwner
+                          ? {
+                              onEdit: () => setEditingItem(item),
+                              onRemove: () =>
+                                removeItemMutation.mutate(String(item.thread_id)),
+                              removePending: removeItemMutation.isPending,
+                            }
+                          : undefined
+                      }
                     />
                   ) : (
                     <ThreadCard
@@ -496,29 +512,17 @@ export function BooklistDetailPage() {
                       onPreview={openPreview}
                       booklistComment={item.comment || ""}
                       animateIn={animateIn}
+                      managementActions={
+                        isOwner
+                          ? {
+                              onEdit: () => setEditingItem(item),
+                              onRemove: () =>
+                                removeItemMutation.mutate(String(item.thread_id)),
+                              removePending: removeItemMutation.isPending,
+                            }
+                          : undefined
+                      }
                     />
-                  )}
-                  {isOwner && (
-                    <div className="mt-2 flex flex-wrap items-center justify-end gap-1 text-xs">
-                      <button
-                        type="button"
-                        onClick={() => setEditingItem(item)}
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-(--od-text-secondary) transition-colors hover:text-(--od-accent)"
-                      >
-                        <Edit3 className="h-3.5 w-3.5" />
-                        编辑
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          removeItemMutation.mutate(String(item.thread_id));
-                        }}
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-(--od-error) transition-colors hover:text-(--od-error)"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        移除
-                      </button>
-                    </div>
                   )}
                 </div>
               ))}
