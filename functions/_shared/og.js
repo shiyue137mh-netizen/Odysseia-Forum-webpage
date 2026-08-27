@@ -1,4 +1,5 @@
 export const DEFAULT_API_BASE_URL = 'https://forum.shimmerday.top/v1';
+export const DEFAULT_OG_IMAGE_BASE_URL = 'https://odysseia-forum-og.vercel.app';
 const SITE_NAME = '类脑索引';
 const OG_IMAGE_REVISION = '20260827-1.5x-textfix';
 const CLICKJACKING_HEADERS = {
@@ -215,7 +216,7 @@ export function createShareMetadataHandler({
       requestUrl.hash = '';
       const fallbackImage = new URL('/og-image-202608.png', requestUrl).href;
       const metadata = buildMetadata(data, requestUrl.href, fallbackImage);
-      const imageBaseUrl = cleanText(env.OG_IMAGE_BASE_URL);
+      const imageBaseUrl = cleanText(env.OG_IMAGE_BASE_URL || DEFAULT_OG_IMAGE_BASE_URL);
       if (imageType && imageBaseUrl) {
         const imageUrl = new URL(`/api/og/${imageType}/${resourceId}`, imageBaseUrl);
         imageUrl.searchParams.set('v', `${cleanText(data?.updated_at) || 'unknown'}-${OG_IMAGE_REVISION}`);

@@ -182,7 +182,6 @@ try {
     }),
     env: {
       API_BASE_URL: 'https://api.example.com/v1/',
-      OG_IMAGE_BASE_URL: 'https://odysseia-forum-og.vercel.app',
       OG_SERVICE_TOKEN: 'test-service-token',
       ASSETS: { fetch: async () => new Response(shell, { headers: { 'Content-Type': 'text/html' } }) },
     },
