@@ -1,106 +1,59 @@
-# ⚙️ 核心系统设计 (Core Systems)
+# 核心系统设计
 
-此文档总结了除数据流机制外，支撑起整个前端运转的几大核心系统的设计模式。
+本文只记录当前前端代码中已经存在的边界和入口。
 
-## 1. 路由系统 (Routing)
+## 路由与认证
 
-项目采用基于 `react-router-dom` v6 搭建的路由体系。在 `src/app/` 或 `src/pages/` 的顶层定义有整个路由大树。
+路由集中定义在 `src/app/router.tsx`，使用 `react-router-dom` v6 的
+`createBrowserRouter`。页面通过 `lazy` 动态导入，并由局部 `Suspense` 使用
+`OmicronLoader` 作为 fallback。已登录应用的主树为：
 
-### 1.1 嵌套路由与 Layout
+`ProtectedRoute` → `RequiredSetupGate` → `RootLayout` → 页面路由。
 
-我们使用了嵌套路由的概念：
+`ProtectedRoute` 通过 `useAuth` 查询 `/auth/checkauth`；未认证时把当前安全的站内路径写入
+`sessionStorage`，再跳转到登录页。真正的 OAuth 跳转由 `LoginPage` 发起，开发环境使用
+`/auth/login-dev`，其他环境使用 `/auth/login`。不要把路由守卫描述成自动完成 OAuth。
 
-```tsx
-<Route path="/" element={<RootLayout />}>
-  <Route index element={<HomePage />} />
-  <Route path="/search" element={<SearchPage />} />
-</Route>
-```
+`src/app/App.tsx` 在 `QueryClientProvider` 和 `ThemeProvider` 外层挂载全局
+`ErrorBoundary`。它提供重试/返回首页的兜底 UI；局部边界是否需要额外添加，取决于组件的失败隔离需求。
 
-所有的普通页面被嵌入到了 `RootLayout`（主布局）中。
+## 主题、设置与表面
 
-- `RootLayout` 负责渲染全局的 Sidebar，搜索顶栏、背景图容器等。
-- `<Outlet />` 是各个具体 `Page` 组件挂载的渲染热区。
-  利用这个模式避免了页面跳转带来的整个外框的反复卸载与重绘。
+用户设置由 `src/shared/store/settingsStore.ts` 管理，并持久化到
+`localStorage` 的 `odysseia_user_settings`。`useTheme` 根据设置中的主题值计算实际主题；设置为
+`auto` 时读取 `prefers-color-scheme`（深色使用 `claudeDark`，浅色使用 `discordLight`）。
 
-### 1.2 路由懒加载 (Code Splitting)
+`ThemeProvider` 调用 `src/app/themes/applyThemeTokens.ts` 将主题颜色、字体、透明表面和玻璃模糊
+写入 HTML 根节点的 `--od-*` 变量与 `data-od-*` 属性。背景图实际由 `WallpaperBackdrop` 渲染。
+主题切换和部分氛围设置复用 `src/shared/lib/viewTransition.ts` 的 `withViewTransition`。
 
-为了加快首屏（FCP/LCP）加载速度，大型页面通过 `React.lazy()` 进行异步代码分割：
+## 搜索：URL 是查询状态源
 
-```tsx
-const ProfilePage = lazy(() => import("@/pages/UserProfilePage"));
-```
+`src/features/search/hooks/useSearchParams.ts` 的 `useSearchURLParams` 解析和序列化搜索 URL。
+主要参数包括 `q`、`channel`、`type`（`thread` / `booklist` / `tournament`）、`sort`、
+`order`、`page` 和 `tag_logic`；标签、作者、频道、日期、点赞下限和评论下限也可以通过
+`$tag:...$`、`$author:...$`、`$channel:...$`、`$date:...$`、`$likes:...$`、`$replies:...$`
+token 表达，负号表示排除。旧的 `author:...`、`tag:...` 等写法由 tokenizer 迁移。
 
-路由层用 `<Suspense fallback={<Loader />}>` 进行包裹。如果你新加了一个特别庞大的独立页面组件，**强制使用懒加载形式注册路由**。
+筛选面板通过受控 props 和回调更新 URL，不维护另一份查询条件。`localStorage` 中的
+`odysseia_search_tag_logic` 只在 URL 尚未写入 `tag_logic` 时作为新搜索的初值；解析已有链接时
+仍以 URL 为准。
 
-## 2. 身份验证守卫 (Auth Guard)
+`useSearchResults` 使用 React Query 的 `useInfiniteQuery`。每页请求固定 `offset: 0`，后续页将已
+加载的 thread ID 以字符串 `exclude_thread_ids` 传给 API，以避免插入新帖造成重复；结果默认
+`staleTime` 为 60 秒，并支持设置页选择连续滚动或分页及预加载。偏好过滤通过请求的
+`apply_preferences` 控制，`ignoreDiscoveryPreferences` 只影响当前搜索。
 
-我们的权限验证不是仅仅靠后端返回 401 报错才拦截。
-在路由体系中具备 `ProtectedRoute` 高阶组件（或 Wrapper）。
+自动补全由 `useSearchAutocomplete` 查询 `/search/suggestions`，返回作者、帖子和书单；标签补全
+来自频道元数据目录，不是该接口返回的独立标签列表。
 
-- 检测不到有效认证状态时，拦截去往敏感路由（如 `/me`）的访问，展示提示或者自动触发到 Discord OAuth2 的登录流程。
+## 首次配置与页面引导
 
-## 3. 错误捕获 (Error Boundaries)
+`RequiredSetupGate` 查询用户偏好是否为首次配置；首次用户且本机 onboarding 状态没有完成
+`initial_setup` 时跳转 `/setup`。设置页会保存频道、排除标签、打开方式、分页和预加载选项；
+失败时停留在配置页并显示重试入口。
 
-应用需要使用 Error Boundary（错误边界）接管白屏崩溃。
-无论是路由层面，还是某个渲染复杂的 Widget，外部可以嵌套容错机制组件，确保组件因为不可控数据结构崩溃时，不至于导致整个浏览器白屏，而是局部显示兜底 UI。
-
-## 4. 主题与持久化 (Theme Persistence)
-
-黑/白模式切换由 `ThemeToggle` 控制。此状态属于全局客户端偏好：
-
-- 优先读取 `localStorage` 中记录的用户偏好（如 `theme: dark`）。
-- 否则读取浏览器系统的时区或 `prefers-color-scheme`。
-  我们将 class `dark` 动态注入至 `HTML` 根节点上控制整个 Tailwind 变量生效。在切换主题或背景时，推荐使用 `src/shared/lib/viewTransition.ts` 提供的通用方法触发平滑的原生过渡动画。
-
-## 5. 搜索系统与 URL 状态驱动
-
-搜索系统目前完全依靠 **URL Search Params** 进行状态同步，以保障用户可以自由分享其搜索或过滤状态，并避免状态管理的冗余与数据不一致。
-
-### 5.1 分词器驱动 (searchTokenizer)
-
-搜索词输入支持高级语法的精确匹配与条件剥离，前端使用 `src/shared/lib/searchTokenizer.ts` 作为统一解释器：
-
-- **可用语法**: `$tag:xxx$`, `-$tag:xxx$`, `$author:xxx$`, `-$author:xxx$`, `$channel:xxx$`。
-- **协议转换**: 当用户在 `TopBar` 键入字符或在 `SearchFilterPanel` 操作标签、作者（如 `onToggleTagToken`、`onSubmitAuthorDraft`）时，工具函数（如 `addToken`, `removeToken`）会操作字符串以维持唯一的 Source of Truth。随后 `tokenizeSearchPayload` 会将长字符串打散为内部的 `TokenizedSearchPayload` 数据结构（包含 `includeTags`, `excludeTags`, `includeAuthors`, `excludeAuthors`, `channels` 等）。
-- **向后端序列化**: 当发往后端时，如 `$author:xxx$` 这样的 Token 除了被映射至数组结构（如果支持），也会由 `searchApi.ts` 中的 `buildKeywordString` 封装成原生的 `author:"xxx"` 字符串格式并追加进 API 的 `keywords` 字段内。
-- **向后兼容**: 为了兼容旧版未带 `$` 符号的语法，分词器中引入了 `migrateLegacySyntax` 函数，在处理 URL 查询参数时，它会自动把类似 `author:xxx` 的格式标准化为 `$author:xxx$`。
-
-### 5.2 参数层 (`useSearchURLParams`)
-
-`src/features/search/hooks/useSearchParams.ts` 中的 `useSearchURLParams` 钩子解析并暴露经过封装合并后的过滤状态（例如新增的 `type` 参数，用于区分 `thread` 或 `booklist` 的检索目标），组件使用该钩子修改参数会自动触发 React Router 的导航方法，进而引发整个订阅此 Hooks 的查询模块重刷。
-
-### 5.3 偏好融合层 (`useSearchResults`)
-
-在获取最终数据前，`src/features/search/hooks/useSearchResults.ts` 会结合当前查询参数状态向后端发起带有偏好标记的搜索请求：
-
-- **偏好标志 (`apply_preferences`)**: 前端向后端发起搜索时默认带上 `apply_preferences: true` 标记，此时后端会自动合并当前用户的黑名单标签、白名单标签等偏好设置进行过滤。前端已移除原有的繁杂的本地 tag 合并与 `filterThreadsByPreferences` 兜底过滤逻辑，完全将数据控制权交由 API 返回，确保请求高度一致性。
-- **展示与忽略控制 (`ignoreDiscoveryPreferences`)**: 提供状态变量供 UI（如横幅提示）触发暂时忽略偏好的动作，以使用纯净参数重查数据。
-- **无缝滚动分页拉黑**: 在加载下一页数据时，前端的 `getNextPageParam` 会强制收集当前已获取的 `exclude_thread_ids` 列表发送给后端（数组元素可能为 Number 或 String），并且强制覆盖 `offset=0` 以适配后端游标逻辑。这种结合总余量（`total > 0`）判定下一页的实现彻底解决了传统的因为分页期间插入新帖导致的跳页或重复加载 Bug。
-
-### 5.4 智能建议与补全 (Autocomplete)
-
-前端抛弃了原有的前端伪随机或单独查标签的建议逻辑，现在通过 `useSearchAutocomplete` 钩子结合后端专用的 `/search/suggestions` 接口来提供全局统一的自动补全功能。
-
-- 一次请求能够分类拉取到相关的 **作者 (authors)**、**帖子 (threads)** 和 **书单 (booklists)**，并交由 `SearchSuggestions` 智能分类渲染。
-- 这些建议会基于用户的当前偏好 (`apply_preferences`) 进行筛选，并在输入框焦点激活时实时呈现给用户。
-
-## 6. 首次配置与页面引导
-
-首次账号配置和页面功能教学是两条独立流程，不能再混用同一套步骤：
-
-- Required Setup：登录回调后、进入主布局前完成频道范围、排除 Tag 和 Discord 跳转方式配置，不可跳过。
-- Page Tour：进入主页面后介绍导航和页面功能，可以跳过，也可以结束当前引导。
-
-Required Setup 只拦截真正的新用户。判定条件是偏好记录不存在，且本机旧版 onboarding 的 `completedTutorialIds` 不包含 `initial_setup`。后者是存量用户迁移兼容：已经完成旧引导的用户不能因为缺少新版偏好记录而被强制重新配置。
-
-### 6.1 OnboardingManager 与状态控制
-
-页面教学由 `OnboardingManager` 充当驱动中心，挂载于 `RootLayout`。
-它监听路由变动与 DOM 树的可用情况。当用户达到特定场景并且之前尚未完成对应教程时，通过 Zustand Store (`useOnboardingStore`) 自动分发 `activeTutorial` 并弹出气泡提示。
-状态控制将自动把已完成的 `completedTutorialIds` 持久化记录至 `localStorage`。
-
-### 6.2 基于 DOM 锚点的定向
-
-引导气泡采用了高弹性的 CSS Selector 选择机制。
-通过在 UI 节点绑定专用的 `data-tour="xxx"`（如 `data-tour="filter-panel"` 或 `data-tour="user-header"`），并在 `tutorials.ts` 中设定目标的 `target` 属性，气泡引擎会自动使用 `getBoundingClientRect` 追踪并计算绝对定位的动画平移，实现无需硬编码页面结构的“即插即用”式挂载。
+`OnboardingManager` 挂载在 `RootLayout`，使用 Zustand 的
+`src/features/onboarding/store/useOnboardingStore.ts` 保存已完成教程 ID 到
+`localStorage`。页面教程由路由触发，高级搜索教程在筛选面板出现后通过 `data-tour` 选择器触发。
+目标列表和步骤以 `src/features/onboarding/lib/tutorials.ts` 为准。

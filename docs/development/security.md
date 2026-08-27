@@ -1,31 +1,34 @@
-# 🛡️ 前端安全要求 (Security)
+# 前端安全要求
 
-作为论坛类型的前后端分离业务体系，Odysseia 采用最高规格的方式防御常见的网络前端攻击。
+安全边界以当前实现为准。前端校验不能替代后端的认证、授权、输入校验和跨站请求防护。
 
-## 1. 跨站脚本攻击 (XSS) 防护
+## XSS 与 Markdown
 
-我们允许并大量呈现富文本内容及 Markdown 文本，这通常是高频导致 DOM 型或存储型 XSS 的载体。
+- 普通 JSX 插值由 React 转义；不要把不可信字符串拼入原始 HTML、URL 或脚本上下文。
+- `src/shared/ui/MarkdownText.tsx` 使用项目内的有限 Markdown 解析器。解析前会转义文本和属性，
+  只为解析出的结构生成 HTML；链接通过 `src/shared/lib/urlSafety.ts` 只接受 `http:` / `https:`，
+  并在非 Discord 域名跳转前显示 `ExternalLinkWarningDialog`。
+- `MarkdownText` 当前确实使用 `dangerouslySetInnerHTML`，但仅用于上述生成结果。修改解析器时必须
+  保持“先转义、后生成受控标签”的顺序，并补充 `src/shared/ui/MarkdownText.test.tsx` 的危险协议、
+  链接和代码块测试。不要直接把后端原文传给 `dangerouslySetInnerHTML`。
+- `DiscordMarkdownText` 使用 React 节点渲染行内格式，同样只接受 `http(s)` 链接。
 
-### 1.1 React 内置保护
+## 认证、存储与请求
 
-任何由大括号构成的正常变量渲染，都会被 React 进行原生 `htmlspecialchars` 转义。
+`src/shared/api/client.ts` 默认启用 `withCredentials`，优先使用后端 Cookie 会话；当 Cookie 不可用
+且浏览器有 `auth_token` 时，`authApi` 会回退到 `Authorization: Bearer ...`。登录 token 和
+认证头开关存储在 `localStorage`，因此 XSS 一旦成立可能导致 token 被窃取；不要在前端日志、错误
+提示或分析事件中输出 token。
 
-> `<div>{user_input_content}</div>` 是绝对安全的。
+使用 Cookie 的请求不能仅凭“Authorization 备用机制”宣称天然免疫 CSRF。服务端必须继续负责
+Cookie 属性、CORS 和必要的 CSRF 校验；前端新增写操作时应沿用现有 `apiClient`，不要绕过认证和
+错误处理拦截器。
 
-### 1.2 dangerouslySetInnerHTML 使用红线
+登录跳转和回调只接受 `src/shared/lib/navigationSafety.ts` 允许的站内路径，不能把任意外部 URL
+直接放入 redirect 参数。
 
-**绝对禁止**直接将后端文本传入 `dangerouslySetInnerHTML`（除非经过可靠的后端 DOMpurify 过滤且由非常确定的内部管理模块提供）。业务端原则上禁止使用此属性。
+## 依赖与验证
 
-### 1.3 Markdown 安全渲染
-
-我们的 `MarkdownText` 组件集成的是生态成熟的 `react-markdown` 库，它通过解析出 AST 而不是直接注入 HTML 字符串来预防脚本执行。
-如果是外部图片链接嵌入，注意防范 `src=javascript:alert(1)` 的极端情况检测，或限定前缀为合法的 `http://` / `https://`。
-
-## 2. 身份认证与跨站请求伪造 (CSRF)
-
-- 与后端通信所采用的 `Authorization: Bearer <token>` 这种显式携带请求头的机制，在绝大部分情况下天然免疫老式的 CSRF 攻击机制（因为它是无 Cookie 状态管理，浏览器发起跨站请求时无法伪造头部的 `Authorization` 字段）。
-- 然而，我们如果使用 `localStorage` 保存 Token，可能会遭受被 XSS 窃取 Token 的风险。所以必须要**做死第一步的防线，即防范 XSS 注入**。
-
-## 3. 第三方依赖审查 (Dependency Auditing)
-
-请确保 `package.json` 中的构建脚本不会带来构建时的后门漏洞。定期执行 `pnpm audit` 审查关键依赖的子包安全警报，尤其是像 React 解析器、Markdown 解析器这种直接操作 DOM 的直接包。
+生产依赖、构建脚本和锁文件的变更需要单独审查。当前 CI（`.github/workflows/ci.yml`）没有配置
+自动化依赖安全审计门禁；本文件不把未配置的 `audit` 命令当成项目契约。涉及解析器、认证、URL
+处理或存储时，至少运行对应定向测试，并如实记录未覆盖的浏览器/后端边界。

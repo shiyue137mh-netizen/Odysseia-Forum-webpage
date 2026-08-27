@@ -1,77 +1,37 @@
-# 🎨 UI 样式与设计指南 (UI & Style Guide)
+# UI 样式与设计指南
 
-本项目使用 **Tailwind CSS v4** 作为原子化 CSS 引擎，核心采用 **CSS-First** 方案。结合 **CSS Variables (`--od-*`)** 来实现流畅主题切换、语义层级和透明风格。
+项目使用 Tailwind CSS v4、CSS-first 配置和运行时 `--od-*` 主题变量。样式入口是
+`src/shared/styles/globals.css`，它导入 `tokens.css`、基础样式、组件 surface 和 utility 文件，
+并通过 `@theme`、`@plugin 'tailwindcss-animate'`、`@source` 配置 Tailwind。仓库没有
+`tailwind.config.js`，不要重新引入一套 JS 配置。
 
-## 1. 核心设计体系 (Tailwind v4)
+## Token 与 surface
 
-我们采用 `Tailwind + od-token` 的双轨体系，并在 v4 中实现了全量 CSS 配置化：
+- 默认 token 在 `src/shared/styles/tokens.css`；主题切换由
+  `src/app/themes/applyThemeTokens.ts` 写入颜色、字体、透明度和阴影等变量。
+- 颜色、文本和边界优先使用 `--od-bg`、`--od-bg-secondary`、`--od-text-*`、`--od-accent`、
+  `--od-border` 等语义变量，或对应的 Tailwind `text-od-*` / `bg-od-*` 类。第三方品牌色、
+  明确的状态色和局部设计值可沿用现有组件模式；不要把所有字面量颜色都误写成禁止项。
+- 现有 surface utility 包括 `od-app-shell`、`od-shell-surface`、`od-chrome-layer`、
+  `od-chrome-surface`、`od-content-surface`、`od-floating-panel-solid`、`od-floating-glass`
+  和 `od-operation-base`。优先复用它们，不重复声明相同的背景/边框组合。
+- 背景图与透明度由 `WallpaperBackdrop` 和 `ThemeProvider` 协同处理；玻璃效果只在
+  `glassMode` 有效且浏览器支持 `backdrop-filter` 时启用。内容可见性与文字颜色不应依赖玻璃效果。
 
-- **配置中枢**：所有的主题扩展（颜色、间距、圆角）现在都在 `src/shared/styles/globals.css` 的 `@theme` 块中通过 CSS 变量定义。
-- **不再使用 JS 配置**：项目已移除 `tailwind.config.js`，避免了厚重的配置加载，提升了毫秒级的开发体验。
-- **自动化扫描**：Tailwind v4 会自动检测源码中的类名，无需手动配置 `content` 路径。
+## 排版、布局与动效
 
-### 1.1 主题色与语义色 (Theming)
+排版 token 包括 `--od-type-title`、`--od-type-section`、`--od-type-body`、`--od-type-meta` 和
+`--od-weight-*`。用字号与字重建立层级，颜色只作为辅助。保持现有无框、流体布局倾向，避免无
+必要的卡片套卡片和厚重边框。
 
-所有颜色优先使用语义变量，不直接硬编码 Hex 或原子色类（如 `bg-blue-500`）。
+基础过渡可使用 `tailwindcss-animate` 的 `animate-in`、`fade-in` 等 utility；复杂微交互复用已安装
+的 `motion`（`motion/react`）。主题或页面切换可调用
+`src/shared/lib/viewTransition.ts` 的 `withViewTransition`。动画应尊重
+`prefers-reduced-motion`，并避免在大量列表节点上增加不必要的 layout 动画。
 
-- **基础背景层**：`--od-bg` / `--od-bg-secondary` / `--od-bg-tertiary`
-- **容器层**：`--od-card` / `--od-card-hover`
-- **边界层**：`--od-border` / `--od-border-strong`
-- **文本层级**：
-  - `--od-text-primary` / `--od-text-secondary` / `--od-text-tertiary`
-  - `--od-text-heading` / `--od-text-label` / `--od-text-meta`
-- **状态与高亮**：`--od-accent` (仅用于焦点) / `--od-success` / `--od-warning` / `--od-error`
+## 提交前检查
 
-> **开发要求**: 组件实现时，颜色来源优先顺序是：`--od-*` 语义变量 > 映射后的主题类 (如 `bg-od-bg`) > Tailwind 临时原子类。
-
-### 1.2 排版与层级 (Typography & Hierarchy)
-
-本项目强调“**字重优先**”的层级表达，避免只靠颜色区分主次。
-
-- **语义字号**：`--od-type-title` / `--od-type-hero` / `--od-type-section` / `--od-type-body`
-- **语义字重**：`--od-weight-strong` / `--od-weight-medium` / `--od-weight-regular`
-
----
-
-## 2. 无框流体风格 (Borderless Fluid)
-
-本项目不鼓励“卡片套卡片”的厚重层级，优先无框流体表达。卡片或者不同颜色的主题嵌套绝对不可以超过三层。
-
-- **直接表达**：直接把字放在背景上，不需要容器。这要求文字排版够好，善于用字色、字重去作为设计语言。
-- **阅读节奏**：分割线 (`FluidDivider`) 的职责不是把内容框起来，而是把阅读节奏切开。
-- **轻量 Surface**：仅将背景色留给真正的交互实体（如帖子卡片、浮层、输入框），页面标题和分区说明默认不加背景容器。
-
----
-
-## 3. 透明与磨砂玻璃 (Transparency & Glass)
-
-磨砂是高成本效果，必须控制预算：
-
-1. **底层**：`od-operation-base`（底层背景，可启用毛玻璃）。
-2. **浮层**：`od-floating-glass`（仅在下拉、预览、Modal 等小面积区域使用磨砂）。
-3. **内容层**：使用透明混色 (`color-mix`)，不叠加 `backdrop-filter` 磨砂效果。
-
----
-
-## 4. 动效与过渡 (Animations)
-
-- **框架支持**：采用 **Motion 12**。
-- **现代规范**：在 React 19 下，`motion` 组件直接通过 `ref` 接收引用，不再需要特殊的包装。
-- **基础动画**：优先使用 `@plugin 'tailwindcss-animate'` 提供的内置原子类（如 `animate-in`, `fade-in`）。
-
----
-
-## 5. 开发禁忌与检查清单
-
-### 5.1 禁忌 (Don'ts)
-
-- **严禁新建 `tailwind.config.js`**：所有配置必须在全局 CSS 的 `@theme` 块中完成。
-- **严禁过度嵌套**：背景色/容器嵌套超过三层会导致视觉混乱。
-- **严禁滥用 Accent**：`--od-accent` 只用于交互激活态，禁止当做通用文本颜色。
-
-### 5.2 提交前检查 (Checklist)
-
-1. 是否优先使用 `src/shared/styles/globals.css` 中定义的样式变量？
-2. 是否用字重+字号体现层级（而非只靠颜色）？
-3. hover 态是否优先强调图标和文字（而非边框发光）？
-4. 设置/筛选页面是否设计了清晰的文本阅读节奏？
+1. 是否复用了现有 token 和 surface utility，而不是复制主题颜色？
+2. 是否保留键盘焦点、响应式布局和 reduced-motion 行为？
+3. 是否只在需要时引入 `motion`，并避免扩大列表动画成本？
+4. 是否通过 `pnpm lint:styles` 检查相关 CSS/TSX 样式？

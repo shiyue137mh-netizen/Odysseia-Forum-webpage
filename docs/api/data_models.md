@@ -1,607 +1,238 @@
-# 后端数据概览（生产环境）
+# API 数据模型
 
-本文件基于后端实际代码整理，用于说明 **生产环境** 中前端能够从 API 拿到的字段与含义。
+本文件只保留当前前端需要理解的模型语义和类型边界。完整字段定义以 [`openapi.json`](../../openapi.json) 的 `components.schemas` 以及自动生成的 [`src/shared/types/openapi.d.ts`](../../src/shared/types/openapi.d.ts) 为准。
 
-## 1. 通用约定
+## 类型来源与 ID 约定
 
-- API 前缀：`/v1`
-- 所有接口默认在 HTTP 层使用 JSON。
-- 鉴权：
-  - 搜索与偏好接口依赖 `require_auth` / `get_current_user`，需要携带有效的 Bearer Token。
-- ID 序列化：
-  - 线程 ID、频道 ID、Banner 中的 `thread_id` / `channel_id` 等字段在模型内部是 `int`，
-  - 通过 Pydantic 的 `field_serializer` 转成 **字符串** 返回前端，避免 JavaScript 精度问题。
-- 分页：
-  - 使用 `limit` + `offset` 模式，响应中会返回 `total`、`limit`、`offset`。
-- 帖子删除检测：
-  - 后端在帖子首楼消息被删除时会自动标记 `show_flag = False`，从而在搜索结果和发现广场中自动隐藏对应帖子。
-  - 前端无需额外处理已删除帖子的过滤逻辑。
+生成类型的命令是：
 
-## 2. 搜索接口 `/v1/search`
+```bash
+pnpm gen:api
+```
 
-- 方法：`POST /v1/search/`
-- 依赖：`require_auth`（需要登录态）
-- 请求体：`SearchRequest`
-- **无限滚动分页规范**: 为了防止数据更新或排序导致的跳页现象，前端无限滚动加载时，需收集当前所有已加载帖子的 ID 作为 `exclude_thread_ids` 传递，同时强制将 `offset` 设为 `0`。
-- 响应体：`SearchResponse`（包含 `ThreadDetail` 列表、标签、Banner、未读数等）
+前端领域类型直接复用生成 schema：
 
-### 2.1 SearchRequest 请求字段
+```ts
+import type { components } from "@shared-types/openapi";
 
-- `guild_id: Optional[int]`
-  - 要搜索的服务器 ID，为空则不按服务器过滤。
-- `channel_ids: Optional[List[int | str]]`
-  - 要搜索的频道 ID 列表，为空则搜索所有已索引频道。
-- `include_tags: List[str]`
-  - 必须包含的标签名列表。
-- `exclude_tags: List[str]`
-  - 必须排除的标签名列表。
-- `tag_logic: str`
-  - 多标签逻辑：`"and"`（全部命中）或 `"or"`（任意命中）。
-- `keywords: Optional[str]`
-  - 搜索关键词，支持逗号（AND）与斜杠（OR）组合。
-- `exclude_keywords: Optional[str]`
-  - 要排除的关键词，使用逗号分隔。
-- `exclude_keyword_exemption_markers: Optional[List[str]]`
-  - 关键词排除豁免标记，包含这些标记的反选关键词不会被排除。
-- `include_authors: Optional[List[int | str]]`
-  - 只看这些作者的帖子（作者 ID 列表）。
-- `exclude_authors: Optional[List[int | str]]`
-  - 屏蔽这些作者的帖子。
-- `author_name: Optional[str]`
-  - 模糊搜索作者全局昵称或用户名。**(前端已弃用此字段，改用在 `keywords` 中拼接 `author:"name"` 的方式向后端传递)**
-- `search_by_collection: Optional[bool]`
-  - 仅搜索当前用户收藏的帖子。
-- `exclude_thread_ids: Optional[List[int | str]]`
-  - 排除已展示的帖子 ID 列表。**(注意：受限于 JS 64 位整数精度，前端在请求中统一以 `string[]` 格式传递，依赖后端 Pydantic 自动转换为整型)**
-- `exclude_channel_ids: Optional[List[int | str]]`
-  - 要排除的频道ID列表。
-- `apply_preferences: Optional[bool]`
-  - 是否在搜索时应用当前登录用户的探索偏好（含过滤与降级），默认为 `false`。
-- `created_after / created_before: Optional[str]`
-  - 发帖时间范围，支持绝对日期（`YYYY-MM-DD`）或相对时间（如 `-7d`）。
-- `active_after / active_before: Optional[str]`
-  - 最后活跃时间范围，规则同上。
-- `reaction_count_range: str`
-  - 点赞数范围，默认来自 `DefaultPreferences.DEFAULT_NUMERIC_RANGE`，如 `">10"`、`"5-20"`。
-- `reply_count_range: str`
-  - 回复数范围，例如 `">=5"`。
-- `sort_method: str`
-  - 排序方法：
-    - `"comprehensive"`：综合排序（默认）
-    - `"created_at"`：发帖时间
-    - `"last_active"`：最后活跃时间
-    - `"reaction_count"`：点赞数
-    - `"reply_count"`：回复数
-    - `"custom"`：自定义排序
-- `custom_base_sort: str`
-  - 当 `sort_method = "custom"` 时使用的基础排序算法，默认 `"comprehensive"`。
-- `sort_order: str`
-  - 排序顺序：`"asc"` 或 `"desc"`，默认 `"desc"`。
-- `limit: int`
-  - 每页返回数量，范围 1–100，默认 10。
-- `exclude_thread_ids: Optional[List[int | str]]`
-  - 已在前端展示的帖子 ID 列表，用于去重或无缝滚动。当使用此参数时，必须将 offset 设置为 0，防止后端在排除后的集合基础上产生跳页。
-- `exclude_channel_ids: Optional[List[int | str]]`
-  - 要排除的频道ID列表。
-- `search_by_collection: Optional[bool]`
-  - 是否仅搜索当前用户已收藏的帖子。对应 Discord Bot 端的 `/查看收藏` 指令。
-- `offset: int`
-  - 偏移量，从 0 开始。
+type ThreadDetail = components["schemas"]["ThreadDetail"];
+type Booklist = components["schemas"]["BooklistDetail"];
+```
 
-> 生产环境中，后端还会通过内部解析器对 `keywords` 做二次解析，抽取作者名、精确关键词与排除词，组合成实际用于检索的查询参数。
+Discord Snowflake 以及 API 响应中的主要 Discord ID 使用 `string`。请求 schema 为兼容后端，部分 ID 同时接受 `integer | string`；浏览器端仍应优先使用字符串，避免超过 `Number.MAX_SAFE_INTEGER`。
 
-### 2.2 前端参数装配机制 (Tokenization & Mapping)
+时间字段在生成类型中通常是 `string`，实际响应使用 ISO 8601 字符串。不要把它们文档化成 JavaScript `Date`，除非调用方自行转换。
 
-虽然最终的网络传输体符合 `SearchRequest` 模型，但前端在组装数据时引入了**全局中间态分词层 (`src/shared/lib/searchTokenizer.ts`)**：
+## 通用分页
 
-- 前端界面的源字符串 `query`（如 `"关键词 $tag:音乐$ -$author:张三$"`）会被解析出不同的 Token。
-- `searchApi.ts` 会将打散的 Token 字段拼装到请求体中：
-  - `$tag:` 提取后追加到 `include_tags`。
-  - `-$tag:` 提取后追加到 `exclude_tags`。
-  - `$author:` 提取后转换为 `author:"姓名"` 字符串追加到 `keywords` 字段供后端的 `KeywordParser` 进一步解析，而不会直接使用 `SearchRequest.author_name` 字段。
-  - `$channel:` 优先合并到 `channel_ids` 列表。
+书单列表、书单项列表和赛事列表都使用同一结构：
 
-### 2.3 SearchResponse 响应字段
-
-该响应继承自 `PaginatedResponse[ThreadDetail]`，并增加了若干额外字段。
-
-基础分页字段：
-
-- `total: int`
-- `limit: int`
-- `offset: int`
-
-#### 2.3.1 ThreadDetail 帖子字段
-
-`ThreadDetail` 是搜索结果中单个帖子的公开视图，其字段如下：
-
-- `thread_id: str`
-  - 帖子的 Discord ID（以字符串形式返回）。
-- `guild_id: str`
-  - 帖子所属服务器的 Discord ID（字符串）。
-- `channel_id: str`
-  - 所在频道的 Discord ID（字符串）。
-- `title: str`
-  - 帖子标题。
-- `author: Optional[AuthorDetail]`
-  - 帖子作者详细信息，包括作者 ID、用户名、头像等。
-- `created_at: datetime`
-  - 创建时间。
-- `last_active_at: Optional[datetime]`
-  - 最后活跃时间（例如最新回复或更新）。
-- `reaction_count: int`
-  - 点赞数 / 表情反应数。
-- `reply_count: int`
-  - 回复数。
-- `display_count: int`
-  - 在搜索结果中展示的次数（用于排序算法统计）。
-- `first_message_excerpt: Optional[str]`
-  - 首条消息摘要。
-- `thumbnail_url: Optional[str]`
-  - 缩略图 URL（如首张图片或配置的封面）。
-- `tags: List[str]`
-  - 帖子关联的真实 Discord 标签名称列表。
-- `virtual_tags: List[str]`
-  - 帖子关联的**虚拟映射标签**名称列表。当帖子来自被映射的源频道时呈现。
-- `collected_flag: bool`
-  - 当前用户是否已关注/收藏该帖子。
-
-#### 2.3.2 扩展字段
-
-除了 `results: List[ThreadDetail]` 外，`SearchResponse` 还包含：
-
-- `available_tags: List[str]`
-  - 搜索结果关联的可用标签名列表。
-  - **排序逻辑**: 虚拟标签（来自 Mappings）置顶，随后是各频道的真实标签（去重）。
-- `virtual_tags: List[str]`
-  - 当前选定频道下定义的所有可用虚拟映射标签。
-- `banner_carousel: List[BannerItem]`
-  - 当前频道以及全局可展示的 Banner 列表，最多 8 个。
-  - `BannerItem` 字段：
-    - `thread_id: str`
-    - `title: str`
-    - `cover_image_url: str`
-    - `channel_id: str`
-- `unread_count: int`
-  - 当前用户关注列表中的未读更新数量（由 `FollowService.get_unread_count` 统计）。
-
-### 2.4 单帖详情接口 `GET /v1/search/thread/{thread_id}`
-
-- 方法：`GET /v1/search/thread/{thread_id}`
-- 路径参数：`thread_id` (int) — 帖子 Discord ID
-- 响应：`ThreadDetail` 对象
-- 用途：Banner 点击跳转、分享链接等场景，避免依赖搜索结果缓存
-
-### 2.5 核心机制：频道映射 (Channel Mappings)
-
-当后端 `config.json` 中配置了 `channel_mappings` 时，API 会产生以下行为：
-
-1. **虚拟标签生成**: 如果搜索请求中指定了某个作为"目标"的 `channel_id`，后端会读取映射配置，将对应的源频道汇总到该目标频道名下，并生成 `virtual_tags`。
-2. **请求转换**: 前端在 `include_tags` 中传入虚拟标签名时，后端会自动将请求扩展为包含所有对应 `source_channel_ids` 的大范围搜索。
-3. **标签透传**: 搜索结果中的 `ThreadDetail.virtual_tags` 会标注该贴属于哪个虚拟分类，方便前端展示（例如在帖子卡片上高亮显示映射标签）。
-
-## 3. 元数据接口 `/v1/meta/channels`
-
-- 方法：`GET /v1/meta/channels`
-- 依赖：`get_current_user`（需要登录态）
-- 查询参数：
-  - `channel_ids: Optional[List[int | str]]`：可选的频道 ID 列表，缺省时返回所有已索引频道。
-  - `guild_id: Optional[int]`：按服务器 ID 过滤频道。
-- 响应体：`List[ChannelDetail]`
-
-`ChannelDetail`
-
-- `id: int`
-  - 频道 Discord ID。
-- `name: str`
-  - 频道名称。
-- `tags: List[TagDetail]`
-  - 该频道下所有可用标签。
-
-`TagDetail`
-
-- `id: int`
-  - 标签 Discord ID。
-- `name: str`
-  - 标签名称。
-
-前端典型用途：
-
-- 构建左侧频道导航列表。
-- 渲染某一频道下的可用标签供筛选使用。
-
-### 3.1 主服务器 ID 接口 `GET /v1/meta/main-guild`
-
-- 方法：`GET /v1/meta/main-guild`
-- 描述：返回配置文件中定义的主服务器 ID (Main Guild ID)
-- 响应：Snowflake ID 字符串
-
-## 4. 用户偏好接口 `/v1/preferences`
-
-- `GET /v1/preferences/users/{user_id}`
-  - 获取指定用户的搜索偏好。
-- `PUT /v1/preferences/users/{user_id}`
-  - 创建或更新指定用户的搜索偏好（部分字段更新）。
-
-响应体模型为 `UserPreferencesResponse`：
-
-- 基本信息：
-  - `user_id: int`：Discord 用户 ID。
-- 频道偏好：
-  - `preferred_channels: Optional[List[int]]`：偏好频道 ID 列表。
-- 作者偏好：
-  - `include_authors: Optional[List[int | str]]`：只看这些作者。
-  - `exclude_authors: Optional[List[int | str]]`：屏蔽这些作者。
-- 标签偏好：
-  - `include_tags: Optional[List[str]]`：必须包含的标签名。
-  - `exclude_tags: Optional[List[str]]`：必须排除的标签名。
-- 关键词偏好：
-  - `include_keywords: str`：默认空字符串，用逗号/斜杠组合 AND/OR。
-  - `exclude_keywords: str`：要排除的关键词。
-  - `exclude_keyword_exemption_markers: List[str]`：默认 `["禁", "🈲"]`。
-- 显示偏好：
-  - `preview_image_mode: str`：`"thumbnail" | "full" | "none"`。
-  - `results_per_page: int`：每页显示结果数量。
-- 排序偏好：
-  - `sort_method: str`：同 SearchRequest 中的 `sort_method`。
-  - `custom_base_sort: str`：自定义排序时的基础排序算法。
-- 时间偏好：
-  - `created_after / created_before: Optional[str]`。
-  - `active_after / active_before: Optional[str]`。
-
-这些偏好可以在前端用于：
-
-- 初始化搜索页的默认筛选条件；
-- 在设置页展示和编辑用户个性化配置。
-
-## 5. 作者数据统计接口 `/v1/authors/{author_id}`
-
-- 方法：`GET /v1/authors/{author_id}`
-- 路径参数：`author_id` (int) — 作者的 Discord 用户 ID
-- 响应体：`AuthorProfileResponse`
-
-### 5.1 AuthorProfileResponse
-
-- `id: str` — 作者的 Discord 用户 ID（字符串）
-- `name: str` — 唯一用户名
-- `global_name: Optional[str]` — 全局显示名称
-- `display_name: str` — 服务器内显示名称
-- `avatar_url: Optional[str]` — 头像 URL
-- `stats: AuthorStats` — 统计摘要
-
-### 5.2 AuthorStats
-
-- `thread_count: int` — 发帖总数（默认 0）
-- `reaction_count: int` — 收到的总反应数（默认 0）
-- `reply_count: int` — 收到的总回复数（默认 0）
-
-前端典型用途：
-
-- 作者个人主页：展示作者信息与创作统计。
-- 帖子卡片中的作者弹窗：快速预览作者数据。
-
-## 6. 标签数据统计接口 `/v1/tags/stats`
-
-- 方法：`POST /v1/tags/stats`
-- 请求体：`TagStatsRequest`
-- 响应体：`TagStatsResponse`
-
-### 6.1 TagStatsRequest
-
-- `guild_id: Optional[int]` — 服务器 ID（可选）
-- `channel_ids: Optional[List[int | str]]` — 指定频道 ID 列表（可选）
-- `include_virtual: bool` — 是否包含虚拟映射标签的统计（默认 `true`）
-
-### 6.2 TagStatsResponse
-
-- `total_threads: int` — 检索范围内的有效帖子总数
-- `items: List[TagStatItem]` — 各个标签的聚合统计列表
-
-### 6.3 TagStatItem
-
-- `tag_name: str` — 标签名称
-- `total_thread_count: int` — 该标签下的总帖子数（跨频道累加）
-- `channel_info: List[ChannelTagInfo]` — 按频道分桶的详细统计数据
-  - `channel_id: str` — 频道 ID（字符串）
-  - `channel_name: str` — 频道名称
-  - `thread_count: int` — 该频道下此标签的帖子数
-
-前端典型用途：
-
-- 标签页：展示各标签的帖子数量分布。
-- 频道详情页：展示该频道下各标签活跃度。
-- 偏好设置页：辅助用户了解标签的热度后进行个性化筛选。
-
-## 7. 发现广场接口 `/v1/discovery`
-
-路由
-
-> **重要说明**: 这些接口是专用的发现功能端点，用于替代之前 Plaza 和 Draw 页面通过 `/search` 接口模拟的临时方案（详见第 12 节）。
-
-### 7.1 广场轨道 `GET /v1/discovery/rails`
-
-- 方法：`GET /v1/discovery/rails`
-- 描述：一次性获取多条轨道数据并处理收藏标记
-- 查询参数：
-  - `limit: int` — 每条轨道返回的数量（1–50，默认 10）
-  - `days: int` — 统计时间跨度天数（1–90，默认 30）
-  - `apply_preferences: bool` — 是否应用当前用户的过滤偏好（默认 `true`）
-- 响应体：`DiscoveryRailsResponse`
-
-### 7.2 DiscoveryRailsResponse
-
-- `latest: List[ThreadDetail]` — 最新发布
-- `reaction_surge: List[ThreadDetail]` — 近期点赞飙升
-- `discussion_surge: List[ThreadDetail]` — 近期讨论飙升
-- `collection_surge: List[ThreadDetail]` — 近期收藏飙升
-
-### 7.3 随机抽卡 `GET /v1/discovery/random`
-
-- 方法：`GET /v1/discovery/random`
-- 描述：根据指定范围随机抽取帖子
-- 查询参数：
-  - `limit: int` — 抽取数量（1–50，默认 10）
-  - `channel_ids: Optional[List[int | str]]` — 频道筛选范围
-  - `include_tags: Optional[List[str]]` — 包含的标签名
-  - `exclude_tags: Optional[List[str]]` — 排除的标签名
-  - `tag_logic: str` — 标签逻辑，`'and'` 或 `'or'`（默认 `'and'`）
-- 响应体：`List[ThreadDetail]`
-
-前端典型用途：
-
-- **Plaza 页面**: 使用 `/discovery/rails` 一次请求获取全部轨道数据，替代之前对 `/search` 的 4 次独立调用。
-- **Draw 页面**: 使用 `/discovery/random` 直接从后端获取随机帖子，替代之前"先搜索再前端随机"的方案。
-
-## 8. 线程模型与前端可见字段
-
-部分字段仅用于内部审计或排序控制（如 `show_flag`、`not_found_count`、`latest_update_at` 等），不会直接暴露到前端。
-真正暴露给前端的数据通过 `ThreadDetail` 进行筛选和序列化（见 2.3.1 小节）。
-
-前端可以依赖的字段主要包括：
-
-- 业务展示：`title`、`first_message_excerpt`、`thumbnail_url`、`tags`。
-- 时间相关：`created_at`、`last_active_at`。
-- 交互反馈：`reaction_count`、`reply_count`。
-- 排序统计：`display_count`。
-
-## 9. 生产环境 vs 本地开发环境的数据差异
-
-- **生产环境**：
-  - `/v1/search` 调用真实数据库与索引服务，使用 UCB1 等参数进行结果排序。
-  - `/v1/meta/channels` 从 `CacheService` 获取已索引频道与真实标签。
-  - `/v1/preferences` 读写真实用户偏好数据。
-  - Banner 数据由 `BannerService` 从数据库中读取。
-  - `/v1/follows` 及 `/v1/follows/unread-count` 提供关注列表与未读更新数量。
-  - `/v1/auth/checkauth` 在返回登录状态时也附带未读更新数量。
-  - `/v1/discovery/rails` 和 `/v1/discovery/random` 提供专用的广场和随机抽卡数据。
-  - `/v1/authors/{author_id}` 提供作者档案与统计数据。
-  - `/v1/tags/stats` 提供标签聚合统计。
-- **本地开发环境（MSW）**：
-  - 前端通过 MSW 模拟上述接口，只保证字段结构与真实接口一致，数据是有限的 Mock。
-  - 某些值（如频道 ID、标签名、统计数字）是静态示例，不代表生产环境真实分布。
-
-前端在设计类型与交互时应以本文件描述的 **生产环境字段与语义** 为准，不应依赖 Mock 数据中的具体值。
-
----
-
-## 10. 关注列表与"有更新"相关数据
-
-这一节补充说明和 **关注 / 更新状态** 相关、但在搜索结果里不一定直接出现的字段，方便前端在设计交互时统一参考。
-
-### 10.1 关注列表 `/v1/follows/`
-
-依赖 `get_current_user`：
-
-- 方法：`GET /v1/follows/`
-- 查询参数：
-  - `limit: int = 10000`
-  - `offset: int = 0`
-- 响应结构（非 Pydantic，手动构造的 JSON）：
-
-```jsonc
-{
-  "total": 123,
-  "threads": [
-    {
-      "thread_id": "1234567890",
-      "channel_id": "987654321",
-      "title": "帖子标题",
-      "author_id": "1122334455",
-      "created_at": "2024-01-01T12:00:00+00:00",
-      "last_active_at": "2024-01-02T12:00:00+00:00",
-      "latest_update_at": "2024-01-02T12:30:00+00:00",
-      "latest_update_link": "https://discord.com/...",
-      "reaction_count": 10,
-      "reply_count": 5,
-      "first_message_excerpt": "首条消息摘要……",
-      "thumbnail_url": "https://...",
-      "tags": ["标签A", "标签B"],
-      "followed_at": "2024-01-01T12:00:00+00:00",
-      "last_viewed_at": "2024-01-02T12:00:00+00:00",
-      "has_update": true,
-    },
-  ],
-  "limit": 10000,
-  "offset": 0,
+```ts
+interface PaginatedResponse<T> {
+  total: number;
+  limit: number;
+  offset: number;
+  results: T[];
 }
 ```
 
-字段来源：
+这是前端 [`src/entities/booklist/types.ts`](../../src/entities/booklist/types.ts) 的本地泛型；OpenAPI 中对应三个具体 schema：`PaginatedResponse_BooklistSummary_`、`PaginatedResponse_BooklistDetail_`、`PaginatedResponse_BooklistItemDetail_`。
 
-- 线程字段（来自 `Thread` 模型）：
-  - `thread_id: str`
-  - `channel_id: str`
-  - `title: str`
-  - `author_id: str`
-  - `created_at: datetime`
-  - `last_active_at: Optional[datetime]`
-  - `latest_update_at: Optional[datetime]`
-  - `latest_update_link: Optional[str]`
-  - `reaction_count: int`
-  - `reply_count: int`
-  - `first_message_excerpt: Optional[str]`
-  - `thumbnail_url: Optional[str]`
-  - `tags: List[str]`（从 `thread.tags` 映射而来）
-- 关注关系字段（来自 `ThreadFollow`）：
-  - `followed_at: datetime`
-  - `last_viewed_at: Optional[datetime]`
-  - `has_update: bool`
-    - 逻辑：`thread.latest_update_at` 存在且晚于 `last_viewed_at`，或者 `last_viewed_at` 为 `null` 时视为 `true`。
+## 帖子与作者
 
-前端典型用途（设计指引）：
+### `ThreadDetail`
 
-- **关注页卡片**：
-  - 使用 `has_update` 在卡片上加红点 / "有更新"标记。
-  - 使用 `latest_update_at` / `latest_update_link` 定位到最新回复（如果需要）。
-- **搜索结果页**：
-  - 当前的搜索结果 `ThreadDetail` **不包含** `has_update`/`followed_at` 等字段，因此:
-    - 搜索结果中无法直接知道某贴是否已关注或是否有未读更新；
-    - 若希望在搜索结果中显示"已关注/有更新"状态，需要后端扩展 `ThreadDetail` 或提供额外接口。
+搜索、发现、单帖详情和书单项都围绕这个模型。必填字段是 `thread_id`、`channel_id`、`title`、`created_at`、`reaction_count`、`reply_count`、`thumbnail_urls`；响应还包含：
 
-### 10.2 未读更新数量 `unread_count`
+| 字段 | 类型 | 语义 |
+| --- | --- | --- |
+| `thread_id` / `guild_id` / `channel_id` | `string` | Discord ID |
+| `author` | `AuthorDetail-Output` 或 `null` | 作者信息，可能为空 |
+| `last_active_at` | `string` 或 `null` | 最后活跃时间 |
+| `collection_count` | `number`，默认 `0` | 总收藏数 |
+| `display_count` | `number`，默认 `0` | 搜索结果展示次数 |
+| `first_message_excerpt` | `string` 或 `null` | 首楼摘要 |
+| `thumbnail_urls` | `string[]` | 首楼图片 URL 列表；不是单数的 `thumbnail_url` |
+| `tags` / `virtual_tags` | `string[]` | 真实标签 / 虚拟映射标签 |
+| `collected_flag` | `boolean`，默认 `false` | 当前用户是否收藏 |
+| `is_tournament` | `boolean`，默认 `false` | 是否属于赛事 |
+| `tournament_info_list` | `TournamentInfo-Output[]` | 所属赛事列表 |
 
-未读更新有三处来源，语义一致：
+旧代码中可能出现的 `id`、`is_following`、`active_flag`、`has_update` 等字段不是 `ThreadDetail` 的生成 schema 字段。前端 [`src/entities/thread/types.ts`](../../src/entities/thread/types.ts) 的 `Thread` 为兼容 UI 的扩展类型，不能反向当成后端基础模型。
 
-1. 搜索接口 `/v1/search`：
-   - 返回的 `SearchResponse` 中包含：
+### `FollowedThreadResponse-Output`
 
-     ```py
-     unread_count: int = Field(
-         default=0,
-         description="当前用户关注列表的未读更新数量"
-     )
-     ```
+它包含 `ThreadDetail` 的帖子字段，并额外提供关注关系字段：`latest_update_at`、`latest_update_link`、`followed_at`、`last_viewed_at`、`has_update`（默认 `false`）和 `active_flag`（默认 `true`）。`FollowsListResponse` 的 `threads` 数组使用该模型。
 
-   - 值来自 `FollowService.get_unread_count(user_id)`。
+### 作者模型
 
-2. 认证检查接口 `/v1/auth/checkauth`：
-   - 返回 JSON 中同样包含 `unread_count` 字段：
+`AuthorDetail-Output` 和 `AuthorProfileResponse` 的作者 ID 是字符串；作者信息字段为 `name`、`global_name: string | null`、`display_name`、`avatar_url: string | null`。`AuthorProfileResponse` 还包含 `stats: AuthorStats`，统计字段为 `thread_count`、`reaction_count`、`reply_count`，默认值为 `0`。
 
-     ```jsonc
-     {
-       "loggedIn": true,
-       "user": { ... },
-       "unread_count": 3
-     }
-     ```
+搜索建议使用独立的 `AuthorSuggestion-Output`（`id`、`name`、`display_name`、可选 `avatar_url`），不要用完整作者档案替代它。
 
-   - 便于前端在全局导航（如登录后立刻）显示未读徽标。
+## 搜索、发现与元数据
 
-3. 关注路由 `/v1/follows/unread-count`：
-   - 方法：`GET /v1/follows/unread-count`
-   - 响应：`{"unread_count": number}`
+### `SearchRequest`
 
-前端可以根据实际需求选择数据来源：
+这是 `POST /v1/search/` 的请求模型。字段按用途分组如下：
 
-- **全局侧边栏徽标**：优先使用 `/auth/checkauth` 或 `/follows/unread-count`。
-- **搜索页头部统计**：直接使用 `SearchResponse.unread_count`，保持一次请求拿齐结果与未读数。
+| 分组 | 字段 |
+| --- | --- |
+| 范围 | `guild_id`、`channel_ids` |
+| 标签/作者 | `include_tags`、`exclude_tags`、`tag_logic`、`include_authors`、`exclude_authors`、`author_name` |
+| 关键词 | `keywords`、`exclude_keywords`、`exclude_keyword_exemption_markers` |
+| 时间 | `created_after`、`created_before`、`active_after`、`active_before` |
+| 数值过滤 | `reaction_count_range`、`reply_count_range` |
+| 排序 | `sort_method`、`custom_base_sort`、`sort_order` |
+| 分页/行为 | `limit`（1–100，默认 10）、`offset`（默认 0）、`exclude_thread_ids`、`exclude_channel_ids`、`search_by_collection`、`apply_preferences`、`debug_timing` |
 
-### 10.3 当前文档 vs 前端使用情况说明
+默认值：`tag_logic="and"`、`search_by_collection=false`、`apply_preferences=false`、两个数值范围为 `[0, 10000000)`、`sort_method="comprehensive"`、`custom_base_sort="comprehensive"`、`sort_order="desc"`。
 
-- 本文件现在覆盖的内容：
-  - 搜索接口 `/v1/search`：`SearchRequest`、`SearchResponse`、`ThreadDetail` 的所有字段；
-  - 单帖详情 `/v1/search/thread/{thread_id}`：Banner 点击等场景直接获取帖子；
-  - 元数据 `/v1/meta/channels`：频道和标签结构；
-  - 主服务器 `/v1/meta/main-guild`：获取配置的主服务器 ID；
-  - 用户偏好 `/v1/preferences/users/{user_id}`：全部字段；
-  - 作者数据统计 `/v1/authors/{author_id}`：作者信息与统计摘要；
-  - 标签数据统计 `/v1/tags/stats`：标签聚合统计；
-  - 发现广场 `/v1/discovery/rails`：多轨道广场数据；
-  - 随机抽卡 `/v1/discovery/random`：随机帖子抽取；
-  - 关注列表 `/v1/follows/`：帖子 + 关注关系字段（含 `has_update` 等）；
-  - 未读更新数量：`/v1/search`、`/v1/auth/checkauth`、`/v1/follows/unread-count` 中的 `unread_count`。
+`keywords` 使用逗号表达 AND、斜杠表达 OR；日期字段接受 `YYYY-MM-DD` 或后端支持的相对时间格式（例如 `-7d`）。前端 UI 请求不是这个 schema 的一对一复制，实际转换见 [`searchApi.ts`](../../src/features/search/api/searchApi.ts)。
 
-- 前端已经使用的字段（截至当前实现）：
-  - 搜索结果卡片/列表：
-    - `title`、`first_message_excerpt`、`thumbnail_url`、`tags`、
-      `created_at`、`reaction_count`、`reply_count`。
-  - 搜索页统计与筛选：
-    - `total`、`limit`、`offset`、`available_tags`、`banner_carousel`。
-  - 关注页：
-    - 关注列表接口的基础帖子字段（标题、摘要、封面、标签、计数等）。
-  - 未读数：
-    - 尚未在 UI 中展示，但可以从上述三个接口任一处接入。
+### `SearchResponse`、建议和相似帖
 
-- 目前尚未在 UI 中利用、但已经有的有用数据：
-  - `has_update`：可用于关注页、未来的搜索结果中突出"有新内容"的帖子（红点/高亮）。
-  - `latest_update_at` / `latest_update_link`：可用于"跳转到最新更新"按钮。
-  - `display_count`：主要用于排序算法（UCB1），不建议直接展示，但可用于 debug / 实验性 UI。
+`SearchResponse` 必填字段只有 `total`、`limit`、`offset`、`results: ThreadDetail[]`；另有 `available_tags: string[]` 和 `virtual_tags: string[]`。它不包含 `unread_count` 或 `banner_carousel`。
 
-## 11. 收藏与书单 (Collections & Booklists)
+`SearchSuggestionResponse` 包含作者、帖子和书单建议数组：`authors: AuthorSuggestion-Output[]`、`threads: ThreadSuggestion-Output[]`、`booklists: BooklistSuggestion[]`。后端描述每类最多 3 个。
 
-新增的收藏系统与书单系统，提供了更灵活的内容组织方式。
+`SimilarThreadsResponse` 必填 `source_thread_id`，另有 `matched_tag_count`（默认 0）和 `results: ThreadDetail[]`。
 
-### 11.1 收藏类型 `CollectionType`
+### 频道和标签
 
-在 `/collection/batch/add` 等接口中使用 `target_type` 字段区分：
+`ChannelDetail-Output` 的核心字段是 `guild_id`、`guild_name`、`channel_id`、`name`、`category_id`、`category_name`，以及：
 
-- `1`: **THREAD** (帖子)
-- `2`: **BOOKLIST** (书单)
+- `available_tags: TagDetail-Output[]`：原生标签；`TagDetail-Output` 是 `tag_id` 和 `name`。
+- `virtual_tags: VirtualTagDetail-Output[]`：每项为 `tag_name` 和 `source_channel_ids`。
+- `mapped_source_channels: MappedSourceChannelDetail-Output[]`：虚拟标签来源频道及其标签。
+- `real_thread_count`、`virtual_thread_count`、`total_thread_count`：均默认为 `0`。
 
-### 11.2 书单详情 `BooklistDetail`
+`TagStatsRequest` 为 `guild_id`、`channel_ids`、`include_virtual`（默认 `true`）。`TagStatsResponse` 为 `total_threads` 和 `items: TagStatItem-Output[]`；每个 `TagStatItem` 有 `tag_name`、`total_thread_count`、`channel_info`。`ChannelTagInfo-Output` 除频道/标签 ID 和 `thread_count` 外，还包含 `guild_name`、`channel_name`、分类字段及 `is_virtual`。旧文档只列出 `channel_id/channel_name/tag_name`，是不完整的。
 
-书单列表与详情接口返回的核心模型：
+`DiscoveryRailsResponse` 固定包含 `latest`、`reaction_surge`、`discussion_surge`、`collection_surge` 四个 `ThreadDetail[]` 数组。
 
-- `id: int`: 书单 ID
-- `title: str`: 标题
-- `description: Optional[str]`: 简介
-- `cover_image_url: Optional[str]`: 封面
-- `owner_id: string`: 创建者用户 ID (字符串)
-- `is_public: bool`: 是否公开
-- `display_type: int`: 排序方式 (1=加入时间倒序, 2=自定义排序)
-- `item_count: int`: 包含帖子数
-- `collection_count: int`: 被收藏数
-- `view_count: int`: 浏览器
-- `collected_flag: bool`: **(动态)** 当前用户是否已收藏该书单
+## 分享元数据模型
 
-### 11.3 书单项 `BooklistItemDetail`
+分享/OG 接口使用独立的 DTO，不复用完整帖子或书单详情：
 
-书单内容接口 `/booklist/item/list/page/{id}` 返回的列表项：
+- `ThreadShareMetadataDTO`：`title`、可空 `description` 和 `image_url`、`OpenGraphAuthorDTO author`、`ThreadShareStatsDTO stats`、`created_at`、`updated_at`。帖子统计是 `reaction_count`、`reply_count`、`collection_count`。
+- `AuthorShareMetadataDTO`：`display_name`、可空 `avatar_url`、`AuthorShareStatsDTO stats`、可空 `latest_work`、最多五项 `OpenGraphWorkDTO-Output[] works`、`updated_at`。
+- `BooklistShareMetadataDTO`：`title`、可空 `description`/`cover_image_url`/`author_name`、最多五项作品、`BooklistShareStatsDTO stats`、`is_tournament`、`created_at`、`updated_at`。
+- `OpenGraphWorkDTO-Output`：`title`、`image_url`、`reaction_count`、`created_at`；`OpenGraphLatestWorkDTO-Output`：`title`、`created_at`。
 
-- `booklist_item_id: int`: 关联记录 ID
-- `thread_id: str`: 帖子 ID
-- `title, author, thumbnail_urls...`: 帖子的基础快照信息
-- `comment: Optional[str]`: **推荐语/书单主备注**
-- `display_order: int`: 排序权重
-- `collected_flag: bool`: **(动态)** 当前用户是否收藏了该帖子
+`AuthorShareStatsDTO` 的字段是公开作品数、总反应数和总回复数；`BooklistShareStatsDTO` 的字段是 `item_count`、`collection_count`、`view_count`。这些 DTO 的字段应以生成 schema 为准，不能把普通 `ThreadDetail` 的 `thumbnail_urls` 等字段套进来。
 
----
+## 关注响应
 
-## 12. Search 接口替换方案分析
+`FollowsListResponse` 的字段是：
 
-> 本节分析前端当前通过 `/search` 临时实现的功能，以及如何迁移到新的专用接口。
+```ts
+{
+  total: number;
+  threads: components["schemas"]["FollowedThreadResponse-Output"][];
+  limit: number;
+  offset: number;
+}
+```
 
-### 12.1 当前临时方案
+关注页所需的 `unread_count` 来自单独的 `GET /v1/follows/unread-count`。前端将两次请求组合后才得到 `FollowsResponse`；这不是 OpenAPI 生成模型。
 
-前端的 `plazaApi.ts` 和 `DrawPage` 目前通过调用 `/search` 来模拟广场和抽卡功能：
+## 偏好模型
 
-| 页面           | 当前实现             | 调用方式                                                                        |
-| -------------- | -------------------- | ------------------------------------------------------------------------------- |
-| **Plaza 广场** | `plazaApi.getRail()` | 对 4 条轨道分别调用 `searchApi.search()`，用不同的 `sort_method` 和时间过滤模拟 |
-| **Draw 抽卡**  | `DrawPage` 候选池    | 调用 `searchApi.search()` 获取 72 条帖子，再在前端 `sampleThreads()` 做随机抽样 |
+`UserPreferencesResponse` 必填 `user_id`，其余字段包括：
 
-**问题**：
+`preferred_channels`、`include_authors`、`exclude_authors`、`include_tags`、`exclude_tags`、`include_keywords`（默认空字符串）、`exclude_keywords`（默认空字符串）、`exclude_keyword_exemption_markers`（默认 `["禁", "🈲"]`）、`preview_image_mode`（默认 `thumbnail`）、`results_per_page`（默认 `5`）、`ui_page_size`（默认 `48`）、`sort_method`（默认 `comprehensive`）、`custom_base_sort`（默认 `comprehensive`）以及四个可空时间字段。
 
-- 广场页每次加载产生 **4 次** 独立的 search 请求，服务端压力大
-- 抽卡的"随机"是前端伪随机，候选池受 `limit=72` 限制，池深度不够真正随机
-- 广场缺少 `collection_surge`（收藏飙升）轨道，之前用 `editors_pick`（综合排序）代替
-- search 接口不是为发现场景优化的，排序逻辑与广场场景不完全匹配
+`UserPreferencesUpdateRequest` 使用同名可空字段，全部可选；ID 列表在 schema 中接受数字或字符串。`preview_image_mode` 的约定值是 `thumbnail`、`full`、`none`。生成 schema 对 `results_per_page` 的描述要求小于 10；网页端独立的 `ui_page_size` 是另一项设置，不应混用。
 
-### 12.2 新接口替代方案
+## Banner 与图片刷新
 
-| 页面           | 新接口                  | 优势                                                                                                                                                                                                  |
-| -------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Plaza 广场** | `GET /discovery/rails`  | `getRails` 单次请求返回全部 4 条轨道；后端原生支持 `collection_surge`；`apply_preferences` 参数直接由后端处理偏好过滤。**注意：单个轨道的刷新 `getRail` 目前仍 fallback 回调 `searchApi.search()`。** |
-| **Draw 抽卡**  | `GET /discovery/random` | 后端直接做真随机抽取，不限于前端伪随机；支持 `channel_ids` / `include_tags` / `exclude_tags` 筛选                                                                                                     |
+### `BannerApplicationRequest` / `BannerItem-Output`
 
-### 12.3 迁移影响分析
+Banner 申请请求的三个必填字段是：
 
-需要改动的文件：
+```ts
+{
+  thread_link: string;
+  cover_image_url: string;
+  target_scope: string;
+}
+```
 
-| 文件                                   | 改动内容                                                                                                                                                     |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/features/plaza/api/plazaApi.ts`   | `getRails()` 替换为调用 `/discovery/rails`；`PlazaRailKey` 增加 `collection_surge`。**注：`getRail()` 暂时保留了对 `searchApi.search()` 的依赖。**           |
-| `src/pages/PlazaPage/index.tsx`        | 用单一 `useQuery` 替换 4 个独立 rail query；偏好过滤逻辑交给后端 `apply_preferences`                                                                         |
-| `src/pages/DrawPage/index.tsx`         | 候选池改为直接调用 `plazaApi.getRandomThreads` (/discovery/random) 获取真实随机数据；彻底移除之前前端 `sampleThreads()` 随机采样逻辑，提升抽取结果的分散度。 |
-| `src/features/plaza/lib/queryKeys.ts`  | 更新 query key 结构                                                                                                                                          |
-| `src/features/search/lib/queryKeys.ts` | 移除 `drawPool` key（不再需要）                                                                                                                              |
+`thread_link` 支持 Discord 完整链接或纯数字 ID。响应 `BannerApplicationResponse` 必填 `success`、`message`，`application_id` 可空。
+
+`BannerItem-Output` 字段为 `thread_id`、`title`、`cover_image_url`、`channel_id`、`guild_id`、`target_type`（默认 `1`）、`start_time`、`end_time`。ID 是字符串；不存在 `link` 或 `image` 这类 OpenAPI 字段，页面需要自行组装 UI 数据。
+
+### `FetchImageRequest` / `FetchImageResponse`
+
+请求包含 `items: FetchImageItem[]`；每个 item 必须有 `thread_id`，`channel_id` 可选。结果每项包含 `thread_id`、`thumbnail_urls`、`updated`（默认 `false`）和可空的 `error`。
+
+## 书单与赛事模型
+
+### `BooklistDetail` 与 `BooklistSummary-Output`
+
+两者字段基本一致。核心字段：
+
+| 字段 | 类型/默认值 | 说明 |
+| --- | --- | --- |
+| `id` | `number` | 书单 ID |
+| `owner_id` | `string` | 创建者 Discord 用户 ID |
+| `title`、`description`、`cover_image_url` | 字符串/可空 | 书单元数据 |
+| `author` | `AuthorDetail-Output` 或 `null` | 创建者信息 |
+| `is_public`、`is_anonymous`、`is_default` | `boolean` | 可见性及默认书单标记 |
+| `is_tournament` | `boolean = false` | 赛事是特殊书单 |
+| `tournament_channel_id` | `string` 或 `null` | 赛事关联频道 |
+| `default_sort_method` / `default_sort_order` | `join_time` / `desc` | 书单默认排序 |
+| `item_count` / `collection_count` / `view_count` | `number` | 项目、收藏、浏览计数 |
+| `publish_status` | `number = 0` | `0` 未发布、`1` 待处理、`2` 成功、`3` 失败 |
+| `created_at` / `updated_at` | `string` | 时间 |
+| `collected_flag` / `is_marked` | `boolean = false` | 当前用户收藏；请求 `mark_thread_id` 时的命中标记 |
+| `publish_info` | `BooklistPublishInfo-Output` 或 `null` | 已发布时的 Discord 信息，仅详情模型有此字段 |
+
+`BooklistSummary-Output` 用于列表，`BooklistDetail` 用于详情；不要把旧文档中的 `display_type` 作为当前排序模型，创建/更新接口仍接受它是因为后端标记为已废弃，优先使用 `default_sort_method` 与 `default_sort_order`。
+
+### 书单项
+
+`BooklistItemDetail` 必填 `booklist_item_id`、`thread_id`、`channel_id`、`title`、`author`、`created_at`、`reaction_count`、`reply_count`、`thumbnail_urls`、`display_order`、`added_at`，并包含帖子展示字段、`comment`、`tournament_participated_at`、`collected_flag` 等。`thumbnail_urls`、`tags`、`virtual_tags` 都是数组；不存在单数 `thumbnail_url`。
+
+写入模型：
+
+- `BooklistItemsAddRequest`：`{ items: BooklistItemAddData[] }`；每项必须有 `thread_id`，可选 `comment`、`display_order`、`tournament_participated_at`。
+- `BooklistItemsDeleteRequest`：`{ thread_ids: (number | string)[] }`。
+- `BooklistItemUpdateRequest`：可选/可空的 `comment`、`display_order`、`tournament_participated_at`。
+- `BooklistItemsSyncRequest`：必须有 `thread_id`、`scope_booklist_ids`、`target_booklist_ids`，可选 `comment`；目标列表必须是 scope 的子集。
+- `BooklistItemsSyncDTO`：`thread_id` 及新增、移除、未变化的书单 ID 数组。
+
+发布模型 `BooklistPublishRequest` 只有必填的 `thread_url`；`BooklistPublishInfo-Output` 返回 Discord guild/thread/message 的字符串 ID、URL 和 `published_at`。
+
+创建和更新响应分别是 `BooklistCreateResponse`（`booklist_id`、`title`、`created_at`）和 `BooklistUpdateResponse`（`booklist_id`、`title`，以及可选默认 message）。
+
+赛事专用模型由独立 `/tournament/*` 路由使用：
+
+- `TournamentCreateRequest`：必填 `tournament_channel_id`、`owner_id`、`title`；可选 `description`、`cover_image_url`、`is_public`（默认 `true`）。对应响应 `TournamentCreateResponse` 还返回 `booklist_id`、`tournament_channel_id`、`created` 和提示 `message`。
+- `TournamentUpdateRequest`：可选/可空的 `title`、`description`、`cover_image_url`、`is_public`。
+- `TournamentItemsAddRequest`：`items: TournamentItemAddData[]`；每项必须有 `thread_id`，可选 `comment` 和 `tournament_participated_at`。
+- `TournamentItemUpdateRequest`：可选/可空的 `comment`、`tournament_participated_at`。
+
+当前网页赛事功能使用 `BooklistDetail` 和 `/booklist/*`，而不是这些 API-key 路由。OpenAPI 还会为同一 Pydantic 模型生成 `*-Input`/`*-Output` 两个内部 schema；前端响应应使用 `*-Output`，不把 `*-Input` 当作网络响应类型。
+
+## 收藏、简单响应和错误
+
+收藏接口的 body 是 ID 数组，`target_type=1` 表示帖子、`target_type=2` 表示书单。这个约定与书单模型分离，不能写成 `CollectionRequest` 对象。
+
+登录、登出、关注写操作、收藏写操作、发布/删除等多个接口在 OpenAPI 中的成功响应是未细化的 `object`，因此文档和前端都不应假定统一的 `{ success, message }` 结构。已细化的操作响应只使用各自 schema。
+
+校验失败统一可能返回 `HTTPValidationError`：`detail` 是 `{ loc, msg, type }[]`。未知的业务错误字段不在当前生成契约中。
+
+## 前端适配类型边界
+
+以下类型是前端方便 UI 使用的适配，不是后端新增模型：
+
+- `Thread`：基于 `ThreadDetail`，把 `tags` 和赛事字段扩展为 UI 可选字段，并保留少量旧字段兼容。
+- `FollowedThread`：基于 `Thread` 加入关注关系字段。
+- `Booklist` / `BooklistItem`：分别直接别名 `BooklistDetail` / `BooklistItemDetail`。
+- `PaginatedResponse<T>`：前端泛型包装器。
+- `FollowsResponse`：把 `/follows/` 和 `/follows/unread-count` 两次响应组合后的 UI 结构。
+- `UserPreferencesResponse`：前端把三个 Snowflake 列表归一化为字符串数组。
+
+新增字段或接口时，应先更新后端导出的 `openapi.json`，再重新生成类型；不要只修改本文件或手工扩大前端类型。

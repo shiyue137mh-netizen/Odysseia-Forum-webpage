@@ -1,102 +1,71 @@
-# 📁 目录结构说明 (Directory Structure)
+# 目录结构说明
 
-本文件详细描述了基于 FSD (Feature-Sliced Design) 的前端代码库业务结构。配合 `core_architecture.md` 阅读，可快速厘清现有文件的存放位置与逻辑边界。
-
-## 1. 完整目录树
+以下结构以当前仓库根目录为准，省略测试文件和未逐项列出的组件；具体入口以源码为准。
 
 ```text
-Odysseia-Forum-Main/
-├── webpage/                          # React 前端根目录
-│   ├── src/
-│   │   ├── app/                    # [App 面向应用层] 全局配置、路由拓扑、顶层 Provider
-│   │   │   ├── providers/          # 错误边界、路由守卫、QueryClientProvider
-│   │   │   ├── themes/             # 主题上下文
-│   │   │   ├── App.tsx             # 基础包裹组件
-│   │   │   └── router.tsx          # 路由树定义
-│   │   │
-│   │   ├── pages/                  # [Pages 面向路由层] 每个路由对应的容器页面
-│   │   │   ├── SearchPage/         # 搜索主页
-│   │   │   ├── DrawPage/           # 抽卡发现
-│   │   │   ├── TournamentsPage/    # 赛事域（另有 Detail / Manage / My 三个页面）
-│   │   │   ├── MePage/             # 我的空间（关注中心是它的 ?tab=follows）
-│   │   │   └── ...
-│   │   │
-│   │   ├── widgets/                # [Widgets 面向区块层] 组装多个特性的庞大独立 UI 块
-│   │   │   ├── layout/             # 核心框架布局 (TopBar, AppSidebar)
-│   │   │   ├── sidebar/            # 侧边栏挂件
-│   │   │   └── thread-preview/     # 面向全局的帖子预览浮层组合
-│   │   │
-│   │   ├── features/               # [Features 面向行为层] 带有明确业务闭环和网络读写的特性操作
-│   │   │   ├── auth/               # 认证流程 (登录守卫、会话管理)
-│   │   │   ├── authors/            # 作者卡片与作品悬浮预览
-│   │   │   ├── banner/             # 轮播图管理 (Banner 申请交互)
-│   │   │   ├── booklists/          # 书单系统 (书单增删改查、帖子批量加入)
-│   │   │   ├── discovery/          # 发现接口 (热点轨道、随机推荐)
-│   │   │   ├── draw/               # 抽卡揭晓浮层
-│   │   │   ├── easter-eggs/        # 彩蛋系统
-│   │   │   ├── follows/            # 关注系统 (未读状态拉取、更新中心)
-│   │   │   ├── mascot/             # 吉祥物面板 (全局提示、互动气泡)
-│   │   │   ├── notifications/      # 通知中心 (整合提醒、未读汇总)
-│   │   │   ├── onboarding/         # 新手引导系统 (气泡弹窗与全局教程步骤管理)
-│   │   │   ├── plaza/              # 广场大盘
-│   │   │   ├── preferences/        # 用户偏好设置 (搜索习惯、标签过滤黑白名单)
-│   │   │   ├── search/             # 搜索中枢 (分词器、URL状态同步、API桥接)
-│   │   │   ├── tags/               # 标签目录
-│   │   │   ├── threads/            # 完整帖子交互总成 (ThreadCard、ThreadListItem、结果集合与帖子动作)
-│   │   │   └── tournaments/        # 赛事 (本质是标记为 is_tournament 的书单)
-│   │   │
-│   │   ├── entities/               # [Entities 面向实体层] 以特定业务模型为核心的对象与轻量视图
-│   │   │   ├── thread/             # 帖子类型、派生模型、统计/状态/赛事徽章与加载骨架
-│   │   │   ├── booklist/           # 书单卡片
-│   │   │   ├── tournament/         # 赛事类型 (Tournament = Booklist 的别名)
-│   │   │   └── user/               # 用户卡片 (AuthorAvatar)
-│   │   │                           # 注：频道没有 entity 层，统一由 shared/hooks/useChannels 提供
-│   │   │
-│   │   ├── shared/                 # [Shared 面向共享基建] 纯粹的通用组件与核心底层逻辑
-│   │   │   ├── ui/                 # 原子组件大盘 (Button, Tooltip, LazyImage)
-│   │   │   ├── lib/                # 纯函数支持 (Tailwind合并器, 工具类)
-│   │   │   ├── hooks/              # 非业务相关的 React钩子 (页面视窗感知等)
-│   │   │   ├── api/                # Axios 总实例与拦截器配置
-│   │   │   ├── config/             # 全局静态配置区 (如频道映射、导航栏配置)
-│   │   │   ├── styles/             # Tailwind 全局配置与入口
-│   │   │   └── types/              # TS 声明区 (包括 OpenAPI 自动生成接口)
-│   │   │
-│   │   ├── assets/                 # 静态字体、图标等切图资源
-│   │   └── main.tsx                # React 的挂载原生入口
-│   │
-│   ├── tsconfig.json               # 核心编译策略
-│   └── vite.config.ts              # 核心服务运行与代理策略
+repo/
+├── src/
+│   ├── main.tsx                 # React 挂载入口
+│   ├── app/
+│   │   ├── App.tsx              # QueryClient、主题、路由、全局层装配
+│   │   ├── router.tsx            # 路由树与页面懒加载
+│   │   ├── providers/            # ErrorBoundary、ProtectedRoute、RequiredSetupGate
+│   │   └── themes/               # ThemeProvider、主题 token 和背景层
+│   ├── pages/                    # 路由页面及页面内部子组件
+│   ├── widgets/
+│   │   ├── layout/               # RootLayout、TopBar、AppSidebar、MobileTabBar
+│   │   ├── sidebar/              # 可调整大小的侧栏
+│   │   ├── thread-preview/       # 全局帖子预览与浮层
+│   │   └── content-display/      # 广场/排行/内容展示区块
+│   ├── features/                 # 按业务能力切片
+│   │   ├── ai-search/            # Provider、Agent、工具、会话、提示词和 AI UI
+│   │   ├── auth/                 # 认证 API 与 hooks
+│   │   ├── booklists/            # 书单 API、查询、写操作和表单
+│   │   ├── discovery/            # 发现轨道与随机抽取 API/hooks
+│   │   ├── draw/                 # 抽卡揭晓 UI
+│   │   ├── follows/              # 关注列表、未读数和操作
+│   │   ├── preferences/          # 服务端搜索/发现偏好
+│   │   ├── search/               # 普通搜索 API、URL 参数、查询和预览状态
+│   │   ├── threads/              # 帖子卡片、列表、操作和推荐
+│   │   ├── tournaments/          # 赛事查询与赛事列表组件
+│   │   └── ...                   # authors、banner、easter-eggs、history、mascot、notifications、onboarding、plaza、tags
+│   ├── entities/
+│   │   ├── thread/               # 帖子类型、轻量视图和状态/标签展示
+│   │   ├── booklist/             # 书单类型、卡片和条目转换
+│   │   ├── tournament/           # 赛事类型
+│   │   └── user/                 # 用户头像和用户头部组件
+│   ├── shared/
+│   │   ├── api/                 # Axios client、限流处理
+│   │   ├── config/              # 频道、导航和应用配置
+│   │   ├── hooks/               # 通用 hooks
+│   │   ├── lib/                 # 会话、URL、日期、搜索 Token 等纯逻辑
+│   │   ├── store/               # 全局界面设置及图片查看器状态
+│   │   ├── styles/              # 全局 CSS、主题 token 和组件样式
+│   │   ├── types/               # OpenAPI 与环境类型
+│   │   └── ui/                  # 通用 UI、Markdown、图片和加载器
+│   ├── assets/                  # 图片和静态资源
+│   └── tests/                   # 测试环境初始化
+├── docs/                        # 项目文档
+├── scripts/                     # OpenAPI 导出、OG 检查等脚本
+├── package.json
+├── vite.config.ts
+└── tsconfig*.json
 ```
 
-## 2. 核心功能分布
+## 当前边界
 
-在日常开发中，如果你需要修改某一个特定的功能，可以通过如下规律快速定界：
+普通搜索的 URL 协议位于 `src/features/search/hooks/useSearchParams.ts`，帖子预览状态位于
+`src/features/search/store/previewStore.ts`，消费方是 `src/widgets/thread-preview`。不要把帖子预览
+误写成搜索条件状态。
 
-- **搜索与列表展现**: 主要被汇聚在了 `src/features/search/`。通过 `searchTokenizer` 提供分词功能，利用 `useSearchURLParams` 提取并监听 URL query 参数作为唯一数据源；帖子浮层数据由独立的 `previewStore` 承载。
-- **发现广场与抽卡**: `src/features/plaza/` 不再复用搜索接口，而是通过 `plazaApi.ts` 调用专用的后端发现接口（`/discovery/rails`、`/discovery/random`），在 `PlazaPage` 和 `DrawPage` 中直接获取独立组装的热点轨道或随机推荐帖子。
-- **全局预览浮层**: `src/widgets/thread-preview/`，响应 `previewStore` 的状态从而在任意页面顶部展示帖子快照阅读流。
-- **主框架皮肤与顶栏**: 放置在 `src/widgets/layout/` 中。这些区块天然包裹在页面周围，属于高度复用的骨架级挂件。
-- **论坛内容的承接者**: `src/entities/thread/`，任何跟帖子这三个字本身有关的数据形态、卡片样式、Tag 样式，全都被内聚在此处。
+广场使用 `src/features/discovery`、`src/features/plaza` 的查询和 API；抽卡页直接使用发现随机
+接口并在 `src/features/draw` 中展示揭晓 UI。赛事与书单共享 `booklistsApi` / `booklistKeys`，赛事
+通过 `is_tournament=true` 区分；当前不存在独立的 `tournamentsApi`。
 
-## 3. 相对路径引用的绝对禁令
+`src/features/ai-search` 是完整的浏览器端业务切片，包含 Chat Completions 适配、模型列表、Agent
+循环、工具运行时、提示词、上下文、响应解析、本地会话和页面组件。它调用已有的搜索、书单和
+发现 API，不拥有后端 Agent 服务。
 
-为了遏制无限层级的 `../../../` 黑洞引发困扰，配置了严格的 `@` 解析钩子。跨层级调用时，**必须使用以下标准写法**：
+## 导入与分层
 
-```typescript
-// ❌ 严禁出现此类跨域穿透写法
-import { Button } from "../../../../shared/ui/Button";
-
-// ✅ 正确规范写法
-import { Button } from "@/shared/ui/Button";
-import { Thread } from "@/entities/thread/types";
-// ✅ 对于由 pnpm gen:api 产生的类型文件，专用了强关联短标识
-import { paths } from "@shared-types/openapi";
-```
-
-## 4. 分层依赖方向（有 lint 兜底）
-
-`shared < entities < features < widgets < pages < app`，**下层不得引用上层**。
-
-`eslint.config.js` 里用 `no-restricted-imports` 为每一层配置了禁止引用的上层路径。目前存量违规按 `warn` 计入 `pnpm lint` 的 `--max-warnings` 基线，**新增违规会让基线超标从而 CI 失败**；存量清零后应把规则提升为 `error`。
-
-常见的正确解法是 **props 注入** 而不是直接 import：底层组件暴露 `actionsSlot?: ReactNode` 之类的插槽，由上层把业务组件传进来。
+Vite 提供 `@` → `src` 和 `@shared-types` → `src/shared/types` 别名，跨目录代码应使用别名而不是层层相对路径。目标依赖方向为 `shared < entities < features < widgets < pages < app`；`eslint.config.js` 目前以 `warn` 级 `no-restricted-imports` 检查部分下层到上层引用，存量违规仍需单独治理，不能把该规则写成已经全部通过的硬约束。

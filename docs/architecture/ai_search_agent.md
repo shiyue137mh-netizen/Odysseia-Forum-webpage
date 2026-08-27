@@ -1,178 +1,88 @@
-# AI 搜索 Agent 设计
+# AI 搜索 Agent（当前实现）
 
-## 1. 定位
+本文记录当前前端实现。AI 搜索是受认证与必要设置守卫保护的 `/ai-search` 页面，Agent、工具运行时、会话和展示均在浏览器执行；项目不提供模型服务，也没有后端 Agent。模型服务由用户在页面中配置的 OpenAI-compatible Provider 提供。
 
-AI 搜索是一个独立页面中的浏览器端搜索助手。它不提供模型服务，也不在后端运行 Agent；用户自行连接兼容 OpenAI Chat Completions 的模型服务，浏览器负责执行论坛现有的只读搜索 API。
-
-模型只负责：
-
-- 理解自然语言搜索需求；
-- 组合传统搜索条件；
-- 从有限摘要中选择候选帖子；
-- 请求读取少量候选帖详情；
-- 总结并引用最终结果。
-
-模型不能直接访问论坛 API、Cookie、登录 Token、Local Storage 或任意网络地址。
-
-## 2. 首版边界
-
-- 独立路由：`/ai-search`。
-- 首版只支持 OpenAI-compatible Chat Completions。
-- 浏览器最多持久化最近 5 条搜索会话，刷新或切换页面后可以继续查看；不建设长期记忆系统或树状回答分支。
-- 用户可编辑看板娘人格与回答习惯，但不可覆盖固定工具协议和安全约束。
-- 仅开放只读工具，不提供收藏、关注、屏蔽或其他写操作。
-- 不引入通用 Agent 框架；先使用一个有硬上限的小型工具循环。
-
-## 3. 工具流
+## 运行链路
 
 ```text
-用户描述需求
-  -> 模型按资源类型调用 search_threads 或 search_tournaments
-  -> 浏览器执行传统搜索并返回有限摘要
-  -> 关键歧义无法自行判断时，ask_user 暂停并等待用户回答
-  -> 模型必要时调整条件再次搜索
-  -> 模型调用 get_resource_details 读取少量帖子或赛事详情
-  -> 模型输出正文与结构化资源引用
-  -> 前端校验 ID 并渲染现有帖子卡片
+AISearchPage
+  -> 读取本地 Provider 设置、用户偏好和 /meta/channels
+  -> POST Provider /chat/completions（携带固定工具协议）
+  -> Agent 最多循环 8 步
+  -> 浏览器执行 search/draw/booklist 只读 API
+  -> 详情读取后校验帖子引用
+  -> 解析 Markdown、<thread> 引用和可选 followups
+  -> 渲染帖子预览卡片或抽卡横向轨道
 ```
 
-### 3.1 `search_threads`
+模型只接收固定协议、用户自定义提示词、动态搜索上下文和经过压缩的工具结果；其中用户喜好是软参考，服务端搜索偏好仍按协议约束搜索。工具结果和帖子正文都被视为不可信数据；模型不能直接读取论坛 Cookie、Authorization、Local Storage 或任意网络地址。浏览器仍会通过现有 `apiClient` 调用论坛 API。
 
-映射现有 `searchApi.search()`，支持关键词、频道、Tag、作者、发帖时间、最后活跃时间、点赞数、回复数、收藏范围、排序依据和升降序。
+## Provider 设置
 
-工具描述必须给模型提供参数语义和常见组合，而不只列字段名：日期采用自然日零点边界，结束日期不包含当天；最新发布使用 `sort=newest`，相关度使用 `sort=relevance`，最近更新使用 `sort=active`，高赞使用 `sort=reactions`，讨论量使用 `sort=replies`；点赞和回复下限均为包含边界。当前日期由动态上下文提供，以便模型计算今天、本周和本月的绝对日期。
+`src/features/ai-search/api/modelsApi.ts` 和同目录的 `chatCompletionsApi.ts` 负责外部 Provider：
 
-返回限制：
+- Base URL 必须是 HTTPS；仅 `localhost`、`127.0.0.1` 和 `::1` 允许本地 HTTP。
+- 设置页通过 `GET /models` 读取 `data[].id`，由用户选择模型；聊天请求使用 `POST /chat/completions`。
+- 聊天请求默认 `stream: true`、`tool_choice: "auto"`，解析 SSE；Provider 返回普通 JSON 时也能解析。
+- API Key、Base URL、模型、用户提示词、用户喜好和 `sendClientHeader` 保存在浏览器 `localStorage` 的 `odysseia_ai_search_settings_v1`。这不是服务端密钥存储，同源 XSS 和公共设备风险由用户承担。
+- 可选请求头为 `X-Client-Name: odysseia-forum-webpage`；关闭后不影响核心功能。
 
-- 每次最多 12 条；
-- 首楼摘要最多 200 个字符；
-- 只返回帖子 ID、标题、作者名、频道、Tag、统计、时间和摘要；
-- 不把图片数组、Banner、通知、收藏状态、API 地址或请求配置发送给模型。
+实际 system message 由固定工具协议、可编辑的看板娘提示词、动态上下文和可选用户喜好拼接。动态上下文来自当前用户、服务端搜索偏好和 `/meta/channels`；频道下列出真实 Tag、虚拟 Tag 及映射源频道 Tag。
 
-### 3.2 `search_tournaments`
+## 工具与限制
 
-直接复用公开书单 API，并固定传入 `is_tournament=true`。赛事在当前公开数据模型中是特殊书单；该工具支持关键词和按参赛作品数、浏览数、收藏数、创建时间或更新时间排序，但不开放普通书单搜索。
+当前声明给模型的工具只有以下五个：
 
-### 3.3 `get_resource_details`
-
-- 只能读取本会话搜索结果中出现过的帖子或赛事 ID；
-- 单次最多 3 个资源；
-- 单会话最多读取 8 篇帖子和 4 个赛事；
-- 单会话详情正文总计最多 8000 个字符；
-- 截断时必须在工具结果中标记 `truncated`。
-
-### 3.4 `ask_user`
-
-只有关键歧义会明显改变频道、Tag、资源类型或排序，而且无法通过一次宽泛搜索自行判断时才允许调用。问题最多 120 字，提供 2 至 3 个不同方向的候选答案，UI 固定提供自定义输入；每轮最多询问一次。
-
-`ask_user` 必须作为唯一工具调用。Assistant Tool Call 原样写入会话后 Agent 暂停；用户选择会被保存为对应 Tool Message，再从原消息链继续请求，不能伪装成新的 User Message。
-
-### 3.5 结构化引用
-
-前端只渲染同时满足以下条件的帖子引用：
-
-1. ID 来自本会话搜索结果；
-2. 引用使用合法的 `<thread>` YAML；
-3. 同一回复未超过展示上限。
-
-伪造、未知或超量 ID 不生成链接。
-
-最终正文默认按 Markdown 渲染。帖子引用使用 `<thread>...</thread>` 包裹的 YAML，`thread_id` 和 `reason` 必填，`overview` 与 `tone` 可选。`overview` 根据资源类型概括故事前提、用途、核心功能或适用场景，不得把插件、工具或教程强行总结成剧情；解析器暂时兼容旧 `synopsis` 字段。模型不得重复输出标题、作者、图片、Tag、统计或 URL；这些事实字段必须从本轮真实帖子缓存取得。解析失败、未知 ID 或超过六篇的引用降级为普通 Markdown 文本。
-
-## 4. Agent 限额
-
-```text
-最大 Agent 步数：8
-帖子搜索次数：3
-赛事搜索次数：2
-单次搜索模型可见结果：12
-搜索摘要长度：200 字符
-单次详情读取：3 个资源
-单会话详情读取：8 篇帖子、4 个赛事
-单会话详情正文：8000 字符
-最终展示帖子：6 篇
-```
-
-限制由前端代码执行，提示词只负责解释规则。
-
-## 5. 消息与会话
-
-内部消息遵循 Chat Completions 的 `system`、`user`、`assistant`、`tool` 结构。页面状态另行保存本轮搜索命中的帖子，供 ID 校验和卡片渲染，不把完整缓存反复发送给模型。
-
-Session 使用完整的 Chat Completions 消息顺序保存 `user`、发起工具调用的隐藏 `assistant`、隐藏 `tool` 结果和最终可见 `assistant`。隐藏消息不渲染在页面中，但下一轮请求会按原顺序进入 Payload；UI 推理轨迹、消息时间、耗时和 Usage 不进入模型上下文。浏览器最多保存最近 5 条会话，每条会话最多保留 48 条协议消息；超过上限时只从完整的 user 回合边界裁剪，不能从 Tool Call 与 Tool Result 中间截断。每条最终 Assistant 消息最多保存 36 个经过校验且最近使用的真实帖子对象。
-
-Chat Completions 默认使用 SSE 流式响应，并兼容仍返回普通 JSON 的 Provider。流式正文、推理和工具状态只保存在页面内存，完成后再一次写入 Local Storage。可展示的过程轨迹只保存模型返回的推理文字、经过人类可读化的工具参数摘要、工具状态和结果数量；不保存或展示完整搜索结果、帖子正文和原始工具参数 JSON。
-
-流式 Assistant 发起工具调用后，下一轮 Payload 必须原样带回该 Assistant 的 `reasoning_content`、`content` 与 `tool_calls`，再追加对应的 Tool 消息；部分推理模型缺少该字段会拒绝继续请求。Provider 返回标准 `usage` 时，页面累计本次 Agent 多轮模型调用的输入、输出和总 Token，并与消息耗时一起保存；未返回 Usage 时不伪造统计。
-
-每次执行创建独立的 `AbortController`，同一个 signal 传递给模型请求、传统搜索和帖子详情请求。用户停止后保留已生成且通过不完整标签裁剪的正文，将运行中的工具标记为已终止，并结束本次 Agent 循环；停止按钮不能只隐藏前端状态而让后台请求继续运行。
-
-运行中的会话 ID 与 AbortController 在前端模块生命周期内登记。SPA 页面切换不会终止 Agent，返回 AI 页面后仍能识别运行状态并停止；浏览器刷新、关闭或进程挂起不承诺继续执行。任务完成、失败或被终止时，如果用户不在对应会话，侧边栏显示持久化未读提示；进入该会话后清除。
-
-## 6. 提示词
-
-系统提示词由两部分组成：
-
-1. 不可编辑的核心协议：工具权限、数据边界、帖子内容不可信、不得伪造 ID、搜索和详情次数限制；
-2. 用户可编辑的看板娘提示词：人格、语气、答案长度和评价偏好。
-
-默认可编辑提示词保存在 Local Storage，提供恢复默认操作。固定协议永远在代码中追加，用户提示词不能增加工具或解除限制。
-
-实际 Payload 的首条 `system` 消息由三部分动态拼接：固定工具协议、用户可编辑提示词、当前用户搜索上下文。动态上下文来自登录用户、搜索偏好和 `/meta/channels`，包含偏好频道、包含/屏蔽 Tag、作者和关键词偏好及当前日期。Tag 不使用全局平铺池，而是按频道独立列出该频道当前允许的真实 Tag、虚拟 Tag 和映射源频道 Tag；相同 Tag 在不同频道中重复保留，以便模型准确组合 `channel_id + tag`。设置窗口只读展示该上下文，但不将其持久化为用户配置。
-
-## 7. 模型连接与隐私
-
-模型配置包含 Base URL、模型名称、API Key 和应用标识开关。
-
-- Base URL 默认仅允许 HTTPS；本地开发额外允许 `localhost` 和 `127.0.0.1` 的 HTTP。
-- 模型名称不要求用户手填；前端通过 OpenAI-compatible `GET /models` 获取 `data[].id`，再由用户选择。
-- 模型列表请求失败时区分地址错误、CORS、鉴权失败、HTTP 错误和不兼容响应。
-- API Key 随模型设置保存在当前浏览器的 Local Storage，设置窗口明确提示同源 XSS 和公共设备风险。
-- 发送前明确显示目标域名以及将发送的搜索摘要、帖子详情数量。
-- Tool 结果使用字段白名单，绝不序列化论坛 Cookie、Authorization、Axios 配置或 Local Storage。
-
-浏览器禁止 JavaScript 覆盖真正的 `User-Agent`。应用身份采用：
-
-```http
-X-Client-Name: odysseia-forum-webpage
-```
-
-浏览器仍自然携带自身 UA。由于自定义 Header 可能触发 Provider 的 CORS 拒绝，连接设置允许关闭应用标识 Header；关闭后不影响核心功能。
-
-## 8. UI 原则
-
-AI 搜索页不是常规聊天软件，而是与看板娘面对面对话的搜索场景。
-
-- 看板娘立绘初始位于页面视觉中心；
-- 首次产生回复后，立绘平滑上移，为下方正文腾出空间；
-- 模型不能控制表情，表情完全由页面状态决定；
-- 搜索、阅读详情、完成、无结果和错误分别映射固定表情；
-- AI 回复直接铺在连续页面背景上，不使用消息气泡；
-- 用户输入可以保持左对齐并与 AI 正文区分，但不制造多层卡片；
-- 输入框是会话区唯一持续存在的明显容器；
-- 思考区域按实际时间线展示推理文字、搜索和详情工具摘要，单个工具调用不再嵌套展开，也不展示原始 Tool JSON；
-- 流式执行期间顶部状态文字使用低速扫光，正文按增量直接渲染；
-- 流式回复在“类脑娘”名称右侧每秒更新已处理时长，完成后在消息底部固定显示时间、耗时及 Provider 实际返回的 Token Usage；
-- 最终帖子引用复用现有帖子视觉与详情浮层。
-
-建议状态映射：
-
-| 状态 | 表情资源 |
+| 工具 | 行为与硬限制 |
 | --- | --- |
-| 空闲 / 初次见面 | `hi` |
-| 理解问题 / 组织回答 | `write` |
-| 执行搜索 | `searching` |
-| 读取候选详情 | `tea` |
-| 完成 | `success` |
-| 无结果 / 需要修正 | `confused` |
-| 请求失败 | `error` |
+| `search_threads` | 调用现有 `searchApi.search`；单次返回最多 12 个压缩候选，最多执行 3 次。支持关键词、频道、Tag、作者、创建/活跃日期、点赞/回复下限、收藏范围和排序；搜索 API 自动应用用户偏好。 |
+| `search_tournaments` | 调用 `booklistsApi.listPublic` 并固定 `is_tournament=true`；单次最多取 8 个公开赛事，最多执行 2 次。赛事是特殊书单，不用于普通书单搜索。 |
+| `draw_threads` | 调用 `/discovery/random`；每次 1–10 张，最多执行 2 次。卡池可选用户偏好、全社区或自选频道，可叠加包含/排除 Tag 和 AND/OR 逻辑。 |
+| `get_resource_details` | 只允许读取本会话搜索结果中的帖子或赛事 ID；单次最多 3 个资源，整个 Agent 回合最多 8 篇帖子、4 个赛事。帖子文本单篇最多取 2000 字符，详情文本总量最多 8000 字符；赛事同时读取详情和前 8 个参赛条目。 |
+| `ask_user` | 仅在关键歧义无法通过一次宽泛搜索解决时使用；问题最多 120 字，选项为 2–3 项，且必须是本次 assistant 消息唯一的工具调用。 |
 
-页面遵循无框流体风格：除输入框、模型设置和帖子卡片外，文字直接放在背景上。
+Agent 总步数上限是 8。帖子候选会按最近使用保留最多 36 个；最终正文中的合法帖子引用最多渲染 6 个，重复、未知 ID、非法 YAML 或超量引用会降级为普通 Markdown。工具运行时还兼容历史消息中的 `get_thread_details` 名称，但当前工具声明和提示词只使用 `get_resource_details`。
 
-## 9. 分批实现
+搜索工具返回标题、作者、Tag、统计、时间和不超过 200 字符的首楼摘要；详情工具返回真实候选的首楼文本（截断时标记 `truncated`）。模型不得从未读取详情的候选中做确定性推荐。
 
-1. 独立页面、看板娘舞台、输入区与本地模型设置；
-2. Chat Completions 连接测试和错误分类；
-3. 有限 `search_threads` 工具循环；
-4. `get_resource_details` 和帖子引用卡片；
-5. 上下文压缩、停止生成与最终回复流式输出。
+## 消息、会话和持久化
+
+Agent 内部使用 Chat Completions 的 `system`、`user`、`assistant`、`tool` 顺序。发起工具调用的 assistant 和工具结果在页面中隐藏，但会作为下一轮请求的原始协议消息保留；`reasoning_content`、工具调用和普通中途正文也会跟随协议继续发送。
+
+`useAISearchConversationStore`（Zustand）负责会话状态：
+
+- 最多保留 5 个会话，每个会话最多 48 条消息；超限时从完整的 user 回合边界裁剪。
+- 最终 assistant 消息可以保存推理、工具轨迹、Usage、最多 36 个候选帖子、最多 2 批抽卡结果和最多 3 条续问。
+- 会话、未读标记和消息通过 `odysseia_ai_search_conversations_v1` 写入 `localStorage`，并兼容迁移旧的单会话 key `odysseia_ai_search_session_v1`。
+- 流式正文和运行中的轨迹只存在页面内存；用户停止、等待追问或完成后才作为消息写入会话。运行中的 AbortController 以模块级 Map 登记，因此 SPA 切页不会自动取消，回到 AI 页面仍可识别并停止；刷新/关闭页面不承诺续跑。
+- 任务在非当前会话完成、失败或被停止时会标记未读；进入该会话后清除。
+
+每轮模型返回的标准 `usage` 会累计输入、输出和总 Token；Provider 不返回 Usage 时不伪造统计。每次执行使用独立 `AbortController`，模型请求、普通搜索和详情请求使用同一 signal；当前 `/discovery/random` 的 API 封装没有 signal 参数，因此抽卡请求不具备同等的取消保证。
+
+## 引用与 UI
+
+模型按提示词在 Markdown 正文中输出：
+
+```text
+<thread>
+thread_id: "真实帖子 ID"
+reason: "推荐理由"
+overview: "可选概览"
+tone: "可选氛围"
+</thread>
+```
+
+`responseParser` 使用 YAML + Zod 校验 ID 和字段，并只把本轮缓存中的帖子交给 `AISearchThreadReference`；仍兼容旧会话的 `synopsis` 和旧 XML 字段。`followups` 必须恰好包含 broader、narrower、alternate 各一条，否则不进入 UI。
+
+AI 页面当前提供：
+
+- 初始看板娘舞台；执行时根据 idle/thinking/searching/reading/complete/error 状态切换立绘，流式回复后收缩到页面上方。
+- 可编辑的 contenteditable Token 输入框，支持 `$tag:名称$`、`$author:ID$`、`$channel:ID$`，并通过普通搜索建议 API 补全作者。
+- 可展开的思考/工具轨迹、流式正文、停止/重试/编辑、追问按钮，以及复用现有帖子预览浮层的引用卡片。
+- `draw_threads` 的结果由 `DiscoveryThreadCarousel` 展示，不把随机抽取伪装成相关度排序。
+
+## 尚未实现或明确限制
+
+- 没有内置模型、服务端代理或长期云端会话；Provider、API Key 和会话均是浏览器侧配置/存储。
+- 抽卡 API 当前未接收 AbortSignal，停止生成时可能仍完成一次随机请求。
+- 浏览器刷新、关闭或进程挂起不会恢复运行中的 Agent；Local Storage 配额不足时只保留内存会话。

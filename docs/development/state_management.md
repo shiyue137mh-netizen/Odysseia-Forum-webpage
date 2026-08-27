@@ -1,100 +1,41 @@
-# 🔄 状态管理指南 (State Management)
+# 状态管理指南
 
-在复杂的前端应用中，清晰地划分不同类型的数据状态是保证项目可维护性的关键。本项目将状态严格划分为 **服务端状态 (Server State)** 和 **客户端状态 (Client State)** 两种。
+本项目按数据所有权划分状态。服务器数据交给 TanStack React Query；跨组件的本地交互状态使用
+Zustand；单组件开关和短暂输入优先使用 React 的 `useState`；可分享、可回退的搜索条件放在 URL。
 
-## 1. 核心理念与技术选型
+## 服务器状态：React Query
 
-| 状态类型         | 职责描述                                                                                           | 技术栈                  |
-| :--------------- | :------------------------------------------------------------------------------------------------- | :---------------------- |
-| **Server State** | 与后端数据库保持同步的数据（如：帖子列表、用户资料），具有异步、需要缓存、会被其他用户更改的特性。 | `@tanstack/react-query` |
-| **Client State** | 纯前端的交互状态（如：模态框是否展开、搜索面板输入的缓存字、当前选中的本地标签栏）。               | `zustand`               |
+API 请求函数位于各 feature 的 `api/`（底层客户端为 `src/shared/api/client.ts`），查询 hook 通常
+位于同 feature 的 `hooks/`。列表、用户资料、偏好、频道和搜索结果等异步数据使用 `useQuery` 或
+`useInfiniteQuery`，查询键集中在相邻 feature 的 `lib/queryKeys.ts`（如 `searchKeys`）。
 
-> ⚠️ **强制规范**：绝对禁止使用 `zustand` 或 `useState` 搭配 `useEffect` 来手动发请求缓存后端返回的业务数据。服务器返回的数据流统一必须通过 React Query 管理。
+各查询按数据性质设置 `staleTime`，并非所有查询共享一个全局固定值；常见列表为 60 秒，频道元数据
+为 10 分钟，搜索建议为 30 秒。需要刷新时使用 query 的 `refetch` / invalidation，不要用
+`useState + useEffect` 自行复制服务器缓存。
 
-## 2. Server State (React Query) 规范
+## 客户端状态：Zustand 与 React
 
-`@tanstack/react-query` 充当了我们在浏览器中的 "数据同步代理"。
+当前长期存在的 store 包括：
 
-### 2.1 基础调用流
+- `src/shared/store/settingsStore.ts`：用户界面设置，保存至 `odysseia_user_settings`；
+- `src/features/search/store/previewStore.ts`：帖子预览对象、延迟加载的 thread ID 和预览选项；
+- `src/features/onboarding/store/useOnboardingStore.ts`：教程完成状态，持久化至
+  `odysseia_onboarding_state`；
+- `src/features/mascot/store/mascotStore.ts`、`src/features/easter-eggs/store/easterEggStore.ts`
+  以及图片查看器 store：各自管理对应的 UI/彩蛋状态。
 
-1. 在 `Shared/api` 中通过 `axios` 编写基础数据请求函数（仅返回Promise）。
-2. 在 `Entities` 内部封装专属的自定义 Hook。例如 `useThreadList`。
-3. 在业务组件中直接引入该自定义 Hook 进行使用。
+订阅 Zustand 时只选择当前组件需要的字段；需要同时读取多个字段时复用项目已有的浅比较方式。
+普通组件内部的展开、悬浮和提交中状态不要为了共享而提升到 store。
 
-### 2.2 设计原则
+帖子预览和搜索条件是两个独立边界：预览使用 `usePreviewStore`，搜索条件不放入已删除的
+`searchStore`。
 
-- **查询键 (Query Keys) 必须序列化且具语意**: 形如 `['threads', 'list', { filter: 'hot' }]`。
-- **staleTime (数据陈旧时间)**: 必须显式设置。默认不要是 0，可以设定为 `1000 * 60` (1分钟) 甚至更长，减少网速带宽压力。
-- **并发与重试**: React Query 默认会在组件 Focus 或网络重新连接时静默刷新。
+## URL 作为搜索状态
 
-## 3. Client State (Zustand) 规范
+`src/features/search/hooks/useSearchParams.ts` 中的 `useSearchURLParams` 是搜索参数的唯一解析和
+序列化入口。`q`、`channel`、`type`、排序、页码、标签逻辑等条件从 URL 派生，筛选面板通过回调
+更新 URL。条件变化会重置页码；`tag_logic` 缺失时只在发起新搜索时读取
+`odysseia_search_tag_logic` 作为初值，解析已有分享链接始终以 URL 为准。
 
-`zustand` 是目前最轻量、没有样板代码的 React 状态管理库。
-在本项目中，Store 文件一般放置在 `src/features/{featureName}/store/` 目录中。
-
-### 3.1 定义规范
-
-以 `src/features/search/store/previewStore.ts` 为例：
-
-```typescript
-import { create } from "zustand";
-import type { Thread } from "@/entities/thread/types";
-
-// 1. 定义状态和动作的接口
-interface PreviewState {
-  previewThread: Thread | null;
-  previewThreadId: string | null;
-
-  // Actions
-  setPreviewThread: (thread: Thread | null) => void;
-  setPreviewThreadId: (id: string | null) => void;
-}
-
-// 2. 创建 store
-export const usePreviewStore = create<PreviewState>()((set) => ({
-  previewThread: null,
-  previewThreadId: null,
-
-  setPreviewThread: (thread) =>
-    set({ previewThread: thread, previewThreadId: null }),
-
-  setPreviewThreadId: (id) =>
-    set({ previewThreadId: id, previewThread: null }),
-}));
-```
-
-_(注：搜索的查询条件已由 URL 参数系统全面接管；原先承载 Banner 等 UI 状态的 `searchStore` 在 2026-07 的代码审查中确认已无人使用，已删除。)_
-
-### 3.2 使用规范 (防重渲染)
-
-由于 Zustand 是外部 store，在组件中使用时请**仅提取当前组件真正需要的字段**。这样可以避免不相关的状态改变触发整个组件的重渲染。
-
-✅ 正确用法（仅订阅可见性状态）：
-
-```tsx
-const isMainBannerVisible = useSearchStore(
-  (state) => state.isMainBannerVisible,
-);
-const setMainBannerVisible = useSearchStore(
-  (state) => state.setMainBannerVisible,
-);
-```
-
-❌ 错误用法（会导致任何 SearchUIState 其他值的变化都引发组件刷新）：
-
-```tsx
-const store = useSearchStore();
-```
-
-### 3.3 URL 作为状态 (URL as State)
-
-对于诸如搜索参数（搜索词、筛选渠道、标签、作者等）的场景，**强制使用 URL 参数 (`URLSearchParams`) 代替 Zustand 作为数据源**。
-
-- 好处: 状态可分享、支持浏览器前进后退、解耦 UI Store 与请求逻辑。
-- 示例: 在 `src/features/search/hooks/useSearchParams.ts` 中，通过暴露 `useSearchURLParams` 钩子解析并维护 `query`, `channel`, `sortMethod` 等查询参数。所有筛选组件（如 `SearchFilterPanel`）将受控于由 URL 驱动的派生状态。帖子预览这类独立业务状态放在 `src/features/search/store/previewStore.ts`，与查询条件完全解耦。
-
-> ⚠️ **不要反向写回 URL。** localStorage / sessionStorage 只能作为「输入框回填」或「新建搜索时的初值」，绝不能参与 URL 解析，也不能在 effect 里把本地值 `setParams` 回 URL。2026-07 的审查在这里抓到过两个真实缺陷：草稿把刚被清空的搜索词写了回去（用户以为「清除筛选」按钮坏了），以及 `tagLogic` 缺省值取自 localStorage 导致同一条分享链接在不同设备上结果不同。标签逻辑的基准值现由 `DEFAULT_TAG_LOGIC` 常量固定。
-
-### 3.4 状态的局部化
-
-尽量只将 `跨组件通信` 或者 `页面级需要维持的草稿流` 放入 `zustand`。普通的单组件内部开关（如某个下拉菜单是否展现），优先使用 React 原生的 `useState`。
+`sessionStorage` / `localStorage` 可以保存草稿、显示偏好或本地 UI 设置，但不要在 effect 中把本地
+值反向写回当前 URL，避免分享链接在不同设备产生不同结果。

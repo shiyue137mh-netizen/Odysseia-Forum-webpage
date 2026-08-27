@@ -1,84 +1,46 @@
-# 🏗️ 前端核心架构 (Core Architecture)
+# 前端核心架构
 
-本项目采用 **Feature-Sliced Design (FSD, 功能模块化设计)** 作为基础架构方法论，结合 React 的组件化生态，实现高内聚、低耦合的可扩展前端业务。
+本文描述当前源码，而不是未来架构计划。项目是 React 单页应用，目录按 Feature-Sliced Design（FSD）组织，但现状仍有少量跨层存量引用，不能把 FSD 约束描述为已经完全封闭。
 
-## 1. 技术栈大盘 (Modern Stack)
+## 技术栈
 
-| 领域           | 核心技术                      | 说明                                                    |
-| :------------- | :---------------------------- | :------------------------------------------------------ |
-| **视图层UI**   | **React 19**                  | 使用 React 19 新特性 (Actions, use, ref passed as prop) |
-| **构建引擎**   | **Vite 8 (Rolldown)**         | 采用 Rust 编写的 Rolldown 引擎，极致的 HMR 与打包速度   |
-| **路由控制**   | React Router v6               | 基于组件/Hook形式的前端路由分发                         |
-| **服务端状态** | `@tanstack/react-query` v5    | 负责远程数据拉取、缓存、后台静默刷新                    |
-| **客户端状态** | `zustand`                     | 轻量级、基于 Hooks 的全局 UI 状态流转                   |
-| **样式系统**   | **Tailwind CSS v4**           | **CSS-First** 引擎，取消 JS 配置，原生支持现代 CSS 特性 |
-| **动效库**     | **Motion 12**                 | 丝滑的 UI 交互动画，深度适配 React 19                   |
-| **类型与规范** | **TypeScript 6.0**, Zod       | 全链路显式类型与运行时校验                              |
-| **通信层**     | `axios`, `openapi-typescript` | 基于 OpenAPI 规范自动生成全局类型定义                   |
+| 领域 | 当前实现 | 依据 |
+| --- | --- | --- |
+| UI | React 19、React DOM 19 | `package.json`、`src/main.tsx` |
+| 构建 | Vite 8、`@vitejs/plugin-react-swc`、`@tailwindcss/vite` | `package.json`、`vite.config.ts` |
+| 路由 | `react-router-dom` 6.30.6，`createBrowserRouter` | `src/app/router.tsx` |
+| 服务端状态 | TanStack React Query 5 | `src/app/App.tsx` 及各 feature hooks |
+| 客户端状态 | Zustand 5 | settings、preview、mascot、onboarding、AI 会话等 store |
+| 样式与动效 | Tailwind CSS 4、`motion` 12 | `src/shared/styles`、页面与组件导入 |
+| 请求与校验 | Axios、Zod | `src/shared/api/client.ts`、AI 搜索工具与设置解析 |
+| 类型生成 | `openapi-typescript` | `package.json` 的 `gen:api` 脚本、`src/shared/types/openapi.d.ts` |
 
----
+## 应用装配与运行边界
 
-## 🌟 2. 现代化范式 (Modern Paradigms)
+`src/main.tsx` 以 `React.StrictMode` 挂载 `App`。`src/app/App.tsx` 负责错误边界、共享 `QueryClient`、主题、路由、全局 Toaster、图片修复队列、认证失效和开发环境 React Query Devtools。路由由 `src/app/router.tsx` 集中定义；根路由下依次经过认证守卫、必要设置守卫和 `RootLayout`。
 
-为了保持项目的前瞻性并规避旧知识库的误导，请遵循以下 React 19 + Tailwind 4 的开发新范式：
+`src/widgets/layout/RootLayout.tsx` 是登录后页面的应用壳：桌面侧栏、顶栏、移动端 Tab 栏、独立主滚动区，以及全局帖子预览、图片查看器、主题/吉祥物、彩蛋和新手引导层。页面内容通过 React Router `Outlet` 插入主滚动区。
 
-### 2.1 彻底弃用 `forwardRef`
+## FSD 分层
 
-React 19 中，`ref` 已成为普通 prop。在编写组件时，**严禁使用 `forwardRef`**，直接在参数中解构使用即可：
+目录职责如下：
 
-```tsx
-// ✅ React 19 标准方案
-export const MyComponent = ({ ref, className, ...props }: Props) => (
-  <div ref={ref} className={className} {...props} />
-);
-```
+- `app`：应用初始化、路由、守卫、主题和顶层 Provider。
+- `pages`：路由页面的业务编排；页面可以组合各 feature、widget、entity 和 shared。
+- `widgets`：跨页面复用的完整区块，例如 `RootLayout`、`TopBar`、`AppSidebar`、内容展示和帖子预览。
+- `features`：可复用的业务能力及其 API、hooks、组件、模型和局部状态，例如搜索、书单、赛事、关注、偏好、AI 搜索和发现。
+- `entities`：帖子、书单、赛事和用户等业务实体的类型、轻量展示和转换逻辑。
+- `shared`：通用 UI、API 客户端、类型、配置、样式、纯函数和非业务 hooks。
 
-### 2.2 CSS-First 样式配置
+目标依赖方向是 `shared < entities < features < widgets < pages < app`。当前 `eslint.config.js` 只对 `shared`、`entities`、`features`、`widgets` 配置了禁止引用上层的 `no-restricted-imports`，级别为 `warn`；源码中仍存在少量存量违规，因此这里是治理目标，不是已完成的不变量。新增跨层引用应优先通过 props、下沉共享部分或调整切片边界解决。
 
-项目已彻底移除 `tailwind.config.js`。所有主题扩展（颜色、间距、断点）必须在 `src/shared/styles/globals.css` 的 `@theme` 块中定义：
+## 状态与数据流
 
-- **新增颜色**：使用 `--color-xxx` 格式定义。
-- **自定义配置**：直接写 CSS 变量，Tailwind v4 会自动映射。
+- 远程数据由 React Query hooks 管理，API 实现位于各 feature 的 `api/`；查询 key 位于对应 feature 的 `lib/queryKeys.ts`。全局默认缓存时间、重试和查询错误处理在 `App.tsx` 的 `QueryClient` 配置中定义。
+- 普通搜索条件由 `useSearchURLParams` 解析和序列化到 URL；`q` 承载文本及 Tag/作者/日期 Token，`channel`、`type`、排序、页码和 Tag 逻辑也属于 URL 协议。搜索结果使用 `useInfiniteQuery`，后续请求通过 `exclude_thread_ids` 推进。
+- Zustand 只承载交互状态或本地状态：`useSettingsStore` 保存界面设置，`usePreviewStore` 解耦全局帖子预览，AI 会话 store 保存会话和运行/未读状态，其他 store 分别服务吉祥物、彩蛋和新手引导。
+- 持久化不是统一状态库协议：界面设置、搜索历史、浏览足迹、最后浏览位置、抽卡配方和 AI 设置/会话分别通过各自的 `localStorage` 工具保存；搜索草稿等短期值使用 `sessionStorage`。不要把这些本地数据描述成后端用户配置。
 
-### 2.3 Actions API 表单处理
+## 导入约定
 
-推荐优先使用 React 19 的 Actions 处理异步表单提交。结合 `useActionState` 和 `useFormStatus` 来替代手动维护 `loading` 和 `error` state。
-
----
-
-## 3. FSD (Feature-Sliced Design) 分层规范
-
-本项目的 `src/` 目录严格遵循 FSD 分层逻辑。**层级越高，包含的具体业务逻辑就越多。**
-
-> 核心原则 (依赖单向性): **上层模块可以引用下层或同层模块，但下层绝不能引用上层模块！**
-
-### 🧱 6. Shared (共享层)
-
-**职责**：全局公用的基础设施、底层 UI 组件（如 `src/shared/ui`）。
-
-### 📦 5. Entities (实体层)
-
-**职责**：应用中的核心业务对象（User, Thread）。
-
-### ⚙️ 4. Features (功能特性层)
-
-**职责**：用户与应用交互的具体功能（Form, Toggle）。
-
-### 🧩 3. Widgets (部件层)
-
-**职责**：将 Features 和 Entities 组合而成的独立区块（Navbar, Sidebar）。
-
-### 📄 2. Pages (页面层)
-
-**职责**：路由对应的顶层组件。
-
-### 🚀 1. App (应用层)
-
-**职责**：全局初始化（Provider, `globals.css`）。
-
----
-
-## 4. 数据流流向 (Data Flow)
-
-1. **服务端状态 (React Query)**：通过封装好的 Hooks 直接获取数据，杜绝在 Page 层使用 `useEffect` 手动拉取。
-2. **客户端状态 (Zustand)**：仅处理 UI 状态与跨页面临时缓存。
+Vite 配置提供 `@` → `src`、`@shared-types` → `src/shared/types` 两个别名。跨目录导入使用别名；OpenAPI 生成类型使用 `@shared-types/openapi`。这只是路径约定，不改变 FSD 的依赖边界。

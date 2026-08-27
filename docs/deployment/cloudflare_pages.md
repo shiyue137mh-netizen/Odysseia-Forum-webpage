@@ -39,21 +39,31 @@
 
 ### 3. 环境变量配置
 
-在 **Settings** > **Environment variables** 中添加：
+在 **Settings** > **Environment variables** 中配置浏览器构建变量：
 
-| 变量名          | 示例值                                | 说明                     |
-| --------------- | ------------------------------------- | ------------------------ |
-| `VITE_API_URL`  | `https://api.odysseia.example.com/v1` | 后端 API 地址（必填）    |
-| `VITE_USE_MOCK` | `false`                               | 仅控制开发环境登录 Mock，生产环境保持 `false` |
-| `VITE_API_MOCKING` | `false`                            | 控制 Mock 控制台和测试路由，生产环境保持 `false` |
-| `VITE_SHOW_DEVTOOLS` | `false`                          | 是否显示 React Query Devtools，生产环境通常保持 `false` |
-| `NODE_VERSION`  | `22`                                  | 与当前 CI 构建版本一致 |
+| 变量名 | 必需 | 默认值/说明 |
+| --- | --- | --- |
+| `VITE_API_URL` | 生产必需 | API `/v1` 基地址；未配置会回退到本机 `http://localhost:10810/v1`，不适合生产 |
+| `VITE_BACKEND_URL` | 建议配置 | OAuth 登录入口和本地 Vite 代理目标；默认 `https://forum.shimmerday.top` |
+| `VITE_GUILD_ID` | 否 | Discord 链接缺少 guild ID 时的回退；未配置时使用 `@me` |
+| `VITE_RELEASE_FEED_URL` | 否 | 更新公告源；默认 `/notifications/updates.yaml` |
+| `VITE_USE_MOCK` | 否 | 仅开发环境登录 Mock；生产保持 `false` |
+| `VITE_API_MOCKING` | 否 | 控制 Mock 控制台和测试路由；生产保持 `false` |
+| `VITE_SHOW_DEVTOOLS` | 否 | 是否显示 React Query Devtools；生产通常保持 `false` |
 
-> **重要**: 环境变量必须以 `VITE_` 开头才能在前端代码中访问。
+只有需要暴露给浏览器代码的变量才使用 `VITE_` 前缀。Cloudflare 构建环境的 Node.js 版本单独
+设置为 `22`，它不是浏览器变量。
 
-Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单动态 OG Function
-默认连接 `https://forum.shimmerday.top/v1`；如果后端地址变化，可在 Pages 项目的
-**Settings > Variables and Secrets** 中设置 `API_BASE_URL`（包含 `/v1`）覆盖默认值。
+Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。动态 OG 使用以下配置：
+
+| 变量名 | 必需 | Secret | 说明 |
+| --- | --- | --- | --- |
+| `OG_SERVICE_TOKEN` | 动态元数据必需 | 是 | 后端只读 OG 机器凭证；Production 和 Preview 分别配置 |
+| `API_BASE_URL` | 否 | 否 | 后端 `/v1` 基地址；未配置时默认使用 `https://forum.shimmerday.top/v1` |
+| `OG_IMAGE_BASE_URL` | 否 | 否 | 公开图片服务地址的可选覆盖；未配置时使用代码内置的 Vercel 地址 |
+
+`OG_IMAGE_BASE_URL` 是公开 URL，不是 Secret，也不是部署必填项。当前代码默认使用
+`https://odysseia-forum-og.vercel.app`。
 
 ### 4. 部署
 
@@ -64,7 +74,7 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
    - 运行构建（`pnpm build`）
    - 部署到 CDN
 
-3. 等待构建完成（通常 2-5 分钟）
+3. 等待构建完成；耗时取决于依赖缓存和 Cloudflare 构建队列
 
 ### 5. 验证部署
 
@@ -73,7 +83,7 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 #### 验证清单
 
 - [ ] 页面能正常加载（无白屏）
-- [ ] 刷新任意子路由（如 `/login`, `/follows`）不报 404
+- [ ] 刷新任意子路由（如 `/login`, `/search`）不报 404
 - [ ] 侧边栏显示频道列表
 - [ ] 搜索功能正常
 - [ ] 登录跳转正常（需确保后端 CORS 和回调 URL 配置正确）
@@ -86,41 +96,51 @@ Pages Functions 的运行时变量不受 Vite 的 `VITE_` 规则限制。书单�
 /* /index.html 200
 ```
 
-此文件确保所有路由请求都返回 `index.html`，实现 SPA 路由支持。**已自动包含在构建输出中**。
+此文件为未命中 Pages Function 的前端路由返回 `index.html`，实现 SPA 路由回退。已经命中
+Function 的四类 canonical OG 路由不依赖这条规则。该文件会自动包含在构建输出中。
 
 ### `public/_routes.json`
 
 ```json
 {
   "version": 1,
-  "include": ["/booklists/*", "/share/booklists/*", "/tournaments/*", "/share/tournaments/*", "/threads/*", "/u/*"],
+  "include": ["/booklists/*", "/tournaments/*", "/threads/*", "/u/*"],
   "exclude": []
 }
 ```
 
-书单和赛事路由返回动态 OG；帖子和作者路由暂时由 Function 显式返回 SPA 外壳，待后端分享
-接口接通后再注入动态元数据。其他页面和静态资源继续走静态托管。
+书单、赛事、帖子和作者的 canonical 路由均已接入 crawler-only 动态 OG。其他页面和静态资源
+继续走静态托管。历史 `/share/*` 路径不在当前 Function 路由中，不应用于分享或验收。
 
 ### 动态 OG
 
 跨端认证、后端接口契约、安全边界和验收流程详见
 [`docs/architecture/dynamic_open_graph.md`](../architecture/dynamic_open_graph.md)。当前 Pages
 Function 已接入后端内部分享接口。部署前必须在 Cloudflare Production 和 Preview 环境分别
-配置加密 Secret `OG_SERVICE_TOKEN`，否则会安全回退到站点默认 OG。
+配置加密 Secret `OG_SERVICE_TOKEN`，否则会安全回退到站点静态默认 OG。
 
-书单和赛事动态 OG 分别位于 `functions/share/booklists/[id].js` 与
-`functions/share/tournaments/[id].js`。普通浏览器访问分享 URL 时会直接重定向到正常详情
-页，只有社交爬虫读取后端分享数据。Function 显式通过
-`env.ASSETS` 获取 React 的 `index.html`。不能在这个路由里依赖 `public/_redirects`
-完成 SPA 回退，因为 Cloudflare 不会对已经命中 Function 的请求应用 `_redirects`。
+当前 Function 路径为：
 
-赛事复用书单分享接口，因为当前赛事本质上是 `is_tournament = true` 的书单。OG 图片按以下
-顺序选择：
+```text
+functions/booklists/[id].js
+functions/tournaments/[id].js
+functions/threads/[id].js
+functions/u/[id].js
+```
 
-1. 后端分享接口返回的 `image_url`；
-2. 站点默认 `/og-image-202608.png`。
+四类路由都只为已识别的社交爬虫读取分享元数据并重写 HTML。普通浏览器不会请求内部接口，
+也不会发生 302，而是由 Function 通过 `env.ASSETS.fetch('/')` 直接返回 React SPA shell。
+Cloudflare 不会对已经命中 Function 的请求应用 `public/_redirects`，因此这里必须显式获取 shell。
 
-封面选择由后端统一处理，Function 不再请求书单详情或第一项帖子。
+赛事复用书单分享接口，因为当前赛事本质上是 `is_tournament = true` 的书单。元数据注入成功
+后，`og:image` 指向独立 Vercel 服务：
+
+```text
+https://odysseia-forum-og.vercel.app/api/og/{type}/{id}?v={updated_at}-{revision}
+```
+
+图片服务生成失败时会返回自身的 `fallback.png`；Cloudflare 内部元数据请求失败时则保留
+SPA shell 中的静态默认 OG。
 
 本地纯逻辑检查：
 
@@ -131,10 +151,12 @@ pnpm check:og
 部署后可检查社交爬虫实际收到的原始 HTML：
 
 ```bash
-curl -A Discordbot https://你的域名/share/booklists/书单ID
+curl -A Discordbot https://你的域名/booklists/书单ID
 ```
 
-返回的 `<head>` 应包含该书单对应的 `og:title`、`og:description` 和 `og:image`。
+返回的 `<head>` 应包含该书单对应的 `og:title`、`og:description`、canonical `og:url`，以及
+指向当前图片服务的 `og:image`；未配置 `OG_IMAGE_BASE_URL` 时默认指向 Vercel。帖子、赛事
+和作者分别使用 `/threads/{id}`、`/tournaments/{id}` 和 `/u/{id}` 验收。
 
 ### `src/shared/config/channelCategories.private.ts`
 
@@ -162,30 +184,38 @@ curl -A Discordbot https://你的域名/share/booklists/书单ID
 
 ### ❌ 登录后跳转失败
 
-**原因**: 后端 `redirect_uri` 配置错误  
-**解决**: 在后端 `config.json` 中设置：
+**原因**: 后端 OAuth 回调或前端地址配置错误
+**解决**: 在后端 `config.json` 中核对 `auth` 配置：
 
 ```json
 {
-  "frontend_url": "https://your-domain.pages.dev",
-  "redirect_uri": "https://your-domain.pages.dev/"
+  "auth": {
+    "frontend_url": "https://your-domain.pages.dev",
+    "redirect_uri": "https://your-api-domain.example/v1/auth/callback"
+  }
 }
 ```
 
+`frontend_url` 是登录完成后返回的前端地址；`redirect_uri` 是 Discord OAuth 回调到后端的地址，
+必须与 Discord 应用后台登记值一致，不能填写成前端首页。
+
 ### ⚠️ API 请求失败 (CORS)
 
-**解决**: 后端必须配置 CORS，允许前端域名：
+**解决**: 后端必须允许当前前端 origin。当前后端配置入口是：
 
-```python
-# 示例 FastAPI CORS 配置
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://your-domain.pages.dev"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+```json
+{
+  "api": {
+    "cors_origins": ["https://your-domain.pages.dev"]
+  },
+  "auth": {
+    "frontend_url": "https://your-domain.pages.dev"
+  }
+}
 ```
+
+后端会合并 `api.cors_origins` 与 `auth.frontend_url`。不要在前端仓库复制或维护一套 FastAPI
+中间件实现。
 
 ### ⚠️ 环境变量不生效
 
@@ -206,12 +236,15 @@ Cloudflare Pages 支持 Git 分支自动部署：
 3. 输入你的域名（如 `forum.odysseia.com`）
 4. 按照提示添加 DNS 记录（CNAME）
 
-## 性能优化建议
+## 性能与缓存
 
 - **启用 Cloudflare CDN**: 自动启用，全球加速
 - **压缩**: 已自动启用 Brotli/Gzip 压缩
 - **缓存**: 静态资源自动缓存在 Cloudflare 边缘节点
-- **构建优化**: 当前 bundle 大小约 680 KB（已压缩到 206 KB），在合理范围内
+- **构建分包**: 当前 `vite.config.ts` 将 React、React Query 和 Motion 拆为独立 vendor chunk
+
+不要在文档中长期记录一次构建得到的固定 bundle 大小。需要评估体积时运行 `pnpm build` 或
+`pnpm build:analyze`，以当次产物为准。
 
 ## 回滚部署
 
@@ -231,5 +264,5 @@ Cloudflare Pages 支持 Git 分支自动部署：
 
 ---
 
-**最后更新**: 2026-08-23
-**文档版本**: 1.1
+**最后更新**: 2026-08-28
+**文档版本**: 1.2

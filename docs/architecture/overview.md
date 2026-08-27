@@ -1,50 +1,34 @@
-# 📖 项目概览 (Project Overview)
+# 项目概览
 
-Odysseia Forum Webpage 是一个基于 **React 19** 与 **Vite 8 (Rolldown)** 构建的现代化单页应用 (SPA)。它采用了 Feature-Sliced Design (FSD) 理念，致力于提供流畅、美观、响应式的全平台论坛阅读与搜索体验。
+Odysseia Forum Webpage 是一个 React 19 + Vite 8 的单页应用（SPA），前端源码位于仓库根目录的 `src/`。当前页面通过 React Router 分发，登录后的页面共享 `RootLayout` 应用壳；搜索、发现、书单、赛事、关注、偏好和 AI 搜索等能力按 FSD 切片组织。
 
-## 1. 核心特性
+## 当前运行方式
 
-- **极致性能**: 采用 Vite 8 与 **Rolldown** 引擎，实现秒级冷启动与极致的打包性能。
-- **交互创新**: 引入多套深浅色主题，支持平滑的主题切换动画；附带增强搜索引导体验的“看板娘”系统（基于 **Motion 12**）。
-- **类型安全**: 基于 **TypeScript 6.0**、Zod 与自动生成的 OpenAPI 类型规范，保证端到端类型安全。
-- **数据流健壮**: 通过 `@tanstack/react-query` v5 彻底接管服务端并发与缓存逻辑。
+| 项目 | 当前事实 |
+| --- | --- |
+| 开发命令 | `pnpm dev` |
+| 开发端口 | Vite 配置固定为 `3000`，服务监听 `host: true` |
+| API 地址 | `VITE_API_URL`；未设置时客户端默认 `http://localhost:10810/v1` |
+| `/api` 代理 | Vite 开发服务器把 `/api` 代理到 `VITE_BACKEND_URL`，缺省为 `https://forum.shimmerday.top`；业务 `apiClient` 默认使用 `VITE_API_URL`，两者不是同一配置 |
+| 构建命令 | `pnpm build`，先执行 TypeScript 增量构建，再执行 Vite 构建 |
+| 构建产物 | `dist/` |
 
-## 2. 环境构建与运行
-
-| 维度         | 本开发环境                                    | 生产环境                                          |
-| ------------ | --------------------------------------------- | ------------------------------------------------- |
-| **构建机制** | `pnpm dev` 使用 Vite 开发服务器，支持高效 HMR | `pnpm build` 使用 Rolldown 引擎生成极致压缩的产物 |
-| **访问地址** | `http://localhost:3000`                       | 部署后的正式域名，通过 Cloudflare 边缘分发        |
-| **API 指向** | 根据 `.env` 中填写的 `VITE_API_URL` 决定      | 指向正式后端域名                                  |
-
-### 2.1 本地开发指南
-
-1. 安装依赖（推荐使用 **pnpm**）：
-   ```bash
-   pnpm install
-   ```
-2. 配置环境变量：将 `.env.example` 复制一份命名为 `.env`（或 `.env.development`），并调整后端地址：
-   ```env
-   VITE_API_URL=http://localhost:10810/v1
-   ```
-3. 启动开发服务器：
-   ```bash
-   pnpm dev
-   ```
-4. 打开浏览器访问 `http://localhost:3000` 即可开始调试。
-
-### 2.2 打包发布
-
-执行打包命令：
+最小本地流程：
 
 ```bash
-pnpm build
+pnpm install
+pnpm dev
 ```
 
-产物将输出至 `dist/` 目录。你只需将其托管至任何静态服务容器（例如 Nginx, Cloudflare Pages, Vercel 等）并配置好 API 跨域即可。
+如需指向本地后端，设置 `VITE_API_URL=http://localhost:10810/v1`。具体部署平台、域名和边缘缓存不由本仓库源码保证，应以对应部署文档和环境配置为准。
 
-## 3. 代码审查及提交规范
+## 验证脚本
 
-- 提交前请在本地跑一遍 CI 的五道门禁：`pnpm typecheck`、`pnpm lint`、`pnpm lint:styles`、`pnpm test:run`、`pnpm build`。
-  （注意用 `test:run` 而不是 `test`——后者是 watch 模式，不会自己退出。）
-- **特别注意**：本项目已升级至 **Tailwind CSS v4** 和 **React 19**，请务必阅读 `docs/architecture/core_architecture.md` 了解最新的“现代化范式”，避免使用诸如 `forwardRef` 等旧模式。
+`package.json` 提供以下检查入口：`pnpm typecheck`、`pnpm lint`、`pnpm lint:styles`、`pnpm test:run`、`pnpm build`。它们覆盖范围不同，单次改动应按风险选择，不应把未执行的命令描述为通过。与 OpenAPI 类型同步使用 `pnpm gen:api`；OG 专项检查使用 `pnpm check:og`。
+
+## 关键边界
+
+- 服务端数据和缓存由 React Query 管理；页面不应自行建立第二套远程缓存。
+- 普通搜索的可分享条件以 URL 为准；本地设置、搜索历史和浏览足迹不属于 URL 状态。
+- AI 搜索是浏览器端可选能力，模型服务由用户配置的外部 OpenAI-compatible Provider 提供，论坛 API 仍由前端现有 API 层调用。
+- `src/pages/TestPage.tsx` 及 `/test` 路由只在开发环境或启用 mock 时注册；不要把它当成生产页面。
