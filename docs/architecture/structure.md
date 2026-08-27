@@ -97,6 +97,6 @@ import { paths } from "@shared-types/openapi";
 
 `shared < entities < features < widgets < pages < app`，**下层不得引用上层**。
 
-`eslint.config.js` 里用 `no-restricted-imports` 为每一层配置了禁止引用的上层路径。目前存量违规按 `warn` 计入 `pnpm lint` 的 `--max-warnings` 基线，**新增违规会让基线超标从而 CI 失败**。存量清单见 `docs/code-review-2026-08-23.md` §4.3，清零后应把规则提升为 `error`。
+`eslint.config.js` 里用 `no-restricted-imports` 为每一层配置了禁止引用的上层路径。目前存量违规按 `warn` 计入 `pnpm lint` 的 `--max-warnings` 基线，**新增违规会让基线超标从而 CI 失败**；存量清零后应把规则提升为 `error`。
 
 常见的正确解法是 **props 注入** 而不是直接 import：底层组件暴露 `actionsSlot?: ReactNode` 之类的插槽，由上层把业务组件传进来。
