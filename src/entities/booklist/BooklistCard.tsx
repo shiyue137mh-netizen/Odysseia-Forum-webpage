@@ -6,6 +6,7 @@ import {
   Eye,
   Globe,
   Lock,
+  MoreHorizontal,
   Pencil,
   Star,
   Trash2,
@@ -14,6 +15,7 @@ import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentity
 import { formatRelativeDateTime } from "@/shared/lib/dateTime";
 import {
   ContextMenu,
+  ContextMenuButton,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -190,30 +192,13 @@ export function BooklistCard({
 
               {canManage && (
                 <div className="mt-3 flex items-center justify-end gap-1">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(booklist);
-                    }}
+                  <ContextMenuButton
                     className="inline-flex h-8 w-8 items-center justify-center rounded-full text-(--od-text-tertiary) transition-colors hover:text-(--od-text-primary)"
-                    aria-label="编辑书单"
-                    title="编辑"
+                    aria-label="管理书单"
+                    title="更多操作"
                   >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(booklist);
-                    }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-(--od-text-tertiary) transition-colors hover:text-(--od-error)"
-                    aria-label="删除书单"
-                    title="删除"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </ContextMenuButton>
                 </div>
               )}
             </div>
