@@ -5,6 +5,7 @@ export const followsKeys = {
   all: ['follows'] as const,
   list: (params: FollowsQueryParams = {}) => [...followsKeys.all, 'list', params] as const,
   unreadCount: () => [...followsKeys.all, 'unread-count'] as const,
+  state: (threadId: string) => [...followsKeys.all, 'state', threadId] as const,
 };
 
 export const authorFollowKeys = {

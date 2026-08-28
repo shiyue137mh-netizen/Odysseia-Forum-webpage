@@ -51,6 +51,10 @@ const ThreadDetailPage = lazyPage(
   () => import("@/pages/ThreadDetailPage"),
   "ThreadDetailPage",
 );
+const ActivityPage = lazyPage(
+  () => import("@/pages/ActivityPage"),
+  "ActivityPage",
+);
 const BooklistsPage = lazyPage(
   () => import("@/pages/BooklistsPage"),
   "BooklistsPage",
@@ -147,6 +151,10 @@ const appChildren = [
   {
     path: "me",
     element: withSuspense(<MePage />),
+  },
+  {
+    path: "activity",
+    element: withSuspense(<ActivityPage />),
   },
   {
     path: "u/:userId",

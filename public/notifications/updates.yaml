@@ -1,36 +1,35 @@
 # `presentation: required` 会自动弹出并要求阅读确认；确认结果按通知 `id` 保存在当前浏览器。
 updates:
-  - id: ai-search-launch-2026-08-03
+  - id: follow-updates-launch-2026-08-28
     kind: release
     presentation: required
-    acknowledgement: 我已了解，去试试看
-    title: 类脑娘搜索正式上线
-    message: 类脑娘现在可以调用论坛索引，帮你搜索、筛选和阅读候选作品。
-    created_at: 2026-08-03T00:00:00+08:00
-    starts_at: 2026-08-03T00:00:00+08:00
+    acknowledgement: 我已了解关注与动态功能
+    title: 关注与动态功能现已上线
+    message: 现在可以关注作者和作品，并在动态页集中查看系统通知、作品更新与作者新作。
+    created_at: 2026-08-28T18:03:00+08:00
+    starts_at: 2026-08-28T18:03:00+08:00
     preview_thread:
-      title: 问问类脑娘，让搜索更接近你的想法
+      title: 关注喜欢的作者与作品，不错过新的更新
       first_message_excerpt: |-
-        ## 类脑娘搜索上线啦
+        ## 关注与动态功能上线啦
 
-        你可以直接描述想找的作品，也可以用 `@` 快速指定 Tag、作者或频道。类脑娘会调用论坛现有的搜索接口，筛选候选结果，并在需要时进一步阅读帖子内容。
+        现在可以在作者 Hover 卡片和作者页关注作者，也可以在作品菜单中关注单部作品。关注之后，相关更新会集中出现在新的动态页中。
 
-        ### 使用前请注意
+        ### 动态页会展示什么
 
-        - Odysseia 提供的是运行在浏览器中的搜索 Agent，不提供免费模型服务。
-        - 使用前需要在模型设置中填写你自己的兼容 OpenAI API 地址，并获取和选择模型。
-        - API Key 只保存在当前浏览器，但搜索请求和相关摘要会发送给你配置的模型服务，请确认自己信任对应的服务商。
-        - 搜索结果来自论坛索引，帖子实际内容与可访问状态仍以 Discord 为准。
+        - 关注作品发布的新版本与更新说明。
+        - 关注作者发布的新作品。
+        - Odysseia 的重要公告与系统通知。
 
-        配置完成后，就可以告诉类脑娘一个模糊的想法，让她帮你一步步缩小范围啦。
+        顶部的动态来源可以切换“全部动态”“系统通知”或某位作者；“未读”筛选与“全部已读”也会同时覆盖系统通知和作品动态。关注管理页仍只负责管理关注关系，不会替代动态页。
       tags:
         - 功能更新
-        - AI 搜索
+        - 关注
+        - 动态
       virtual_tags:
         - release
-        - ai-search
+        - follows
+        - activity
       author:
         name: Odysseia
         display_name: Odysseia Web Team
-      thumbnail_urls:
-        - https://cdn.jsdelivr.net/gh/shiyue137mh-netizen/Odysseia-Forum-webpage@main/src/assets/images/mascot/hi.png

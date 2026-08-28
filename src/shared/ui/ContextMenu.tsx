@@ -259,7 +259,7 @@ export function ContextMenuContent({
   return createPortal(
     <div
       id={menuId}
-      className="fixed inset-0 z-50 pointer-events-auto"
+      className="fixed inset-0 z-[4000] pointer-events-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeMenu();
       }}
@@ -275,7 +275,7 @@ export function ContextMenuContent({
           top: `${adjustedPos.y}px`,
         }}
         className={clsx(
-          "od-floating-glass z-50 min-w-[180px] overflow-hidden rounded-xl border border-(--od-border-subtle) p-1.5 text-(--od-text-primary) shadow-2xl shadow-black/35",
+          "od-floating-glass z-[4000] min-w-[180px] overflow-hidden rounded-xl border border-(--od-border-subtle) p-1.5 text-(--od-text-primary) shadow-2xl shadow-black/35",
           className,
         )}
         role="menu"

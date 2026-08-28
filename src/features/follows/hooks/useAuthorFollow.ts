@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 
 import { authorFollowsApi } from "@/features/follows/api/authorFollowsApi";
 import { authorFollowKeys } from "@/features/follows/lib/queryKeys";
@@ -8,6 +13,33 @@ import { extractErrorMessage } from "@/shared/lib/notify";
 interface AuthorFollowStateOptions {
   enabled?: boolean;
   initialFollowed?: boolean;
+}
+
+const AUTHOR_FOLLOW_PAGE_SIZE = 50;
+
+export function useAuthorFollowsList({ enabled = true }: { enabled?: boolean } = {}) {
+  return useInfiniteQuery({
+    queryKey: authorFollowKeys.list({
+      active: true,
+      limit: AUTHOR_FOLLOW_PAGE_SIZE,
+    }),
+    queryFn: ({ pageParam, signal }) =>
+      authorFollowsApi.list(
+        {
+          active: true,
+          limit: AUTHOR_FOLLOW_PAGE_SIZE,
+          offset: pageParam,
+        },
+        signal,
+      ),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      const nextOffset = lastPage.offset + lastPage.results.length;
+      return nextOffset < lastPage.total ? nextOffset : undefined;
+    },
+    enabled,
+    staleTime: 60 * 1000,
+  });
 }
 
 export function useAuthorFollowState(
@@ -34,12 +66,27 @@ export function useToggleAuthorFollow(
 
   return useMutation({
     mutationFn: async () => {
-      if (followed) {
-        await authorFollowsApi.unfollow(normalizedAuthorId);
-        return false;
+      const nextFollowed = !followed;
+      try {
+        if (followed) {
+          await authorFollowsApi.unfollow(normalizedAuthorId);
+        } else {
+          await authorFollowsApi.follow(normalizedAuthorId);
+        }
+        return nextFollowed;
+      } catch (requestError) {
+        // 后端可能已提交关注状态，但在构造响应时返回 5xx。
+        // 只有回查确认目标状态已生效才按成功收敛，否则保留原始错误。
+        try {
+          const actualFollowed = await authorFollowsApi.getState(
+            normalizedAuthorId,
+          );
+          if (actualFollowed === nextFollowed) return actualFollowed;
+        } catch {
+          // 回查失败不应覆盖原始请求错误。
+        }
+        throw requestError;
       }
-      const state = await authorFollowsApi.follow(normalizedAuthorId);
-      return state.active;
     },
     onSuccess: (nextFollowed) => {
       queryClient.setQueryData(

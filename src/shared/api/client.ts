@@ -23,13 +23,17 @@ const LONG_ID_ENTRY = /"([A-Za-z_][A-Za-z0-9_]*_id|id)"(\s*:\s*)(\d{16,})/g;
 
 export const parseWithSafeSnowflakeIds = (data: unknown) => {
   if (typeof data !== 'string') return data;
+  const normalized = data.replace(LONG_ID_ENTRY, '"$1"$2"$3"');
   try {
-    return JSON.parse(data.replace(LONG_ID_ENTRY, '"$1"$2"$3"'));
+    return JSON.parse(normalized);
   } catch (error) {
-    // 走到这里说明修复后的文本反而不合法，回退到原始响应。此时长 ID 精度可能已损坏，
-    // 必须留下线索，不能再静默吞掉。
-    console.error('[API] Snowflake ID 预处理后 JSON 解析失败，已回退到原始响应', error);
-    return JSON.parse(data);
+    // Axios 的响应转换也会经过 4xx/5xx 响应。纯文本错误页不是 JSON，
+    // 应保留原始响应交给 Axios 按 HTTP 状态拒绝，不能在这里用二次 JSON.parse 覆盖真实错误。
+    const firstCharacter = data.trimStart()[0];
+    if (firstCharacter === '{' || firstCharacter === '[') {
+      console.error('[API] Snowflake ID 预处理后 JSON 解析失败，已保留原始响应', error);
+    }
+    return data;
   }
 };
 

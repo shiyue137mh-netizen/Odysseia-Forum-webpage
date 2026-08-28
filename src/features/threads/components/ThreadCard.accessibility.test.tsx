@@ -56,13 +56,22 @@ describe("帖子卡片无障碍入口", () => {
     const author = screen.getAllByRole("button", {
       name: "查看作者：测试作者",
     })[0];
-    const quickAdd = screen.getAllByRole("button", { name: "加入书单" })[0];
-    const tag = screen.getByRole("button", { name: /^#?测试$/ });
-    const discord = screen.getAllByRole("link", {
-      name: /Discord/,
+    const moreActions = screen.getAllByRole("button", {
+      name: "更多作品操作",
     })[0];
+    const tag = screen.getByRole("button", { name: /^#?测试$/ });
+    const discord = screen.getAllByRole("link", { name: /Discord/ })[0];
 
-    [preview, author, quickAdd, tag, discord].forEach(expectAccessibleShortcut);
+    [preview, author, moreActions, tag, discord].forEach(expectAccessibleShortcut);
+
+    fireEvent.click(moreActions);
+    expect(
+      screen.getByRole("menuitem", { name: "加入书单" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: /关注作品/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /Discord/ })).toBeNull();
     unmount();
   });
 });

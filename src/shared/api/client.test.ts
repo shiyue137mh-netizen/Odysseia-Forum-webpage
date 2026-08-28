@@ -46,10 +46,19 @@ describe('parseWithSafeSnowflakeIds', () => {
     expect(parseWithSafeSnowflakeIds(already)).toBe(already);
   });
 
-  it('响应不是合法 JSON 时抛错，并且不会静默吞掉', () => {
+  it('非 JSON 错误响应原样交给 Axios 处理', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => parseWithSafeSnowflakeIds('<html>502 Bad Gateway</html>')).toThrow();
-    expect(spy).toHaveBeenCalled();
+    const response = 'Internal Server Error';
+    expect(parseWithSafeSnowflakeIds(response)).toBe(response);
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('疑似 JSON 但格式损坏时保留原文并留下日志', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const response = '{"thread_id": 1400626067887718401';
+    expect(parseWithSafeSnowflakeIds(response)).toBe(response);
+    expect(spy).toHaveBeenCalledOnce();
     spy.mockRestore();
   });
 });

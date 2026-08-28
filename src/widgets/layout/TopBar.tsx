@@ -91,12 +91,31 @@ export function TopBar({
 
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const notificationTimerRef = useRef<number | null>(null);
 
   const [browseHistoryOpen, setBrowseHistoryOpen] = useState(false);
   const [browseHistoryItems, setBrowseHistoryItems] = useState<
     BrowseHistoryItem[]
   >([]);
   const browseHistoryTimerRef = useRef<number | null>(null);
+
+  const handleNotificationMouseEnter = useCallback(() => {
+    if (notificationTimerRef.current !== null) {
+      window.clearTimeout(notificationTimerRef.current);
+    }
+    notificationTimerRef.current = window.setTimeout(() => {
+      setNotificationOpen(true);
+    }, 150);
+  }, []);
+
+  const handleNotificationMouseLeave = useCallback(() => {
+    if (notificationTimerRef.current !== null) {
+      window.clearTimeout(notificationTimerRef.current);
+    }
+    notificationTimerRef.current = window.setTimeout(() => {
+      setNotificationOpen(false);
+    }, 220);
+  }, []);
 
   const handleOpenBrowseHistory = useCallback(() => {
     setBrowseHistoryItems(getBrowseHistory());
@@ -127,6 +146,9 @@ export function TopBar({
 
   useEffect(() => {
     return () => {
+      if (notificationTimerRef.current !== null) {
+        window.clearTimeout(notificationTimerRef.current);
+      }
       if (browseHistoryTimerRef.current) {
         window.clearTimeout(browseHistoryTimerRef.current);
       }
@@ -686,16 +708,27 @@ export function TopBar({
           )}
         </div>
 
-        <div className="relative">
+        <div
+          className="relative"
+          onMouseEnter={handleNotificationMouseEnter}
+          onMouseLeave={handleNotificationMouseLeave}
+        >
           <button
-            aria-label="打开通知中心"
+            aria-label="打开通知与动态"
             aria-expanded={notificationOpen}
-            onClick={() => setNotificationOpen((prev) => !prev)}
+            onClick={() => {
+              if (notificationTimerRef.current !== null) {
+                window.clearTimeout(notificationTimerRef.current);
+              }
+              setNotificationOpen(false);
+              navigate("/activity");
+            }}
             className={`relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors sm:h-[34px] sm:w-[34px] ${
-              notificationOpen
+              notificationOpen || location.pathname === "/activity"
                 ? "text-(--od-accent)"
                 : "hover:text-(--od-text-primary)"
             }`}
+            title="通知与动态"
           >
             <AnimatedIcon
               icon={Bell}

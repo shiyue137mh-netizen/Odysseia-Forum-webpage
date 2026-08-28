@@ -1,6 +1,6 @@
 # 作品更新、作者关注与动态通知前端接入计划
 
-> 状态：实施中；类型基线、`viewer_flags` 状态、作者关注入口和 Banner 契约已完成第一阶段
+> 状态：实施中；类型基线、`viewer_flags`、作者关注、Banner 契约、动态页与通知弹层迁移已完成
 >
 > 事实来源：线上 `https://forum.shimmerday.top/openapi.json`、当前前端源码与生成类型
 >
@@ -12,7 +12,7 @@
 
 1. 以生成的 `ThreadDetail-Output` 和新增 Schema 修复类型基线；
 2. 用 `viewer_flags` 统一解释收藏、作品关注、作者关注和动态未读；
-3. 右上角只承担“是否有新动态”的提醒，完整作品更新与作者新作留给后续独立动态页；
+3. 右上角展示系统公告与最近动态摘要，点击进入独立 `/activity` 动态页；动态页统一展示系统通知、作品更新与作者新作；
 4. 在用户真正打开作品时按作品标记动态通知已读；
 5. 作者关注入口复用现有作者悬浮卡和作者主页，后续再决定是否扩展“我的关注”管理页；
 6. 同步修正 Banner 申请请求字段，并允许封面链接留空交给后端回退首图。
@@ -146,15 +146,16 @@ type BannerApplicationRequest = {
 - 静态 YAML 公告的本地确认/关闭状态继续由当前 `localStorage` 逻辑管理；
 - 动态通知的 `read_at`、作者关注和 `viewer_flags` 不写入 `localStorage`。
 
-右上角与未来动态页分工如下：
+右上角与动态页分工如下：
 
 ```text
 静态 YAML 公告 ── 现有右上角公告面板
 动态未读数量 ──── 右上角红点提醒
-动态通知列表 ──── 未来独立“动态页”
+动态通知摘要 ──── 现有右上角通知弹层
+动态通知列表 ──── 独立 `/activity` 动态页
 ```
 
-右上角不承载完整动态列表，也不把静态公告和动态通知混成同一套已读状态。
+右上角在同一弹层中分区展示静态公告与最近动态，但不把两者混成同一套已读状态，也不承载完整动态列表。桌面端 Hover 只预览该弹层，点击通知按钮直接进入 `/activity`，不再用点击切换弹层。
 
 ## 5. 最小实现方案
 
@@ -206,26 +207,30 @@ Snowflake ID 仍由前端以字符串保存。OpenAPI 的路径参数显示为 i
 
 覆盖面必须包括搜索结果、单帖详情、相似推荐、Discovery、作者作品列表、作品关注列表、书单与赛事条目。Banner 列表不增加 `viewer_flags` 消费。
 
-### 阶段 D：动态通知基础与未来动态页
+### 阶段 D：动态通知基础与 `/activity` 动态页
 
-在现有 `features/notifications` 内增加 API、查询键和 hooks，不创建第二个通知 feature。页面是否最终命名为 `/activity`、`/updates` 或其他路径，在正式实现前再确认：
+在现有 `features/notifications` 内增加 API、查询键和 hooks，不创建第二个通知 feature。动态展示使用独立 `/activity` 路由，原 `/me?tab=follows` 保持作品关注管理职责：
 
 ```text
 src/features/notifications/
 ├── api/notificationsApi.ts
 ├── hooks/useNotificationsData.ts
 ├── lib/queryKeys.ts
-└── components/ActivityFeed.tsx
+└── components/DynamicNotificationCard.tsx
+
+src/pages/ActivityPage/index.tsx
 ```
 
 建议查询策略：
 
 - 未读数：登录后常驻查询，沿用当前约 30 秒轮询与窗口聚焦刷新；
-- 通知列表：只在未来动态页打开时请求，默认每页 50 条；
+- 通知列表：只在动态页打开时请求，默认每页 20 条；通知弹层只请求最近 5 条；
 - 分页：复用项目现有 `useInfiniteQuery`/加载更多模式，以 `offset + results.length < total` 决定下一页；
-- 静态公告：继续走当前独立 query，不受动态通知 API 失败影响。
+- 页面顶部横向展示当前关注作者，点击头像在当前页精确筛选该作者的动态；状态保存在 `author=<snowflake>` URL 参数；
+- 通知 API 暂无 `author_id` 参数，选中作者时以每页 100 条扫描当前未读条件下的全部分页后再精确过滤；该限制以 `ponytail` 标记，后端增加精确筛选后删除；
+- 静态公告：继续走当前独立 query，不受动态通知 API 失败影响；在动态来源横列中作为固定“系统通知”来源，并在“全部动态”中与后端动态按 `created_at` 混排。
 
-未来动态页上线时，再从现有右上角组件删除以下旧动态路径：
+动态页上线时，从现有右上角组件删除以下旧动态路径：
 
 - `useFollowsFeed()`；
 - 根据 `FollowedThreadResponse.has_update` 组装通知；
@@ -240,9 +245,11 @@ src/features/notifications/
 | `thread_update` | 作品标题、`update.version`、`update.description` | 有 `message_link` 时可单独打开原消息 |
 | `author_new_thread` | 作者名、作品标题、可选首楼摘要 | 打开新作品 |
 
-动态未读直接使用 `read_at == null`。顶栏只需要知道是否存在动态未读；静态公告是否未读继续由现有本地逻辑处理，不需要增加全局 store。
+动态页的单条通知使用“作者与更新信息 Header + 居中列表型作品摘要”结构。Header 中的作者头像和名称进入作者页；作品区复用搜索列表的语言，左侧展示最多四张缩略图，右侧展示标题、首楼摘要、标签、创建/活跃时间和统计字段，不使用大块卡片底色。`NEW` 只表示当前通知 `read_at == null`，不贴在作者头像上，已读通知即使作品还有其他未读状态也不显示该徽标。通知之间只保留下边线，关注作者横列不额外加上下边线；“全部动态”与作者头像使用相同对齐槽和中性按钮样式，当前作者筛选仍用清晰描边标识。
 
-未来动态页的“全部已读”只调用 `POST /v1/notifications/read-all`。静态公告继续在右上角公告面板内使用自己的本地已读动作，两者不做联合提交。
+动态未读直接使用 `read_at == null`；静态公告继续使用本地 `lastOpenedAt` 与强制公告确认状态。顶栏红点与动态页未读数合并两类来源，但两套状态仍分别持有，不增加全局 store。
+
+动态页和右上角弹层的“全部已读”都分别更新静态公告本地已读时间，并调用 `POST /v1/notifications/read-all` 更新后端动态；强制公告仍必须单独阅读确认，不能由“全部已读”代替确认。
 
 ### 阶段 E：按作品标记已读
 
@@ -295,6 +302,17 @@ Hover 有可靠 `viewer_flags` 时直接填充 query cache；作者页直接访�
 - 当前作者的作品查询；
 - 当前活动的搜索/Discovery/书单查询，使这些作品的 `followed_author` 更新；
 - 不改写已经生成的历史通知。
+
+### 阶段 G：统一作品操作菜单
+
+网格卡片、列表卡片和作品详情共用现有 `ContextMenu`。显式三点、桌面右键与移动端长按打开同一套低频操作菜单，包含：
+
+- 加入书单；
+- 关注/取消关注作品；
+- 复制链接与新标签页打开；
+- 卡片现有的相似作品和书单管理操作。
+
+Discord/原帖跳转是高频操作，不收入三点。卡片和作品详情的跳转放在三点右侧；动态列表作品的关注/`NEW` 状态固定在右上角，三点与 Discord 跳转并排在右下角。`ContextMenu` Portal 层级必须高于 `ThreadPreviewOverlay` 和 `QuickAddToBooklistModal`。
 
 ## 6. 兼容与清理边界
 
@@ -353,6 +371,6 @@ Hover 有可靠 `viewer_flags` 时直接填充 query cache；作者页直接访�
 2. OpenAPI 把 `viewer_flags` 标为可选；需要一次带登录态的实际响应确认它在无状态时是 `[]` 还是缺省。前端无论如何都按可选处理。
 3. OpenAPI 只声明常规成功响应、`422` 和认证方案，具体业务错误码仍需在实施时通过真实失败场景记录，前端统一使用现有 `extractErrorMessage()`，不猜测错误结构。
 
-4. 独立动态页的路由名称、导航入口和首版筛选方式尚未决定；在确认前不创建空页面。
+4. 动态页已确定为 `/activity`；通知按钮点击直接进入，弹层底部也保留“查看全部动态”；作者筛选使用完整分页扫描作为临时兼容方案。
 
 这些问题不阻塞当前作者关注与契约迁移。

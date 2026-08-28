@@ -1,10 +1,7 @@
 import {
-  BookOpen,
   Clock3,
-  Edit3,
   Images,
   MoreHorizontal,
-  Trash2,
 } from "lucide-react";
 import { memo, useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -14,6 +11,7 @@ import { MarkdownText } from "@/shared/ui/MarkdownText";
 import type { Thread } from "@/entities/thread/types";
 import { useImageModeSetting } from "@/shared/hooks/useSettings";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
+import { ThreadMoreMenuContent } from "@/features/threads/components/ThreadMoreMenuContent";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
 import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
@@ -29,8 +27,6 @@ import {
   ContextMenu,
   ContextMenuButton,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/shared/ui/ContextMenu";
 
@@ -113,7 +109,7 @@ function ThreadListItemImpl({
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="w-full" disabled={!managementActions}>
+      <ContextMenuTrigger className="w-full">
         <article
           tabIndex={-1}
           data-result-page={resultPage}
@@ -328,36 +324,21 @@ function ThreadListItemImpl({
               <ThreadStatsRow thread={thread} variant="list" />
 
               <div className="ml-auto flex items-center gap-2 text-(--od-text-tertiary) transition-colors group-hover:text-(--od-text-primary)">
-                {managementActions && (
-                  <ContextMenuButton
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-(--od-bg-tertiary) hover:text-(--od-text-primary)"
-                    aria-label="管理书单内帖子"
-                    title="更多操作"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </ContextMenuButton>
-                )}
                 {trailingAction && <div className="md:hidden">{trailingAction}</div>}
-                <div className="flex items-center gap-2 md:hidden">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setQuickAddOpen(true);
-                    }}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-(--od-bg-tertiary) hover:text-(--od-text-primary)"
-                    aria-label="加入书单"
-                    title="加入书单"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                  </button>
-                  <ThreadActions
-                    threadId={thread.thread_id}
-                    channelId={thread.channel_id}
-                    guildId={thread.guild_id}
-                    size="md"
-                  />
-                </div>
+                <ContextMenuButton
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-(--od-bg-tertiary) hover:text-(--od-text-primary)"
+                  aria-label="更多作品操作"
+                  title="更多操作"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </ContextMenuButton>
+                <ThreadActions
+                  threadId={thread.thread_id}
+                  channelId={thread.channel_id}
+                  guildId={thread.guild_id}
+                  size="md"
+                  alwaysVisible
+                />
               </div>
             </div>
           </div>
@@ -370,28 +351,6 @@ function ThreadListItemImpl({
           viewerFlags={thread.viewer_flags}
           variant="list"
         />
-        <div className="hidden items-center gap-2 md:flex">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setQuickAddOpen(true);
-            }}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-sm font-semibold text-(--od-text-tertiary) transition-all duration-200 md:translate-y-1 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 hover:bg-(--od-bg-tertiary) hover:text-(--od-text-primary)"
-            aria-label="加入书单"
-            title="加入书单"
-          >
-            <BookOpen className="h-4 w-4" />
-          </button>
-          <div className="text-(--od-text-tertiary) transition-colors group-hover:text-(--od-text-primary)">
-            <ThreadActions
-              threadId={thread.thread_id}
-              channelId={thread.channel_id}
-              guildId={thread.guild_id}
-              size="md"
-            />
-          </div>
-        </div>
       </div>
 
       <QuickAddToBooklistModal
@@ -403,25 +362,13 @@ function ThreadListItemImpl({
         </article>
       </ContextMenuTrigger>
 
-      {managementActions && (
-        <ContextMenuContent>
-          <ContextMenuItem
-            icon={<Edit3 className="h-4 w-4" />}
-            onClick={managementActions.onEdit}
-          >
-            编辑书单备注
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            variant="danger"
-            disabled={managementActions.removePending}
-            icon={<Trash2 className="h-4 w-4" />}
-            onClick={managementActions.onRemove}
-          >
-            {managementActions.removePending ? "移除中…" : "从书单移除"}
-          </ContextMenuItem>
-        </ContextMenuContent>
-      )}
+      <ContextMenuContent>
+        <ThreadMoreMenuContent
+          thread={thread}
+          onAddToBooklist={() => setQuickAddOpen(true)}
+          managementActions={managementActions}
+        />
+      </ContextMenuContent>
     </ContextMenu>
   );
 }

@@ -53,7 +53,9 @@ describe("ContextMenu 通用上下文菜单组件", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "更多操作" }));
-    expect(screen.getByText("编辑备注")).toBeInTheDocument();
+    const item = screen.getByText("编辑备注");
+    expect(item).toBeInTheDocument();
+    expect(item.closest(".fixed.inset-0")).toHaveClass("z-[4000]");
   });
 
   it("在移动端长按 500ms 时应该触发菜单呼起", () => {

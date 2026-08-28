@@ -1,19 +1,11 @@
 import {
-  BookOpen,
   Calendar,
   Clock3,
-  Copy,
-  Edit3,
-  ExternalLink,
   Image as ImageIcon,
   MoreHorizontal,
-  Search,
-  Sparkles,
-  Trash2,
 } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 import { ThreadBooklistComment } from "@/entities/thread/ThreadBooklistComment";
 import { ThreadStatsRow } from "@/entities/thread/ThreadStatsRow";
@@ -25,6 +17,7 @@ import { useThreadCardModel } from "@/entities/thread/useThreadCardModel";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
+import { ThreadMoreMenuContent } from "@/features/threads/components/ThreadMoreMenuContent";
 import type { ThreadItemManagementActions } from "@/features/threads/components/threadItemActions";
 import { subscribeThreadThumbnailRepair } from "@/features/threads/lib/thumbnailRepairQueue";
 import { useImageModeSetting } from "@/shared/hooks/useSettings";
@@ -36,8 +29,6 @@ import {
   ContextMenu,
   ContextMenuButton,
   ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/shared/ui/ContextMenu";
 
@@ -71,16 +62,6 @@ function ThreadCardImpl({
   managementActions,
 }: ThreadCardProps) {
   const navigate = useNavigate();
-  const handleCopyLink = async () => {
-    const url = `${window.location.origin}/threads/${thread.thread_id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("已复制帖子链接");
-    } catch {
-      toast.error("复制链接失败");
-    }
-  };
-
   const handleFindSimilar = () => {
     if (thread.tags && thread.tags.length > 0) {
       const tagQueries = thread.tags
@@ -110,10 +91,6 @@ function ThreadCardImpl({
     navigate(`/ai-search?prompt=${encodeURIComponent(fullPrompt)}`, {
       state: { initialPrompt: fullPrompt, autoSend: true },
     });
-  };
-
-  const handleOpenInNewTab = () => {
-    window.open(`/threads/${thread.thread_id}`, "_blank", "noopener,noreferrer");
   };
 
   const {
@@ -264,27 +241,13 @@ function ThreadCardImpl({
             </BannerFadeMedia>
 
             <div className="absolute right-3 top-3 z-20 flex items-center gap-2 opacity-100 transition-opacity duration-200 md:opacity-0 md:group-hover:opacity-100">
-              {managementActions && (
-                <ContextMenuButton
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
-                  aria-label="管理书单内帖子"
-                  title="更多操作"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </ContextMenuButton>
-              )}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setQuickAddOpen(true);
-                }}
+              <ContextMenuButton
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md transition-colors hover:bg-black/60"
-                aria-label="加入书单"
-                title="加入书单"
+                aria-label="更多作品操作"
+                title="更多操作"
               >
-                <BookOpen className="h-4 w-4" />
-              </button>
+                <MoreHorizontal className="h-4 w-4" />
+              </ContextMenuButton>
               <ThreadActions
                 threadId={thread.thread_id}
                 channelId={thread.channel_id}
@@ -338,50 +301,13 @@ function ThreadCardImpl({
         </ContextMenuTrigger>
 
         <ContextMenuContent>
-          <ContextMenuItem
-            icon={<Search className="h-4 w-4" />}
-            onClick={handleFindSimilar}
-          >
-            找相似作品
-          </ContextMenuItem>
-          <ContextMenuItem
-            icon={<Sparkles className="h-4 w-4" />}
-            onClick={handleAISimilar}
-          >
-            AI 探索相似
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            icon={<Copy className="h-4 w-4" />}
-            onClick={handleCopyLink}
-          >
-            复制帖子链接
-          </ContextMenuItem>
-          <ContextMenuItem
-            icon={<ExternalLink className="h-4 w-4" />}
-            onClick={handleOpenInNewTab}
-          >
-            在新标签页打开
-          </ContextMenuItem>
-          {managementActions && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                icon={<Edit3 className="h-4 w-4" />}
-                onClick={managementActions.onEdit}
-              >
-                编辑书单备注
-              </ContextMenuItem>
-              <ContextMenuItem
-                variant="danger"
-                disabled={managementActions.removePending}
-                icon={<Trash2 className="h-4 w-4" />}
-                onClick={managementActions.onRemove}
-              >
-                {managementActions.removePending ? "移除中…" : "从书单移除"}
-              </ContextMenuItem>
-            </>
-          )}
+          <ThreadMoreMenuContent
+            thread={thread}
+            onAddToBooklist={() => setQuickAddOpen(true)}
+            onFindSimilar={handleFindSimilar}
+            onAISimilar={handleAISimilar}
+            managementActions={managementActions}
+          />
         </ContextMenuContent>
       </ContextMenu>
 

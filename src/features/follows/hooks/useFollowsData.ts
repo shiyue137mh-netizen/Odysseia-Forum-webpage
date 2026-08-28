@@ -80,3 +80,52 @@ export function useUnfollowThread() {
     },
   });
 }
+
+interface ToggleThreadFollowVariables {
+  threadId: string;
+  followed: boolean;
+}
+
+export function useToggleThreadFollow() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      threadId,
+      followed,
+    }: ToggleThreadFollowVariables) => {
+      if (followed) await followsApi.unfollowThread(threadId);
+      else await followsApi.followThread(threadId);
+      return { threadId, followed: !followed };
+    },
+    onMutate: ({ threadId, followed }) => {
+      const queryKey = followsKeys.state(threadId);
+      const previousFollowed = queryClient.getQueryData<boolean>(queryKey);
+      queryClient.setQueryData(queryKey, !followed);
+      return { previousFollowed };
+    },
+    onSuccess: ({ followed }) => {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: followsKeys.all }),
+        queryClient.invalidateQueries({ queryKey: ["search"] }),
+        queryClient.invalidateQueries({ queryKey: ["discovery"] }),
+        queryClient.invalidateQueries({ queryKey: ["authors"] }),
+        queryClient.invalidateQueries({ queryKey: ["booklists"] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+      ]);
+      notifySuccess(followed ? "已关注这个作品" : "已取消关注这个作品");
+    },
+    onError: (error, { threadId, followed }, context) => {
+      queryClient.setQueryData(
+        followsKeys.state(threadId),
+        context?.previousFollowed ?? followed,
+      );
+      notifyError(
+        extractErrorMessage(
+          error,
+          followed ? "取消关注失败，请稍后再试" : "关注失败，请稍后再试",
+        ),
+      );
+    },
+  });
+}

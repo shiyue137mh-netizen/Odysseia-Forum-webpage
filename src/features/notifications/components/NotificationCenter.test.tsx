@@ -1,22 +1,22 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Thread } from "@/entities/thread/types";
 import { render } from "@/tests/test-utils";
 import { NotificationCenter } from "./NotificationCenter";
 
 const mocks = vi.hoisted(() => ({
-  useFollowsFeed: vi.fn(),
-  formatRelativeDateTime: vi.fn((value: string) => value),
+  setPreviewThread: vi.fn(),
+  useNotificationPreview: vi.fn(),
+  useNotificationUnreadCount: vi.fn(),
+  markAllMutateAsync: vi.fn(),
 }));
-const mockedUseFollowsFeed = mocks.useFollowsFeed;
-const mockedFormatRelativeDateTime = mocks.formatRelativeDateTime;
 
-vi.mock("@/features/follows/hooks/useFollowsData", () => ({
-  useFollowsFeed: mocks.useFollowsFeed,
-  useMarkAllFollowsViewed: () => ({
+vi.mock("@/features/notifications/hooks/useNotificationsData", () => ({
+  useNotificationPreview: mocks.useNotificationPreview,
+  useNotificationUnreadCount: mocks.useNotificationUnreadCount,
+  useMarkAllNotificationsRead: () => ({
     isPending: false,
-    mutateAsync: vi.fn(),
+    mutateAsync: mocks.markAllMutateAsync,
   }),
 }));
 vi.mock("@/features/auth/hooks/useAuth", () => ({
@@ -24,17 +24,39 @@ vi.mock("@/features/auth/hooks/useAuth", () => ({
 }));
 vi.mock("@/shared/hooks/useSettings", () => ({
   useThemeSettings: () => ({ backgroundImageEnabled: false }),
+  useOpenModeSetting: () => "web",
 }));
 vi.mock("@/shared/lib/dateTime", () => ({
-  formatRelativeDateTime: mocks.formatRelativeDateTime,
+  formatRelativeDateTime: (value: string) => value,
 }));
 vi.mock("@/features/notifications/notificationsConfig", () => ({
-  resolveStaticNotifications: vi.fn().mockResolvedValue([]),
+  resolveStaticNotifications: vi.fn().mockResolvedValue([
+    {
+      id: "system-1",
+      kind: "announcement",
+      title: "系统公告",
+      message: "公告正文",
+      created_at: "2026-08-28T08:00:00Z",
+      starts_at: "2026-08-28T08:00:00Z",
+      expires_at: null,
+      presentation: "inbox",
+      acknowledgement: "我已了解",
+      content: {
+        title: "系统公告",
+        message: "公告正文",
+        tags: [],
+        virtual_tags: [],
+        thumbnail_urls: [],
+        author: { name: "Odysseia", avatar_url: null },
+      },
+    },
+  ]),
 }));
 vi.mock("@/shared/config/appInfo", () => ({ APP_VERSION: "test" }));
 vi.mock("@/features/search/store/previewStore", () => ({
-  usePreviewStore: (selector: (state: { setPreviewThread: () => void }) => unknown) =>
-    selector({ setPreviewThread: vi.fn() }),
+  usePreviewStore: (
+    selector: (state: { setPreviewThread: typeof mocks.setPreviewThread }) => unknown,
+  ) => selector({ setPreviewThread: mocks.setPreviewThread }),
 }));
 vi.mock("@/shared/ui/LazyImage", () => ({
   LazyImage: () => null,
@@ -43,81 +65,85 @@ vi.mock("@/features/notifications/components/NotificationAnnouncementModal", () 
   NotificationAnnouncementModal: () => null,
 }));
 
-const baseThread = {
-  thread_id: "1",
-  channel_id: "channel",
-  title: "有新更新的帖子",
-  created_at: "2026-08-01T00:00:00Z",
-  reaction_count: 0,
-  reply_count: 1,
-  collection_count: 0,
-  display_count: 0,
-  first_message_excerpt: "更新内容",
-  thumbnail_urls: [],
-  tags: [],
-  collected_flag: false,
-  is_tournament: false,
-  has_update: true,
-  latest_update_at: "2026-08-27T10:00:00Z",
-  last_active_at: "2026-08-27T11:00:00Z",
-} as Thread;
+const dynamicNotification = {
+  id: 1,
+  type: "thread_update",
+  thread: {
+    thread_id: "123456789012345678",
+    channel_id: "channel",
+    title: "作品更新标题",
+    created_at: "2026-08-01T00:00:00Z",
+    reaction_count: 0,
+    reply_count: 0,
+    collection_count: 0,
+    display_count: 0,
+    first_message_excerpt: "作品简介",
+    thumbnail_urls: [],
+    tags: [],
+    collected_flag: false,
+    is_tournament: false,
+    author: {
+      id: "author-1",
+      name: "author",
+      global_name: null,
+      display_name: "测试作者",
+      avatar_url: null,
+    },
+  },
+  update: {
+    id: 2,
+    description: "新增了一章内容",
+    version: "v2",
+    message_link: null,
+    source_message_at: "2026-08-28T09:00:00Z",
+    published_at: "2026-08-28T09:00:00Z",
+  },
+  created_at: "2026-08-28T09:00:00Z",
+  read_at: null,
+} as const;
 
 describe("NotificationCenter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedUseFollowsFeed.mockReturnValue({
-      data: { results: [baseThread], unread_count: 1 },
+    window.localStorage.clear();
+    mocks.useNotificationPreview.mockReturnValue({
+      data: {
+        results: [dynamicNotification],
+        total: 1,
+        unread_count: 1,
+        limit: 5,
+        offset: 0,
+      },
       isLoading: false,
       isError: false,
+    });
+    mocks.useNotificationUnreadCount.mockReturnValue({
+      data: { unread_count: 1 },
     });
   });
 
-  it("使用 latest_update_at 展示并记录 dismiss，普通活跃变化不会重现", async () => {
-    const { rerender } = render(
-      <NotificationCenter open onClose={vi.fn()} />,
-    );
+  it("同一弹层展示系统公告与最近动态", async () => {
+    render(<NotificationCenter open onClose={vi.fn()} />);
 
-    await waitFor(() =>
-      expect(screen.getByText("有新更新的帖子")).toBeInTheDocument(),
-    );
-    expect(mockedFormatRelativeDateTime).toHaveBeenCalledWith(
-      "2026-08-27T10:00:00Z",
-    );
+    await waitFor(() => expect(screen.getByText("系统公告")).toBeInTheDocument());
+    expect(screen.getByText("作品更新标题")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "查看全部动态" }),
+    ).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: /有新更新的帖子/ }));
-    expect(screen.queryByText("有新更新的帖子")).not.toBeInTheDocument();
+  it("点击动态条目打开作品预览", async () => {
+    const onClose = vi.fn();
+    render(<NotificationCenter open onClose={onClose} />);
 
-    mockedUseFollowsFeed.mockReturnValue({
-      data: {
-        results: [
-          {
-            ...baseThread,
-            last_active_at: "2026-08-27T12:00:00Z",
-          },
-        ],
-        unread_count: 1,
-      },
-      isLoading: false,
-      isError: false,
+    const item = await screen.findByRole("button", {
+      name: "测试作者更新了作品：作品更新标题",
     });
-    rerender(<NotificationCenter open onClose={vi.fn()} />);
-    expect(screen.queryByText("有新更新的帖子")).not.toBeInTheDocument();
+    fireEvent.click(item);
 
-    mockedUseFollowsFeed.mockReturnValue({
-      data: {
-        results: [
-          {
-            ...baseThread,
-            latest_update_at: "2026-08-27T13:00:00Z",
-            last_active_at: "2026-08-27T13:00:00Z",
-          },
-        ],
-        unread_count: 1,
-      },
-      isLoading: false,
-      isError: false,
-    });
-    rerender(<NotificationCenter open onClose={vi.fn()} />);
-    expect(screen.getByText("有新更新的帖子")).toBeInTheDocument();
+    expect(mocks.setPreviewThread).toHaveBeenCalledWith(
+      dynamicNotification.thread,
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

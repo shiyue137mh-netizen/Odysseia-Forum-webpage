@@ -1,11 +1,10 @@
 import {
-  BookOpen,
   Calendar,
   Clock3,
   Eye,
   Hash,
   MessageCircle,
-  Share2,
+  MoreHorizontal,
   ThumbsUp,
   X,
 } from "lucide-react";
@@ -16,10 +15,14 @@ import { ImageCarousel } from "@/entities/thread/ImageCarousel";
 import { ThreadStatusBadges } from "@/entities/thread/ThreadStatusBadges";
 import { ThreadTournamentBadges } from "@/entities/thread/ThreadTournamentBadges";
 import type { Thread } from "@/entities/thread/types";
+import { hasViewerFlag } from "@/entities/thread/lib/viewerFlags";
 import { AuthorIdentityLink } from "@/features/authors/components/AuthorIdentityLink";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { QuickAddToBooklistModal } from "@/features/booklists/components/QuickAddToBooklistModal";
+import { useMarkThreadNotificationsRead } from "@/features/notifications/hooks/useNotificationsData";
 import { useSearchURLParams } from "@/features/search/hooks/useSearchParams";
 import { ThreadActions } from "@/features/threads/components/ThreadActions";
+import { ThreadMoreMenuContent } from "@/features/threads/components/ThreadMoreMenuContent";
 import { useLockBodyScroll } from "@/shared/hooks/useLockBodyScroll";
 import { useFontSizeSetting } from "@/shared/hooks/useSettings";
 import {
@@ -28,14 +31,17 @@ import {
 } from "@/shared/lib/dateTime";
 import { addToken, tokenizeSearchPayload } from "@/shared/lib/searchTokenizer";
 import { fontSizeMap } from "@/shared/lib/settings";
-import { copyTextToClipboard } from "@/shared/lib/shareText";
+import {
+  ContextMenu,
+  ContextMenuButton,
+  ContextMenuContent,
+} from "@/shared/ui/ContextMenu";
 import { MarkdownText } from "@/shared/ui/MarkdownText";
 import { HighlightText } from "@/shared/ui/HighlightText";
 import { AuthorRecommendations } from "@/features/threads/components/AuthorRecommendations";
 import { SimilarRecommendations } from "@/features/threads/components/SimilarRecommendations";
 
 import { createPortal } from "react-dom";
-import { toast } from "sonner";
 
 interface ThreadPreviewOverlayProps {
   thread: Thread;
@@ -52,6 +58,9 @@ export function ThreadPreviewOverlay({
 }: ThreadPreviewOverlayProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const { mutate: markThreadNotificationsRead } =
+    useMarkThreadNotificationsRead();
   const { params, setParams } = useSearchURLParams();
   const fontSize = useFontSizeSetting();
   const fontSizes = fontSizeMap[fontSize];
@@ -67,8 +76,22 @@ export function ThreadPreviewOverlay({
   const wheelGestureTimerRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const touchGestureStartedAtTopRef = useRef(false);
+  const markedReadThreadRef = useRef<string | null>(null);
 
   useLockBodyScroll(true);
+
+  useEffect(() => {
+    const threadId = String(thread.thread_id);
+    if (
+      !isAuthenticated ||
+      !hasViewerFlag(thread, "unread") ||
+      markedReadThreadRef.current === threadId
+    ) {
+      return;
+    }
+    markedReadThreadRef.current = threadId;
+    markThreadNotificationsRead(threadId);
+  }, [isAuthenticated, markThreadNotificationsRead, thread]);
 
   const handleClose = useCallback(() => {
     if (isClosingRef.current) return;
@@ -205,15 +228,6 @@ export function ThreadPreviewOverlay({
     (tag) => !thread.tags?.includes(tag),
   );
   const images = thread.thumbnail_urls || [];
-  const handleShare = async () => {
-    const url = `${window.location.origin}/threads/${thread.thread_id}`;
-    const copied = await copyTextToClipboard(url);
-    if (copied) {
-      toast.success("已复制帖子链接");
-      return;
-    }
-    toast.error("复制帖子链接失败");
-  };
   const searchHighlight = useMemo(
     () => tokenizeSearchPayload(params.query || "").text.trim(),
     [params.query],
@@ -267,7 +281,7 @@ export function ThreadPreviewOverlay({
       >
         {/* Header */}
         <div className="min-w-0 border-b border-(--od-shell-line) bg-(--od-surface-floating) px-4 py-3 sm:px-6">
-          <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 sm:grid-cols-[7.5rem_minmax(0,1fr)_7.5rem]">
+          <div className="grid grid-cols-[5rem_minmax(0,1fr)_5rem] items-center gap-x-2 sm:grid-cols-[7.5rem_minmax(0,1fr)_7.5rem]">
             <button
               ref={closeButtonRef}
               type="button"
@@ -278,7 +292,7 @@ export function ThreadPreviewOverlay({
               <X className="h-5 w-5" />
             </button>
 
-            <div className="col-span-3 row-start-2 flex min-w-0 max-w-full items-center justify-self-start gap-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-center">
+            <div className="col-start-2 row-start-1 flex min-w-0 max-w-full items-center justify-self-center gap-2">
               <AuthorIdentityLink
                 author={thread.author}
                 currentThreadId={thread.thread_id}
@@ -297,7 +311,7 @@ export function ThreadPreviewOverlay({
                   currentThreadId={thread.thread_id}
                   viewerFlags={thread.viewer_flags}
                   showAvatar={false}
-                  nameClassName="max-w-36 font-bold text-(--od-text-primary) sm:max-w-56"
+                  nameClassName="max-w-24 font-bold text-(--od-text-primary) sm:max-w-56"
                   className="max-w-full"
                   onNavigate={({ id }) => {
                     handleClose();
@@ -319,32 +333,29 @@ export function ThreadPreviewOverlay({
               </div>
             </div>
 
-            <div className="col-start-3 row-start-1 flex w-30 items-center justify-end gap-0 justify-self-end">
-              <button
-                type="button"
-                onClick={() => void handleShare()}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
-                aria-label="分享帖子"
-                title="复制帖子链接"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setQuickAddOpen(true)}
-                className="flex h-10 w-10 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
-                aria-label="加入书单"
-                title="加入书单"
-              >
-                <BookOpen className="h-4 w-4" />
-              </button>
+            <div className="col-start-3 row-start-1 flex items-center justify-end justify-self-end">
+              <ContextMenu>
+                <ContextMenuButton
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-(--od-text-secondary) transition-colors hover:bg-(--od-interactive-hover) hover:text-(--od-text-primary)"
+                  aria-label="更多作品操作"
+                  title="更多操作"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </ContextMenuButton>
+                <ContextMenuContent>
+                  <ThreadMoreMenuContent
+                    thread={thread}
+                    onAddToBooklist={() => setQuickAddOpen(true)}
+                  />
+                </ContextMenuContent>
+              </ContextMenu>
               {!hideExternalButton && (
                 <ThreadActions
                   threadId={thread.thread_id}
                   channelId={thread.channel_id}
                   guildId={thread.guild_id}
                   size="md"
-                  alwaysVisible={true}
+                  alwaysVisible
                   externalUrlOverride={externalUrlOverride}
                   className="h-10 [&_a]:h-10 [&_a]:w-10"
                 />
