@@ -5,6 +5,7 @@ import {
   Copy,
   Edit3,
   ExternalLink,
+  ImagePlus,
   Search,
   Sparkles,
   Trash2,
@@ -29,6 +30,7 @@ interface ThreadMoreMenuContentProps {
   onAddToBooklist: () => void;
   onFindSimilar?: () => void;
   onAISimilar?: () => void;
+  onApplyBanner?: () => void;
   managementActions?: ThreadItemManagementActions;
 }
 
@@ -37,6 +39,7 @@ export function ThreadMoreMenuContent({
   onAddToBooklist,
   onFindSimilar,
   onAISimilar,
+  onApplyBanner,
   managementActions,
 }: ThreadMoreMenuContentProps) {
   const { isAuthenticated } = useAuth();
@@ -93,6 +96,14 @@ export function ThreadMoreMenuContent({
               ? "取消关注作品"
               : "关注作品"}
       </ContextMenuItem>
+      {onApplyBanner && (
+        <ContextMenuItem
+          icon={<ImagePlus className="h-4 w-4" />}
+          onClick={onApplyBanner}
+        >
+          申请 Banner
+        </ContextMenuItem>
+      )}
       <ContextMenuSeparator />
       <ContextMenuItem
         icon={<Copy className="h-4 w-4" />}

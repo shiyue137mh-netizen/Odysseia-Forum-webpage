@@ -17,6 +17,7 @@ interface ThreadResultsCollectionProps {
   animateIn?: boolean;
   pageByThreadId?: ReadonlyMap<string, number>;
   onViewedPageChange?: (page: number) => void;
+  onApplyBanner?: (thread: Thread) => void;
 }
 
 const DEFAULT_GRID_CLASS =
@@ -66,6 +67,7 @@ function ThreadResultsCollectionImpl({
   animateIn,
   pageByThreadId,
   onViewedPageChange,
+  onApplyBanner,
 }: ThreadResultsCollectionProps) {
   const fallbackLayoutMode = useLayoutMode();
   const layoutMode = controlledLayoutMode ?? fallbackLayoutMode;
@@ -247,6 +249,7 @@ function ThreadResultsCollectionImpl({
                   onPreview={onPreview}
                   animateIn={animateIn}
                   resultPage={pageByThreadId?.get(thread.thread_id)}
+                  onApplyBanner={onApplyBanner}
                   masonry
                 />
               </MasonryItem>
@@ -275,6 +278,7 @@ function ThreadResultsCollectionImpl({
             animateIn={animateIn}
             resultPage={pageByThreadId?.get(thread.thread_id)}
             renderSecondaryImages={renderSecondaryListImages}
+            onApplyBanner={onApplyBanner}
           />
         ) : (
           <ThreadCard
@@ -287,6 +291,7 @@ function ThreadResultsCollectionImpl({
             onPreview={onPreview}
             animateIn={animateIn}
             resultPage={pageByThreadId?.get(thread.thread_id)}
+            onApplyBanner={onApplyBanner}
           />
         ),
       )}

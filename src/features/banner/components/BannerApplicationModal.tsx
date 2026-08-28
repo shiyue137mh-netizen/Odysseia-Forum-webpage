@@ -10,6 +10,7 @@ import { showMascotToast } from '@/features/mascot/lib/mascotToast';
 import { notifySuccess } from '@/features/mascot/lib/notify';
 import { extractErrorMessage } from '@/shared/lib/notify';
 import { useChannels } from '@/shared/hooks/useChannels';
+import type { Thread } from '@/entities/thread/types';
 
 const bannerSchema = z.object({
     thread_link: z.string().trim().min(17, '请输入帖子 ID 或 Discord 帖子链接').max(150, '帖子链接过长'),
@@ -25,9 +26,10 @@ type BannerFormValues = z.infer<typeof bannerSchema>;
 interface BannerApplicationModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialThread?: Pick<Thread, 'thread_id' | 'title'>;
 }
 
-export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationModalProps) {
+export function BannerApplicationModal({ isOpen, onClose, initialThread }: BannerApplicationModalProps) {
     const { user } = useAuth();
     const channelsQuery = useChannels();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,7 +43,7 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
     } = useForm<BannerFormValues>({
         resolver: zodResolver(bannerSchema),
         defaultValues: {
-            thread_link: '',
+            thread_link: initialThread?.thread_id ?? '',
             cover_image_url: '',
             target_scope: 'global',
         },
@@ -93,11 +95,16 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
 
     useEffect(() => {
         if (!isOpen) return;
+        reset({
+            thread_link: initialThread?.thread_id ?? '',
+            cover_image_url: '',
+            target_scope: 'global',
+        });
         const dialog = dialogRef.current;
         if (!dialog || dialog.open) return;
         if (typeof dialog.showModal === 'function') dialog.showModal();
         else dialog.setAttribute('open', '');
-    }, [isOpen]);
+    }, [initialThread?.thread_id, isOpen, reset]);
 
     if (!isOpen) return null;
 
@@ -128,6 +135,7 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
                         type="button"
                         onClick={onClose}
                         className="rounded-full p-1 text-(--od-text-tertiary) hover:bg-(--od-bg-tertiary) hover:text-(--od-text-primary) transition-colors"
+                        aria-label="关闭 Banner 申请"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -152,29 +160,52 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         {/* Thread ID */}
-                        <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
-                                <Hash className="h-4 w-4" />
-                                帖子 ID 或链接 <span className="text-(--od-error)">*</span>
-                            </label>
-                            <input
-                                {...register('thread_link')}
-                                placeholder="纯数字 ID 或 Discord 帖子链接"
-                                className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) placeholder:text-(--od-text-tertiary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"
-                            />
-                            {errors.thread_link && (
-                                <p className="text-xs text-(--od-error)">{errors.thread_link.message}</p>
-                            )}
-                            <p className="text-xs text-(--od-text-tertiary)">只能为自己的帖子申请 Banner</p>
-                        </div>
+                        {initialThread ? (
+                            <div className="space-y-2">
+                                <p className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
+                                    <Hash className="h-4 w-4" />
+                                    申请作品
+                                </p>
+                                <div className="rounded-lg bg-(--od-bg-secondary) px-3 py-2.5">
+                                    <p className="line-clamp-2 text-sm font-semibold text-(--od-text-primary)">
+                                        {initialThread.title}
+                                    </p>
+                                    <p className="mt-1 truncate font-mono text-[11px] text-(--od-text-tertiary)">
+                                        {initialThread.thread_id}
+                                    </p>
+                                </div>
+                                <input type="hidden" {...register('thread_link')} />
+                                {errors.thread_link && (
+                                    <p className="text-xs text-(--od-error)">{errors.thread_link.message}</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <label htmlFor="banner-thread-link" className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
+                                    <Hash className="h-4 w-4" />
+                                    帖子 ID 或链接 <span className="text-(--od-error)">*</span>
+                                </label>
+                                <input
+                                    id="banner-thread-link"
+                                    {...register('thread_link')}
+                                    placeholder="纯数字 ID 或 Discord 帖子链接"
+                                    className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) placeholder:text-(--od-text-tertiary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"
+                                />
+                                {errors.thread_link && (
+                                    <p className="text-xs text-(--od-error)">{errors.thread_link.message}</p>
+                                )}
+                                <p className="text-xs text-(--od-text-tertiary)">只能为自己的帖子申请 Banner</p>
+                            </div>
+                        )}
 
                         {/* Cover Image URL */}
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
+                            <label htmlFor="banner-cover-image-url" className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
                                 <ImageIcon className="h-4 w-4" />
                                 封面图链接（可选）
                             </label>
                             <input
+                                id="banner-cover-image-url"
                                 {...register('cover_image_url')}
                                 placeholder="留空时尝试使用作品首图"
                                 className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) placeholder:text-(--od-text-tertiary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"
@@ -187,11 +218,12 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
 
                         {/* Target Scope */}
                         <div className="space-y-2">
-                            <label className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
+                            <label htmlFor="banner-target-scope" className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
                                 <Eye className="h-4 w-4" />
                                 展示范围 <span className="text-(--od-error)">*</span>
                             </label>
                             <select
+                                id="banner-target-scope"
                                 {...register('target_scope')}
                                 disabled={channelsQuery.isLoading}
                                 className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"

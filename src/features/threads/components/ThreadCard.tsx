@@ -44,6 +44,7 @@ interface ThreadCardProps {
   animateIn?: boolean;
   resultPage?: number;
   managementActions?: ThreadItemManagementActions;
+  onApplyBanner?: (thread: Thread) => void;
 }
 
 const thumbnailAspectRatioCache = new Map<string, number>();
@@ -60,6 +61,7 @@ function ThreadCardImpl({
   animateIn = true,
   resultPage,
   managementActions,
+  onApplyBanner,
 }: ThreadCardProps) {
   const navigate = useNavigate();
   const handleFindSimilar = () => {
@@ -306,6 +308,9 @@ function ThreadCardImpl({
             onAddToBooklist={() => setQuickAddOpen(true)}
             onFindSimilar={handleFindSimilar}
             onAISimilar={handleAISimilar}
+            onApplyBanner={
+              onApplyBanner ? () => onApplyBanner(thread) : undefined
+            }
             managementActions={managementActions}
           />
         </ContextMenuContent>

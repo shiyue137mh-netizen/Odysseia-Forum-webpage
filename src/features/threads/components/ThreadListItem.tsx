@@ -44,6 +44,7 @@ interface ThreadListItemProps {
   renderSecondaryImages?: boolean;
   trailingAction?: ReactNode;
   managementActions?: ThreadItemManagementActions;
+  onApplyBanner?: (thread: Thread) => void;
 }
 
 function ThreadListItemImpl({
@@ -60,6 +61,7 @@ function ThreadListItemImpl({
   renderSecondaryImages = true,
   trailingAction,
   managementActions,
+  onApplyBanner,
 }: ThreadListItemProps) {
   const {
     fontSizes,
@@ -366,6 +368,9 @@ function ThreadListItemImpl({
         <ThreadMoreMenuContent
           thread={thread}
           onAddToBooklist={() => setQuickAddOpen(true)}
+          onApplyBanner={
+            onApplyBanner ? () => onApplyBanner(thread) : undefined
+          }
           managementActions={managementActions}
         />
       </ContextMenuContent>

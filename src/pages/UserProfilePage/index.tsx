@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { BooklistCard } from "@/entities/booklist/BooklistCard";
+import { BannerApplicationModal } from "@/features/banner/components/BannerApplicationModal";
 import { ThreadResultsCollection } from "@/features/threads/components/ThreadResultsCollection";
 import type { Thread } from "@/entities/thread/types";
 import { UserHeaderCard } from "@/entities/user/UserHeaderCard";
@@ -83,9 +84,11 @@ export function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { openPreview } = usePreviewThread();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [shareText, setShareText] = useState<string | null>(null);
+  const [bannerThread, setBannerThread] = useState<Thread | null>(null);
+  const isOwnProfile = isAuthenticated && Boolean(userId && user?.id === userId);
 
   useEffect(() => {
     const trigger = resolveAuthorKeywordTrigger(userId);
@@ -629,6 +632,7 @@ export function UserProfilePage() {
                 threads={threads}
                 onPreview={openPreview}
                 animateIn={animateIn}
+                onApplyBanner={isOwnProfile ? setBannerThread : undefined}
               />
             )}
           </section>
@@ -710,6 +714,11 @@ export function UserProfilePage() {
           onCopy={handleCopyShareText}
         />
       )}
+      <BannerApplicationModal
+        isOpen={Boolean(bannerThread)}
+        initialThread={bannerThread ?? undefined}
+        onClose={() => setBannerThread(null)}
+      />
     </>
   );
 }
