@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   useNotificationPreview: vi.fn(),
   useNotificationUnreadCount: vi.fn(),
   markAllMutateAsync: vi.fn(),
+  resolveStaticNotifications: vi.fn(),
 }));
 
 vi.mock("@/features/notifications/hooks/useNotificationsData", () => ({
@@ -30,27 +31,7 @@ vi.mock("@/shared/lib/dateTime", () => ({
   formatRelativeDateTime: (value: string) => value,
 }));
 vi.mock("@/features/notifications/notificationsConfig", () => ({
-  resolveStaticNotifications: vi.fn().mockResolvedValue([
-    {
-      id: "system-1",
-      kind: "announcement",
-      title: "系统公告",
-      message: "公告正文",
-      created_at: "2026-08-28T08:00:00Z",
-      starts_at: "2026-08-28T08:00:00Z",
-      expires_at: null,
-      presentation: "inbox",
-      acknowledgement: "我已了解",
-      content: {
-        title: "系统公告",
-        message: "公告正文",
-        tags: [],
-        virtual_tags: [],
-        thumbnail_urls: [],
-        author: { name: "Odysseia", avatar_url: null },
-      },
-    },
-  ]),
+  resolveStaticNotifications: mocks.resolveStaticNotifications,
 }));
 vi.mock("@/shared/config/appInfo", () => ({ APP_VERSION: "test" }));
 vi.mock("@/features/search/store/previewStore", () => ({
@@ -62,8 +43,46 @@ vi.mock("@/shared/ui/LazyImage", () => ({
   LazyImage: () => null,
 }));
 vi.mock("@/features/notifications/components/NotificationAnnouncementModal", () => ({
-  NotificationAnnouncementModal: () => null,
+  NotificationAnnouncementModal: ({
+    notification,
+    required,
+    onClose,
+  }: {
+    notification: { title: string };
+    required: boolean;
+    onClose: () => void;
+  }) => (
+    <div
+      role="dialog"
+      aria-label={`弹出通知：${notification.title}`}
+      data-required={String(required)}
+    >
+      <button type="button" onClick={onClose}>
+        关闭弹出通知
+      </button>
+    </div>
+  ),
 }));
+
+const staticNotification = {
+  id: "system-1",
+  kind: "announcement",
+  title: "系统公告",
+  message: "公告正文",
+  created_at: "2026-08-28T08:00:00Z",
+  starts_at: "2026-08-28T08:00:00Z",
+  expires_at: null,
+  presentation: "inbox",
+  acknowledgement: "我已了解",
+  content: {
+    title: "系统公告",
+    message: "公告正文",
+    tags: [],
+    virtual_tags: [],
+    thumbnail_urls: [],
+    author: { name: "Odysseia", avatar_url: null },
+  },
+} as const;
 
 const dynamicNotification = {
   id: 1,
@@ -106,6 +125,7 @@ describe("NotificationCenter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    mocks.resolveStaticNotifications.mockResolvedValue([staticNotification]);
     mocks.useNotificationPreview.mockReturnValue({
       data: {
         results: [dynamicNotification],
@@ -145,5 +165,53 @@ describe("NotificationCenter", () => {
       dynamicNotification.thread,
     );
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("popup 会自动弹出但不要求读到底，关闭后不会再次自动弹出", async () => {
+    mocks.resolveStaticNotifications.mockResolvedValue([
+      { ...staticNotification, presentation: "popup" },
+    ]);
+
+    const { unmount } = render(
+      <NotificationCenter open={false} onClose={vi.fn()} />,
+    );
+
+    const modal = await screen.findByRole("dialog", {
+      name: "弹出通知：系统公告",
+    });
+    expect(modal).toHaveAttribute("data-required", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "关闭弹出通知" }));
+    await waitFor(() => expect(modal).not.toBeInTheDocument());
+    expect(window.localStorage.getItem("od_notifications_last_opened_at")).toBe(
+      staticNotification.created_at,
+    );
+
+    unmount();
+    render(<NotificationCenter open={false} onClose={vi.fn()} />);
+    await waitFor(() =>
+      expect(mocks.resolveStaticNotifications).toHaveBeenCalled(),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("inbox 不主动弹出，required 仍强制弹出", async () => {
+    const { unmount } = render(
+      <NotificationCenter open={false} onClose={vi.fn()} />,
+    );
+    await waitFor(() =>
+      expect(mocks.resolveStaticNotifications).toHaveBeenCalled(),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    unmount();
+
+    mocks.resolveStaticNotifications.mockResolvedValue([
+      { ...staticNotification, presentation: "required" },
+    ]);
+    render(<NotificationCenter open={false} onClose={vi.fn()} />);
+
+    expect(
+      await screen.findByRole("dialog", { name: "弹出通知：系统公告" }),
+    ).toHaveAttribute("data-required", "true");
   });
 });

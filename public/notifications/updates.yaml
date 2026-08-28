@@ -1,8 +1,9 @@
-# `presentation: required` 会自动弹出并要求阅读确认；确认结果按通知 `id` 保存在当前浏览器。
+# `presentation` 分三级：`inbox` 只进入通知列表；`popup` 自动弹出但可直接关闭；
+# `required` 仅用于紧急通知，会自动弹出并要求阅读确认。
 updates:
   - id: follow-updates-launch-2026-08-28
     kind: release
-    presentation: required
+    presentation: popup
     acknowledgement: 我已了解关注与动态功能
     title: 关注与动态功能现已上线
     message: 现在可以关注作者和作品，并在动态页集中查看系统通知、作品更新与作者新作。

@@ -30,7 +30,7 @@ updates:
     expect(notification.content.author.name).toBe('Odysseia Team');
   });
 
-  it('只接受 required 强制模式，并提供确认文案兜底', async () => {
+  it('接受 popup 与 required 展示等级，并让未知值回退到 inbox', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(`
 updates:
   - id: required-1
@@ -46,6 +46,12 @@ updates:
     message: 普通正文
     created_at: 2026-07-31T00:00:00.000Z
     presentation: unknown
+  - id: popup-1
+    kind: release
+    title: 功能更新
+    message: 可以直接关闭
+    created_at: 2026-07-30T00:00:00.000Z
+    presentation: popup
 `));
 
     const notifications = await fetchReleaseNotifications({ currentAppVersion: '1.0.0' });
@@ -54,5 +60,6 @@ updates:
     expect(notifications[0].acknowledgement).toBe('已阅读并了解');
     expect(notifications[1].presentation).toBe('inbox');
     expect(notifications[1].acknowledgement).toBe('我已了解');
+    expect(notifications[2].presentation).toBe('popup');
   });
 });

@@ -117,14 +117,6 @@ export function NotificationCenter({
         )[0] ?? null,
     [acknowledgedIds, staticDefinitions],
   );
-  const selectedStaticNotification =
-    staticDefinitions.find(
-      (notification) => notification.id === selectedStaticId,
-    ) ?? null;
-  const activeStaticNotification =
-    pendingRequiredNotification ?? selectedStaticNotification;
-  const activeRequiresAcknowledgement =
-    pendingRequiredNotification?.id === activeStaticNotification?.id;
 
   const isStaticUnread = useCallback(
     (notification: StaticNotificationDefinition) =>
@@ -133,6 +125,32 @@ export function NotificationCenter({
         new Date(lastOpenedAt).getTime(),
     [lastOpenedAt],
   );
+  const pendingPopupNotification = useMemo(
+    () =>
+      [...staticNotifications]
+        .filter(
+          (notification) =>
+            notification.presentation === "popup" &&
+            !acknowledgedIds.includes(notification.id) &&
+            isStaticUnread(notification),
+        )
+        .sort(
+          (left, right) =>
+            new Date(right.created_at).getTime() -
+            new Date(left.created_at).getTime(),
+        )[0] ?? null,
+    [acknowledgedIds, isStaticUnread, staticNotifications],
+  );
+  const selectedStaticNotification =
+    staticDefinitions.find(
+      (notification) => notification.id === selectedStaticId,
+    ) ?? null;
+  const activeStaticNotification =
+    pendingRequiredNotification ??
+    pendingPopupNotification ??
+    selectedStaticNotification;
+  const activeRequiresAcknowledgement =
+    pendingRequiredNotification?.id === activeStaticNotification?.id;
   const unreadStaticCount = useMemo(
     () => staticNotifications.filter(isStaticUnread).length,
     [isStaticUnread, staticNotifications],
@@ -162,6 +180,8 @@ export function NotificationCenter({
     if (!activeStaticNotification) return;
     if (activeRequiresAcknowledgement) {
       acknowledge(activeStaticNotification.id);
+    } else if (activeStaticNotification.presentation === "popup") {
+      markOpenedAt(activeStaticNotification.created_at);
     }
     setSelectedStaticId(null);
   };

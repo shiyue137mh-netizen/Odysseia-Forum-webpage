@@ -4,7 +4,7 @@ import serverIconUrl from '@/assets/images/icon/forum-icon-256.png';
 
 // ── 通知类型 ──────────────────────────────────────────
 export type NotificationKind = 'release' | 'announcement' | 'maintenance';
-export type NotificationPresentation = 'inbox' | 'required';
+export type NotificationPresentation = 'inbox' | 'popup' | 'required';
 
 export interface StaticNotificationContent {
   title: string;
@@ -130,7 +130,10 @@ function mapFeedItem(item: ReleaseFeedItem): StaticNotificationDefinition {
     expires_at: item.expires_at ?? null,
     version: item.version,
     url: item.url,
-    presentation: item.presentation === 'required' ? 'required' : 'inbox',
+    presentation:
+      item.presentation === 'popup' || item.presentation === 'required'
+        ? item.presentation
+        : 'inbox',
     acknowledgement: typeof item.acknowledgement === 'string' && item.acknowledgement.trim()
       ? item.acknowledgement
       : '我已了解',

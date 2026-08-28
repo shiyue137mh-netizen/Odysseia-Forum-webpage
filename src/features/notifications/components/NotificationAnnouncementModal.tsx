@@ -16,6 +16,19 @@ interface NotificationAnnouncementModalProps {
   onClose: () => void;
 }
 
+const READ_END_TOLERANCE_PX = 24;
+
+export function isAnnouncementContentAtEnd(
+  element: Pick<HTMLDivElement, 'clientHeight' | 'scrollHeight' | 'scrollTop'>,
+): boolean {
+  const remainingScroll =
+    element.scrollHeight - element.clientHeight - element.scrollTop;
+
+  // ponytail: 移动端动态视口与小数像素可能留下无法手势滚动的短尾部；
+  // 若未来改为内容内联确认区，可删除这段容差判断。
+  return remainingScroll <= READ_END_TOLERANCE_PX;
+}
+
 export function NotificationAnnouncementModal({
   notification,
   required = false,
@@ -47,9 +60,7 @@ export function NotificationAnnouncementModal({
     if (!contentElement) return;
 
     const updateReachedEnd = () => {
-      setReachedEnd(
-        contentElement.scrollHeight - contentElement.scrollTop <= contentElement.clientHeight + 2,
-      );
+      setReachedEnd(isAnnouncementContentAtEnd(contentElement));
     };
     updateReachedEnd();
     const resizeObserver = new ResizeObserver(updateReachedEnd);
@@ -72,7 +83,7 @@ export function NotificationAnnouncementModal({
       aria-labelledby="notification-announcement-title"
       className={`${backgroundImageEnabled ? 'od-floating-glass' : 'od-floating-panel-solid'} fixed inset-0 z-2200 m-auto h-fit max-h-[calc(100dvh-2rem)] w-[calc(100%-1.5rem)] max-w-3xl overflow-hidden rounded-[1.5rem] border border-(--od-border-strong) p-0 text-(--od-text-primary) shadow-2xl shadow-black/50 backdrop:bg-black/65 backdrop:backdrop-blur-sm max-md:h-[calc(100dvh-1.5rem)]`}
     >
-      <div className={`grid min-h-0 ${content.thumbnail_urls.length > 0 ? 'max-md:h-full max-md:grid-rows-[minmax(10rem,30dvh)_minmax(0,1fr)] md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]' : ''}`}>
+      <div className={`grid min-h-0 max-md:h-full ${content.thumbnail_urls.length > 0 ? 'max-md:grid-rows-[minmax(10rem,30dvh)_minmax(0,1fr)] md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]' : ''}`}>
         {content.thumbnail_urls.length > 0 && (
           <div className="relative min-h-44 overflow-hidden md:min-h-[24rem]">
             {content.thumbnail_urls.length === 1 ? (
@@ -138,11 +149,11 @@ export function NotificationAnnouncementModal({
             ref={contentRef}
             onScroll={() => {
               const element = contentRef.current;
-              if (element && element.scrollHeight - element.scrollTop <= element.clientHeight + 2) {
+              if (element && isAnnouncementContentAtEnd(element)) {
                 setReachedEnd(true);
               }
             }}
-            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 sm:px-7 sm:py-6"
+            className="min-h-0 flex-1 touch-pan-y overscroll-contain overflow-x-hidden overflow-y-auto px-5 py-5 sm:px-7 sm:py-6"
           >
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-(--od-accent)">
               {notification.kind === 'release' ? 'Release Notes' : 'Community Notice'}
@@ -192,7 +203,9 @@ export function NotificationAnnouncementModal({
                 disabled={!canConfirm}
                 className="rounded-full bg-(--od-accent) px-5 py-2 text-sm font-bold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-35"
               >
-                {required ? notification.acknowledgement : '关闭'}
+                {required || notification.presentation === 'popup'
+                  ? notification.acknowledgement
+                  : '关闭'}
               </button>
             </div>
           </footer>
