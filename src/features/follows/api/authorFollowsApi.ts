@@ -3,6 +3,8 @@ import type { components } from "@shared-types/openapi";
 import { apiClient } from "@/shared/api/client";
 
 export type AuthorFollowList = components["schemas"]["AuthorFollowList"];
+export type AuthorFollowItem =
+  components["schemas"]["AuthorFollowItem-Output"];
 export type AuthorFollowState = components["schemas"]["AuthorFollowState"];
 
 export interface AuthorFollowsQueryParams {

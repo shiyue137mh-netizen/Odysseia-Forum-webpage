@@ -15,18 +15,26 @@ interface AuthorFollowStateOptions {
   initialFollowed?: boolean;
 }
 
+interface AuthorFollowsListOptions {
+  active?: boolean | null;
+  enabled?: boolean;
+}
+
 const AUTHOR_FOLLOW_PAGE_SIZE = 50;
 
-export function useAuthorFollowsList({ enabled = true }: { enabled?: boolean } = {}) {
+export function useAuthorFollowsList({
+  active = true,
+  enabled = true,
+}: AuthorFollowsListOptions = {}) {
   return useInfiniteQuery({
     queryKey: authorFollowKeys.list({
-      active: true,
+      active,
       limit: AUTHOR_FOLLOW_PAGE_SIZE,
     }),
     queryFn: ({ pageParam, signal }) =>
       authorFollowsApi.list(
         {
-          active: true,
+          active,
           limit: AUTHOR_FOLLOW_PAGE_SIZE,
           offset: pageParam,
         },

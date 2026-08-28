@@ -5,11 +5,12 @@ import {
   Megaphone,
   Radio,
   RefreshCw,
+  Settings2,
   UsersRound,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -241,6 +242,13 @@ export function ActivityPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <Link
+              to="/me?tab=follows"
+              className="od-inline-action od-inline-action-ghost"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              管理关注
+            </Link>
             <button
               type="button"
               onClick={() => {

@@ -1,6 +1,5 @@
 import {
   BellOff,
-  Bookmark,
   CheckCircle2,
   RefreshCw,
   Search,
@@ -70,12 +69,8 @@ export function MeFollowsSection({
         : "还没有当前关注内容，去 Discord 里参与帖子后会自动出现在这里。";
 
   return (
-    <section className="px-1">
+    <section aria-label="关注作品">
       <div className="mb-6 flex flex-col items-center gap-3 text-center">
-        <div className="flex items-center justify-center gap-2">
-          <Bookmark className="h-4 w-4 text-(--od-accent)" />
-          <h2 className="od-text-title">我的关注</h2>
-        </div>
         <div className="w-full max-w-xs">
           <label htmlFor="follow-search" className="sr-only">
             搜索已加载的关注内容

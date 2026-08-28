@@ -181,6 +181,10 @@ describe("ActivityPage", () => {
     render(<ActivityPage />);
 
     expect(screen.getByRole("heading", { name: "动态" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "管理关注" })).toHaveAttribute(
+      "href",
+      "/me?tab=follows",
+    );
     expect(screen.getByRole("button", { name: "系统通知" })).toBeInTheDocument();
     expect(screen.getAllByText("测试作者").length).toBeGreaterThan(0);
     expect(await screen.findByText("作品更新标题")).toBeInTheDocument();

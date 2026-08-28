@@ -5,6 +5,7 @@ import {
   Bookmark,
   Eye,
   Settings2,
+  UsersRound,
 } from "lucide-react";
 
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -36,9 +37,14 @@ import {
 } from "@/pages/MePage/MeBooklistsSection";
 import { MeFollowsSection } from "@/pages/MePage/MeFollowsSection";
 import {
+  MeAuthorFollowsSection,
+  type AuthorFollowStatusFilter,
+} from "@/pages/MePage/MeAuthorFollowsSection";
+import {
   sortFollowedThreads,
   type FollowSort,
 } from "@/features/follows/lib/sortFollows";
+import { useAuthorFollowsList } from "@/features/follows/hooks/useAuthorFollow";
 import { MeHistorySection } from "@/pages/MePage/MeHistorySection";
 import {
   MePageHeader,
@@ -56,6 +62,7 @@ import { notifyError, notifySuccess } from "@/features/mascot/lib/notify";
 
 type MeTab = "booklists" | "follows" | "history" | "preferences";
 type FollowStatusFilter = "current" | "past" | "all";
+type FollowSubTab = "threads" | "authors";
 
 const DEFAULT_FORM: PreferencesFormValue = {
   preferredChannelIds: [],
@@ -99,6 +106,17 @@ function parseFollowStatus(value: string | null): FollowStatusFilter {
   return "current";
 }
 
+function parseFollowSubTab(value: string | null): FollowSubTab {
+  return value === "authors" ? "authors" : "threads";
+}
+
+function parseAuthorFollowStatus(
+  value: string | null,
+): AuthorFollowStatusFilter {
+  if (value === "past" || value === "all") return value;
+  return "current";
+}
+
 export function MePage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -107,8 +125,12 @@ export function MePage() {
 
   const tab = parseTab(searchParams.get("tab"));
   const booklistSubTab = parseBooklistSubTab(searchParams.get("booklists"));
+  const followSubTab = parseFollowSubTab(searchParams.get("follows"));
   const selectedFollowChannel = searchParams.get("channel");
   const followStatus = parseFollowStatus(searchParams.get("follow_status"));
+  const authorFollowStatus = parseAuthorFollowStatus(
+    searchParams.get("author_follow_status"),
+  );
 
   const [showCreateBooklist, setShowCreateBooklist] = useState(false);
   const [editingBooklist, setEditingBooklist] = useState<Booklist | null>(null);
@@ -189,6 +211,15 @@ export function MePage() {
       followStatus === "all" ? null : followStatus === "past" ? false : true,
     channel_ids: selectedFollowChannel ? [selectedFollowChannel] : undefined,
   });
+  const authorFollowsQuery = useAuthorFollowsList({
+    active:
+      authorFollowStatus === "all"
+        ? null
+        : authorFollowStatus === "past"
+          ? false
+          : true,
+    enabled: tab === "follows" && followSubTab === "authors",
+  });
 
   const myBooklistsQuery = useMyBooklistsList();
 
@@ -230,6 +261,11 @@ export function MePage() {
     }) : followedThreads;
     return sortFollowedThreads(filteredThreads, followSort);
   }, [followSearchQuery, followSort, followsQuery.data?.results]);
+  const authorFollowItems = useMemo(
+    () =>
+      authorFollowsQuery.data?.pages.flatMap((page) => page.results) || [],
+    [authorFollowsQuery.data?.pages],
+  );
   const setTab = (next: MeTab) => {
     const sp = new URLSearchParams(searchParams);
     sp.set("tab", next);
@@ -250,6 +286,29 @@ export function MePage() {
       sp.delete("follow_status");
     } else {
       sp.set("follow_status", next);
+    }
+    setSearchParams(sp, { replace: true });
+  };
+
+  const setFollowSubTab = (next: FollowSubTab) => {
+    const sp = new URLSearchParams(searchParams);
+    sp.set("tab", "follows");
+    if (next === "threads") {
+      sp.delete("follows");
+    } else {
+      sp.set("follows", next);
+    }
+    setSearchParams(sp, { replace: true });
+  };
+
+  const setAuthorFollowStatus = (next: AuthorFollowStatusFilter) => {
+    const sp = new URLSearchParams(searchParams);
+    sp.set("tab", "follows");
+    sp.set("follows", "authors");
+    if (next === "current") {
+      sp.delete("author_follow_status");
+    } else {
+      sp.set("author_follow_status", next);
     }
     setSearchParams(sp, { replace: true });
   };
@@ -354,37 +413,88 @@ export function MePage() {
         )}
 
         {tab === "follows" && (
-          <MeFollowsSection
-            channelOptions={channelOptions}
-            hasAnyResults={(followsQuery.data?.results?.length || 0) > 0}
-            followStatus={followStatus}
-            isError={followsQuery.isError}
-            isLoading={followsQuery.isLoading}
-            selectedChannel={selectedFollowChannel}
-            searchQuery={followSearchQuery}
-            sort={followSort}
-            threads={filteredFollowedThreads}
-            onSearchQueryChange={setFollowSearchQuery}
-            onSortChange={setFollowSort}
-            onClearChannel={() => {
-              const nextParams = new URLSearchParams(searchParams);
-              nextParams.delete("channel");
-              setSearchParams(nextParams, { replace: true });
-            }}
-            onPreview={openPreview}
-            onRefresh={() => void followsQuery.refetch()}
-            onSetChannel={setFollowChannel}
-            onSetFollowStatus={setFollowStatus}
-            onUnfollow={(thread) => {
-              if (!window.confirm(`确认取消关注「${thread.title}」？`)) return;
-              unfollowMutation.mutate(thread.thread_id);
-            }}
-            unfollowPendingThreadId={
-              unfollowMutation.isPending
-                ? unfollowMutation.variables
-                : null
-            }
-          />
+          <section className="px-1">
+            <div className="mb-6 flex flex-col items-center gap-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Bookmark className="h-4 w-4 text-(--od-accent)" />
+                <h2 className="od-text-title">关注管理</h2>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFollowSubTab("threads")}
+                  className={`od-pill-chip inline-flex items-center gap-1.5 text-xs ${
+                    followSubTab === "threads"
+                      ? "bg-(--od-accent)/10 font-od-bold text-(--od-accent)"
+                      : "font-od-medium text-(--od-text-secondary) hover:bg-(--od-interactive-hover)"
+                  }`}
+                >
+                  <Bookmark className="h-3.5 w-3.5" />
+                  关注作品
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFollowSubTab("authors")}
+                  className={`od-pill-chip inline-flex items-center gap-1.5 text-xs ${
+                    followSubTab === "authors"
+                      ? "bg-(--od-accent)/10 font-od-bold text-(--od-accent)"
+                      : "font-od-medium text-(--od-text-secondary) hover:bg-(--od-interactive-hover)"
+                  }`}
+                >
+                  <UsersRound className="h-3.5 w-3.5" />
+                  关注作者
+                </button>
+              </div>
+            </div>
+
+            {followSubTab === "threads" ? (
+              <MeFollowsSection
+                channelOptions={channelOptions}
+                hasAnyResults={(followsQuery.data?.results?.length || 0) > 0}
+                followStatus={followStatus}
+                isError={followsQuery.isError}
+                isLoading={followsQuery.isLoading}
+                selectedChannel={selectedFollowChannel}
+                searchQuery={followSearchQuery}
+                sort={followSort}
+                threads={filteredFollowedThreads}
+                onSearchQueryChange={setFollowSearchQuery}
+                onSortChange={setFollowSort}
+                onClearChannel={() => {
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.delete("channel");
+                  setSearchParams(nextParams, { replace: true });
+                }}
+                onPreview={openPreview}
+                onRefresh={() => void followsQuery.refetch()}
+                onSetChannel={setFollowChannel}
+                onSetFollowStatus={setFollowStatus}
+                onUnfollow={(thread) => {
+                  if (!window.confirm(`确认取消关注「${thread.title}」？`)) return;
+                  unfollowMutation.mutate(thread.thread_id);
+                }}
+                unfollowPendingThreadId={
+                  unfollowMutation.isPending
+                    ? unfollowMutation.variables
+                    : null
+                }
+              />
+            ) : (
+              <MeAuthorFollowsSection
+                hasNextPage={Boolean(authorFollowsQuery.hasNextPage)}
+                isError={authorFollowsQuery.isError}
+                isFetchingNextPage={authorFollowsQuery.isFetchingNextPage}
+                isLoading={authorFollowsQuery.isLoading}
+                items={authorFollowItems}
+                status={authorFollowStatus}
+                total={authorFollowsQuery.data?.pages[0]?.total || 0}
+                onLoadMore={() => void authorFollowsQuery.fetchNextPage()}
+                onOpenAuthor={(authorId) => navigate(`/u/${authorId}`)}
+                onRefresh={() => void authorFollowsQuery.refetch()}
+                onSetStatus={setAuthorFollowStatus}
+              />
+            )}
+          </section>
         )}
 
         {tab === "history" && (
