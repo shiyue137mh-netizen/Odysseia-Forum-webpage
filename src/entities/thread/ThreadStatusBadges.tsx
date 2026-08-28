@@ -1,18 +1,20 @@
 import { Bell, Sparkles } from 'lucide-react';
 
+import type { Thread } from '@/entities/thread/types';
+
 interface ThreadStatusBadgesProps {
-    isFollowing?: boolean;
-    hasUpdate?: boolean;
+    viewerFlags?: Thread['viewer_flags'];
     variant?: 'card' | 'list' | 'detail';
     className?: string;
 }
 
 export function ThreadStatusBadges({
-    isFollowing,
-    hasUpdate,
+    viewerFlags,
     variant = 'card',
     className = ''
 }: ThreadStatusBadgesProps) {
+    const isFollowing = viewerFlags?.includes('followed') ?? false;
+    const hasUpdate = viewerFlags?.includes('unread') ?? false;
     if (!isFollowing && !hasUpdate) return null;
 
     // Default to card/list size, slightly larger for detail

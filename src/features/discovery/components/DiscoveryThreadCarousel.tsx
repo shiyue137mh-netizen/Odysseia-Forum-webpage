@@ -198,6 +198,7 @@ export function DiscoveryThreadCarousel({
                 <AuthorIdentityLink
                   author={thread.author}
                   currentThreadId={thread.thread_id}
+                  viewerFlags={thread.viewer_flags}
                   avatarClassName="h-6 w-6"
                   nameClassName="text-xs text-(--od-text-secondary)"
                   className="mt-2 h-6 max-w-full"

@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Author } from "@/entities/thread/types";
 import { authorsApi } from "@/features/authors/api/authorsApi";
+import {
+  useAuthorFollowState,
+  useToggleAuthorFollow,
+} from "@/features/follows/hooks/useAuthorFollow";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { searchApi } from "@/features/search/api/searchApi";
 import { AuthorWorksHoverCard } from "./AuthorWorksHoverCard";
@@ -24,6 +28,18 @@ vi.mock("@/features/preferences/hooks/useUserPreferences", () => ({
   })),
 }));
 
+vi.mock("@/features/follows/hooks/useAuthorFollow", () => ({
+  useAuthorFollowState: vi.fn(() => ({
+    data: false,
+    isError: false,
+    isLoading: false,
+  })),
+  useToggleAuthorFollow: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+}));
+
 const author: Author = {
   id: "123456789",
   name: "author_name",
@@ -35,6 +51,21 @@ const author: Author = {
 describe("AuthorWorksHoverCard", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.mocked(useUserPreferences).mockReturnValue({
+      user: null,
+      preferences: null,
+      savePreferences: vi.fn(),
+      isSaving: false,
+    } as never);
+    vi.mocked(useAuthorFollowState).mockReturnValue({
+      data: false,
+      isError: false,
+      isLoading: false,
+    } as never);
+    vi.mocked(useToggleAuthorFollow).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never);
     vi.mocked(searchApi.search).mockReturnValue(new Promise(() => {}));
     vi.mocked(authorsApi.getAuthorProfile).mockReturnValue(
       new Promise(() => {}),
@@ -139,5 +170,74 @@ describe("AuthorWorksHoverCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(panel).toBeInTheDocument();
+  });
+
+  it("登录后可以从 Hover 中关注作者", async () => {
+    const mutate = vi.fn();
+    vi.mocked(useUserPreferences).mockReturnValue({
+      user: { id: "viewer-1" },
+      preferences: {
+        exclude_authors: [],
+        include_authors: [],
+        preferred_channels: [],
+      },
+      savePreferences: vi.fn(),
+      isSaving: false,
+    } as never);
+    vi.mocked(useToggleAuthorFollow).mockReturnValue({
+      mutate,
+      isPending: false,
+    } as never);
+
+    render(
+      <AuthorWorksHoverCard author={author} initialFollowed={false}>
+        <button type="button">作者头像</button>
+      </AuthorWorksHoverCard>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "作者头像",
+    }).parentElement!;
+    fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+    await act(async () => vi.advanceTimersByTime(300));
+
+    fireEvent.click(screen.getByRole("button", { name: "关注作者" }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it("关注状态加载失败时可以从 Hover 重试", async () => {
+    const refetch = vi.fn();
+    vi.mocked(useUserPreferences).mockReturnValue({
+      user: { id: "viewer-1" },
+      preferences: {
+        exclude_authors: [],
+        include_authors: [],
+        preferred_channels: [],
+      },
+      savePreferences: vi.fn(),
+      isSaving: false,
+    } as never);
+    vi.mocked(useAuthorFollowState).mockReturnValue({
+      data: undefined,
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      refetch,
+    } as never);
+
+    render(
+      <AuthorWorksHoverCard author={author}>
+        <button type="button">作者头像</button>
+      </AuthorWorksHoverCard>,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: "作者头像",
+    }).parentElement!;
+    fireEvent.pointerEnter(trigger, { pointerType: "mouse" });
+    await act(async () => vi.advanceTimersByTime(300));
+
+    fireEvent.click(screen.getByRole("button", { name: "重试关注状态" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

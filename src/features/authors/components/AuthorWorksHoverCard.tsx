@@ -1,4 +1,12 @@
-import { FileText, MessageCircle, ThumbsUp, UserRoundX } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  FileText,
+  Loader2,
+  MessageCircle,
+  ThumbsUp,
+  UserRoundX,
+} from "lucide-react";
 import {
   type CSSProperties,
   type ReactNode,
@@ -18,6 +26,10 @@ import {
   useAuthorProfile,
   useAuthorRecentWorks,
 } from "@/features/authors/hooks/useAuthorsData";
+import {
+  useAuthorFollowState,
+  useToggleAuthorFollow,
+} from "@/features/follows/hooks/useAuthorFollow";
 import { useUserPreferences } from "@/features/preferences/hooks/useUserPreferences";
 import { usePreviewStore } from "@/features/search/store/previewStore";
 import { GUILD_ID } from "@/shared/config/channelCategories.private";
@@ -33,12 +45,14 @@ const PANEL_GAP = 10;
 interface AuthorWorksHoverCardProps {
   author: Author;
   currentThreadId?: string;
+  initialFollowed?: boolean;
   children: ReactNode;
 }
 
 interface AuthorWorksPanelProps {
   author: Author;
   currentThreadId?: string;
+  initialFollowed?: boolean;
   panelRef: RefObject<HTMLDivElement | null>;
   panelStyle: CSSProperties;
   close: () => void;
@@ -49,6 +63,7 @@ interface AuthorWorksPanelProps {
 function AuthorWorksPanel({
   author,
   currentThreadId,
+  initialFollowed,
   panelRef,
   panelStyle,
   close,
@@ -69,6 +84,15 @@ function AuthorWorksPanel({
     { excludeThreadId: currentThreadId, enabled: true },
   );
   const { data: profile } = useAuthorProfile(author.id, { enabled: true });
+  const followStateQuery = useAuthorFollowState(author.id, {
+    enabled: Boolean(user?.id),
+    initialFollowed,
+  });
+  const isAuthorFollowed = followStateQuery.data;
+  const toggleAuthorFollow = useToggleAuthorFollow(
+    author.id,
+    isAuthorFollowed ?? false,
+  );
 
   const authorName = author.display_name || author.global_name || author.name;
   const excludedAuthorIds = (preferences?.exclude_authors || []).map(String);
@@ -172,6 +196,52 @@ function AuthorWorksPanel({
                 </span>
               </span>
             </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (followStateQuery.isError) {
+                void followStateQuery.refetch();
+                return;
+              }
+              toggleAuthorFollow.mutate();
+            }}
+            disabled={
+              !user?.id ||
+              (!followStateQuery.isError && isAuthorFollowed === undefined) ||
+              followStateQuery.isFetching ||
+              toggleAuthorFollow.isPending
+            }
+            aria-pressed={isAuthorFollowed ?? false}
+            aria-label={
+              followStateQuery.isError
+                ? "重试关注状态"
+                : isAuthorFollowed
+                  ? "取消关注作者"
+                  : "关注作者"
+            }
+            title={
+              !user?.id
+                ? "登录后关注作者"
+                : followStateQuery.isError
+                  ? "关注状态加载失败"
+                  : isAuthorFollowed
+                    ? "取消关注作者"
+                    : "关注作者"
+            }
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+              isAuthorFollowed
+                ? "bg-(--od-accent)/15 text-(--od-accent) hover:bg-(--od-accent)/25"
+                : "text-(--od-text-tertiary) hover:bg-(--od-interactive-hover) hover:text-(--od-accent)"
+            }`}
+          >
+            {followStateQuery.isFetching || toggleAuthorFollow.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isAuthorFollowed ? (
+              <BellOff className="h-4 w-4" />
+            ) : (
+              <Bell className="h-4 w-4" />
+            )}
           </button>
           <button
             type="button"
@@ -361,6 +431,7 @@ function AuthorWorksPanel({
 export function AuthorWorksHoverCard({
   author,
   currentThreadId,
+  initialFollowed,
   children,
 }: AuthorWorksHoverCardProps) {
   const triggerRef = useRef<HTMLSpanElement>(null);
@@ -548,6 +619,7 @@ export function AuthorWorksHoverCard({
           <AuthorWorksPanel
             author={author}
             currentThreadId={currentThreadId}
+            initialFollowed={initialFollowed}
             panelRef={panelRef}
             panelStyle={panelStyle}
             close={close}

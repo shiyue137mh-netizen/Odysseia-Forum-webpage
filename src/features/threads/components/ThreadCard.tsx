@@ -192,6 +192,7 @@ function ThreadCardImpl({
               <AuthorIdentityLink
                 author={thread.author}
                 currentThreadId={thread.thread_id}
+                viewerFlags={thread.viewer_flags}
                 showName={false}
                 avatarClassName="h-6 w-6 md:h-7 md:w-7"
                 onNavigate={onAuthorClick}
@@ -202,6 +203,7 @@ function ThreadCardImpl({
                   <AuthorIdentityLink
                     author={thread.author}
                     currentThreadId={thread.thread_id}
+                    viewerFlags={thread.viewer_flags}
                     showAvatar={false}
                     nameClassName="max-w-[140px] text-xs font-medium leading-4 text-(--od-text-secondary)"
                     onNavigate={onAuthorClick}
@@ -223,8 +225,7 @@ function ThreadCardImpl({
               </div>
               <div className="shrink-0 flex items-center self-start pt-1">
                 <ThreadStatusBadges
-                  isFollowing={thread.collected_flag}
-                  hasUpdate={thread.has_update}
+                  viewerFlags={thread.viewer_flags}
                   variant="card"
                 />
               </div>

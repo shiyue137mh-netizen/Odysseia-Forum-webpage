@@ -79,6 +79,7 @@ export function CompactThreadCard({ thread, onOpen }: CompactThreadCardProps) {
       <AuthorIdentityLink
         author={thread.author}
         currentThreadId={thread.thread_id}
+        viewerFlags={thread.viewer_flags}
         avatarClassName="h-4.5 w-4.5"
         nameClassName="text-[10px]"
         className="mt-1.5 max-w-full"

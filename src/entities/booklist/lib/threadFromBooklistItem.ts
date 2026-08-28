@@ -25,6 +25,8 @@ export function threadFromBooklistItem(
     virtual_tags: item.virtual_tags || [],
     thumbnail_urls: item.thumbnail_urls || [],
     collected_flag: item.collected_flag,
+    viewer_flags: item.viewer_flags,
+    latest_update: item.latest_update,
     collection_count: item.collection_count || 0,
     ...extra,
   };

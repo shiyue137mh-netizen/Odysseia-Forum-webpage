@@ -144,6 +144,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/author-follows/{author_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 关注作者
+         * @description 幂等关注指定作者且不补发历史通知。
+         */
+        post: operations["follow_author_v1_author_follows__author_id__post"];
+        /**
+         * 取消关注作者
+         * @description 软取消作者关注且保留已有通知。
+         */
+        delete: operations["unfollow_author_v1_author_follows__author_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/author-follows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 获取关注作者列表
+         * @description 按最近关注时间分页返回作者关注关系。
+         */
+        get: operations["list_author_follows_v1_author_follows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/preferences/users/{user_id}": {
         parameters: {
             query?: never;
@@ -353,6 +397,86 @@ export interface paths {
          *     注意：用户不能取消关注自己的帖子
          */
         delete: operations["remove_follow_v1_follows__thread_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 获取动态通知列表
+         * @description 分页返回作品更新与作者新作通知。
+         */
+        get: operations["list_notifications_v1_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/unread-count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 获取动态通知未读数
+         * @description 返回当前用户全部动态通知的未读数量。
+         */
+        get: operations["get_unread_count_v1_notifications_unread_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/threads/{thread_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 按作品标记动态通知已读
+         * @description 幂等标记用户在指定作品下的全部动态通知。
+         */
+        post: operations["mark_thread_read_v1_notifications_threads__thread_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 将全部动态通知标为已读
+         * @description 幂等标记当前用户的全部动态通知。
+         */
+        post: operations["mark_all_read_v1_notifications_read_all_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1340,6 +1464,90 @@ export interface components {
             avatar_url: string | null;
         };
         /**
+         * AuthorFollowItem
+         * @description 关注作者列表中的单项数据。
+         */
+        "AuthorFollowItem-Input": {
+            /** @description 被关注作者的详细信息 */
+            author: components["schemas"]["AuthorDetail-Input"];
+            /**
+             * Followed At
+             * Format: date-time
+             * @description 最近一次关注该作者的时间
+             */
+            followed_at: string;
+            /**
+             * Active
+             * @description 当前是否仍在关注该作者
+             */
+            active: boolean;
+        };
+        /**
+         * AuthorFollowItem
+         * @description 关注作者列表中的单项数据。
+         */
+        "AuthorFollowItem-Output": {
+            /** @description 被关注作者的详细信息 */
+            author: components["schemas"]["AuthorDetail-Output"];
+            /**
+             * Followed At
+             * @description 最近一次关注该作者的时间
+             */
+            followed_at: string;
+            /**
+             * Active
+             * @description 当前是否仍在关注该作者
+             */
+            active: boolean;
+        };
+        /**
+         * AuthorFollowList
+         * @description 分页作者关注列表。
+         */
+        AuthorFollowList: {
+            /**
+             * Results
+             * @description 当前页的作者关注关系列表
+             */
+            results: components["schemas"]["AuthorFollowItem-Output"][];
+            /**
+             * Total
+             * @description 符合当前筛选条件的作者关注总数
+             */
+            total: number;
+            /**
+             * Limit
+             * @description 当前请求的分页大小
+             */
+            limit: number;
+            /**
+             * Offset
+             * @description 当前请求的分页偏移量
+             */
+            offset: number;
+        };
+        /**
+         * AuthorFollowState
+         * @description 作者关注操作后的关系状态。
+         */
+        AuthorFollowState: {
+            /**
+             * Author Id
+             * @description 作者 Discord ID
+             */
+            author_id: string;
+            /**
+             * Followed At
+             * @description 最近一次关注该作者的时间
+             */
+            followed_at: string;
+            /**
+             * Active
+             * @description 当前是否仍在关注该作者
+             */
+            active: boolean;
+        };
+        /**
          * AuthorProfileResponse
          * @description 作者档案详情及统计数据的响应模型。
          */
@@ -1511,9 +1719,9 @@ export interface components {
             thread_link: string;
             /**
              * Cover Image Url
-             * @description 封面图链接
+             * @description 可选封面图链接；帖子留空时动态使用当前首图，频道不可留空
              */
-            cover_image_url: string;
+            cover_image_url?: string | null;
             /**
              * Target Scope
              * @description 目标范围：'global'表示全频道，或具体频道ID
@@ -1542,7 +1750,7 @@ export interface components {
             /** Title */
             title: string;
             /** Cover Image Url */
-            cover_image_url: string;
+            cover_image_url?: string | null;
             /** Channel Id */
             channel_id: number;
             /**
@@ -1578,7 +1786,7 @@ export interface components {
             /** Title */
             title: string;
             /** Cover Image Url */
-            cover_image_url: string;
+            cover_image_url?: string | null;
             /** Channel Id */
             channel_id: string;
             /**
@@ -1924,6 +2132,13 @@ export interface components {
              * @default false
              */
             collected_flag: boolean;
+            /**
+             * Viewer Flags
+             * @description 当前查看者与作品的关系标记
+             */
+            viewer_flags?: ("collected" | "followed" | "followed_author" | "unread")[];
+            /** @description 作品最新一次正式发布的更新 */
+            latest_update?: components["schemas"]["LatestUpdate-Output"] | null;
         };
         /**
          * BooklistItemUpdateRequest
@@ -2689,22 +2904,22 @@ export interface components {
              * Latest
              * @description 最新发布
              */
-            latest: components["schemas"]["ThreadDetail"][];
+            latest: components["schemas"]["ThreadDetail-Output"][];
             /**
              * Reaction Surge
              * @description 近期点赞飙升
              */
-            reaction_surge: components["schemas"]["ThreadDetail"][];
+            reaction_surge: components["schemas"]["ThreadDetail-Output"][];
             /**
              * Discussion Surge
              * @description 近期讨论飙升
              */
-            discussion_surge: components["schemas"]["ThreadDetail"][];
+            discussion_surge: components["schemas"]["ThreadDetail-Output"][];
             /**
              * Collection Surge
              * @description 近期收藏飙升
              */
-            collection_surge: components["schemas"]["ThreadDetail"][];
+            collection_surge: components["schemas"]["ThreadDetail-Output"][];
         };
         /** FetchImageItem */
         FetchImageItem: {
@@ -2833,6 +3048,13 @@ export interface components {
              * @default false
              */
             collected_flag: boolean;
+            /**
+             * Viewer Flags
+             * @description 当前查看者与作品的关系标记
+             */
+            viewer_flags?: ("collected" | "followed" | "followed_author" | "unread")[];
+            /** @description 作品最新一次正式发布的更新 */
+            latest_update?: components["schemas"]["LatestUpdate-Input"] | null;
             /**
              * Is Tournament
              * @description 该帖子是否为参赛帖子
@@ -2967,6 +3189,13 @@ export interface components {
              */
             collected_flag: boolean;
             /**
+             * Viewer Flags
+             * @description 当前查看者与作品的关系标记
+             */
+            viewer_flags?: ("collected" | "followed" | "followed_author" | "unread")[];
+            /** @description 作品最新一次正式发布的更新 */
+            latest_update?: components["schemas"]["LatestUpdate-Output"] | null;
+            /**
              * Is Tournament
              * @description 该帖子是否为参赛帖子
              * @default false
@@ -3042,6 +3271,80 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         /**
+         * LatestUpdate
+         * @description API 响应中的作品最新更新。
+         */
+        "LatestUpdate-Input": {
+            /**
+             * Id
+             * @description 作品更新的数据库主键 ID
+             */
+            id: number;
+            /**
+             * Description
+             * @description 作者提交的更新说明
+             */
+            description: string;
+            /**
+             * Version
+             * @description 可选的人类可读版本号
+             */
+            version?: string | null;
+            /**
+             * Message Link
+             * @description Discord 更新来源消息链接
+             */
+            message_link?: string | null;
+            /**
+             * Source Message At
+             * Format: date-time
+             * @description Discord 来源消息发布时间
+             */
+            source_message_at: string;
+            /**
+             * Published At
+             * Format: date-time
+             * @description 更新正式发布到索引页的时间
+             */
+            published_at: string;
+        };
+        /**
+         * LatestUpdate
+         * @description API 响应中的作品最新更新。
+         */
+        "LatestUpdate-Output": {
+            /**
+             * Id
+             * @description 作品更新的数据库主键 ID
+             */
+            id: number;
+            /**
+             * Description
+             * @description 作者提交的更新说明
+             */
+            description: string;
+            /**
+             * Version
+             * @description 可选的人类可读版本号
+             */
+            version?: string | null;
+            /**
+             * Message Link
+             * @description Discord 更新来源消息链接
+             */
+            message_link?: string | null;
+            /**
+             * Source Message At
+             * @description Discord 来源消息发布时间
+             */
+            source_message_at: string;
+            /**
+             * Published At
+             * @description 更新正式发布到索引页的时间
+             */
+            published_at: string;
+        };
+        /**
          * MappedSourceChannelDetail
          * @description 虚拟标签映射来源频道的详细信息
          */
@@ -3104,6 +3407,116 @@ export interface components {
              * @default 0
              */
             real_thread_count: number;
+        };
+        /**
+         * MarkReadResponse
+         * @description 按作品标记动态通知已读的响应。
+         */
+        MarkReadResponse: {
+            /**
+             * Thread Id
+             * @description 作品 Discord ID
+             */
+            thread_id?: string | null;
+            /**
+             * Marked Read
+             * @description 本次实际标记为已读的通知数量
+             */
+            marked_read: number;
+        };
+        /**
+         * NotificationItem
+         * @description 动态通知列表中的单项数据。
+         */
+        "NotificationItem-Input": {
+            /**
+             * Id
+             * @description 通知的数据库主键 ID
+             */
+            id: number;
+            /**
+             * Type
+             * @description 动态通知类型：作品更新或作者新作
+             * @enum {string}
+             */
+            type: "thread_update" | "author_new_thread";
+            /** @description 通知关联作品的完整信息 */
+            thread: components["schemas"]["ThreadDetail-Input"];
+            /** @description 作品更新详情；作者新作通知固定为空 */
+            update?: components["schemas"]["LatestUpdate-Input"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 通知产生时间
+             */
+            created_at: string;
+            /**
+             * Read At
+             * @description 用户阅读时间；为空表示未读
+             */
+            read_at?: string | null;
+        };
+        /**
+         * NotificationItem
+         * @description 动态通知列表中的单项数据。
+         */
+        "NotificationItem-Output": {
+            /**
+             * Id
+             * @description 通知的数据库主键 ID
+             */
+            id: number;
+            /**
+             * Type
+             * @description 动态通知类型：作品更新或作者新作
+             * @enum {string}
+             */
+            type: "thread_update" | "author_new_thread";
+            /** @description 通知关联作品的完整信息 */
+            thread: components["schemas"]["ThreadDetail-Output"];
+            /** @description 作品更新详情；作者新作通知固定为空 */
+            update?: components["schemas"]["LatestUpdate-Output"] | null;
+            /**
+             * Created At
+             * @description 通知产生时间
+             */
+            created_at: string;
+            /**
+             * Read At
+             * @description 用户阅读时间；为空表示未读
+             */
+            read_at?: string | null;
+        };
+        /**
+         * NotificationList
+         * @description 分页动态通知列表。
+         */
+        NotificationList: {
+            /**
+             * Results
+             * @description 当前页的动态通知列表
+             */
+            results: components["schemas"]["NotificationItem-Output"][];
+            /**
+             * Total
+             * @description 符合当前筛选条件的通知总数
+             */
+            total: number;
+            /**
+             * Unread Count
+             * @description 当前用户全部动态通知的未读数量
+             */
+            unread_count: number;
+            /**
+             * Limit
+             * @description 当前请求的分页大小
+             */
+            limit: number;
+            /**
+             * Offset
+             * @description 当前请求的分页偏移量
+             */
+            offset: number;
         };
         /**
          * OpenGraphAuthorDTO
@@ -3442,7 +3855,7 @@ export interface components {
              */
             offset: number;
             /** Results */
-            results: components["schemas"]["ThreadDetail"][];
+            results: components["schemas"]["ThreadDetail-Output"][];
             /**
              * Available Tags
              * @description 当搜索单个频道时返回该频道的可用标签列表，全频道搜索时返回空列表
@@ -3495,7 +3908,7 @@ export interface components {
              * Results
              * @description 推荐的相似帖子列表（最多 limit 条）
              */
-            results?: components["schemas"]["ThreadDetail"][];
+            results?: components["schemas"]["ThreadDetail-Output"][];
         };
         /**
          * TagDetail
@@ -3613,7 +4026,113 @@ export interface components {
          * ThreadDetail
          * @description API 响应中单个帖子的详细信息模型
          */
-        ThreadDetail: {
+        "ThreadDetail-Input": {
+            /**
+             * Thread Id
+             * @description 帖子的 Discord ID
+             */
+            thread_id: number;
+            /**
+             * Guild Id
+             * @description 帖子所属的 Discord 服务器 ID
+             * @default 0
+             */
+            guild_id: number;
+            /**
+             * Channel Id
+             * @description 帖子所在频道的 Discord ID
+             */
+            channel_id: number;
+            /**
+             * Title
+             * @description 帖子标题
+             */
+            title: string;
+            /** @description 帖子作者的详细信息 */
+            author?: components["schemas"]["AuthorDetail-Input"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 帖子创建时间
+             */
+            created_at: string;
+            /**
+             * Last Active At
+             * @description 帖子最后活跃时间
+             */
+            last_active_at?: string | null;
+            /**
+             * Reaction Count
+             * @description 帖子点赞数
+             */
+            reaction_count: number;
+            /**
+             * Reply Count
+             * @description 帖子回复数
+             */
+            reply_count: number;
+            /**
+             * Collection Count
+             * @description 帖子被收藏的总次数
+             * @default 0
+             */
+            collection_count: number;
+            /**
+             * Display Count
+             * @description 在搜索结果中的展示次数
+             * @default 0
+             */
+            display_count: number;
+            /**
+             * First Message Excerpt
+             * @description 帖子首条消息摘要
+             */
+            first_message_excerpt?: string | null;
+            /**
+             * Thumbnail Urls
+             * @description 帖子首楼图片URL列表
+             */
+            thumbnail_urls: string[];
+            /**
+             * Tags
+             * @description 帖子关联的标签列表
+             */
+            tags?: string[];
+            /**
+             * Virtual Tags
+             * @description 帖子匹配的虚拟映射标签名列表
+             */
+            virtual_tags?: string[];
+            /**
+             * Collected Flag
+             * @description 当前用户是否收藏了该帖子
+             * @default false
+             */
+            collected_flag: boolean;
+            /**
+             * Viewer Flags
+             * @description 当前查看者与作品的关系标记
+             */
+            viewer_flags?: ("collected" | "followed" | "followed_author" | "unread")[];
+            /** @description 作品最新一次正式发布的更新 */
+            latest_update?: components["schemas"]["LatestUpdate-Input"] | null;
+            /**
+             * Is Tournament
+             * @description 该帖子是否为参赛帖子
+             * @default false
+             */
+            is_tournament: boolean;
+            /**
+             * Tournament Info List
+             * @description 所属赛事书单信息列表
+             */
+            tournament_info_list?: components["schemas"]["TournamentInfo-Input"][];
+        };
+        /**
+         * ThreadDetail
+         * @description API 响应中单个帖子的详细信息模型
+         */
+        "ThreadDetail-Output": {
             /**
              * Thread Id
              * @description 帖子的 Discord ID
@@ -3694,6 +4213,13 @@ export interface components {
              * @default false
              */
             collected_flag: boolean;
+            /**
+             * Viewer Flags
+             * @description 当前查看者与作品的关系标记
+             */
+            viewer_flags?: ("collected" | "followed" | "followed_author" | "unread")[];
+            /** @description 作品最新一次正式发布的更新 */
+            latest_update?: components["schemas"]["LatestUpdate-Output"] | null;
             /**
              * Is Tournament
              * @description 该帖子是否为参赛帖子
@@ -3988,6 +4514,17 @@ export interface components {
              * @description 是否公开
              */
             is_public?: boolean | null;
+        };
+        /**
+         * UnreadCountResponse
+         * @description 动态通知未读数响应。
+         */
+        UnreadCountResponse: {
+            /**
+             * Unread Count
+             * @description 当前用户全部动态通知的未读数量
+             */
+            unread_count: number;
         };
         /**
          * UserPreferencesResponse
@@ -4412,6 +4949,99 @@ export interface operations {
             };
         };
     };
+    follow_author_v1_author_follows__author_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                author_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorFollowState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unfollow_author_v1_author_follows__author_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                author_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_author_follows_v1_author_follows_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                active?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorFollowList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_user_preferences_v1_preferences_users__user_id__get: {
         parameters: {
             query?: never;
@@ -4528,7 +5158,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ThreadDetail"];
+                    "application/json": components["schemas"]["ThreadDetail-Output"];
                 };
             };
             /** @description Validation Error */
@@ -4744,6 +5374,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_v1_notifications_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                unread_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_unread_count_v1_notifications_unread_count_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnreadCountResponse"];
+                };
+            };
+        };
+    };
+    mark_thread_read_v1_notifications_threads__thread_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                thread_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkReadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_read_v1_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarkReadResponse"];
                 };
             };
         };
@@ -5665,7 +6399,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ThreadDetail"][];
+                    "application/json": components["schemas"]["ThreadDetail-Output"][];
                 };
             };
             /** @description Validation Error */
@@ -5708,7 +6442,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ThreadDetail"][];
+                    "application/json": components["schemas"]["ThreadDetail-Output"][];
                 };
             };
             /** @description Validation Error */

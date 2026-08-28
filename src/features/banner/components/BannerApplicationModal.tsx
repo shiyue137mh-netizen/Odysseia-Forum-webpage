@@ -12,8 +12,11 @@ import { extractErrorMessage } from '@/shared/lib/notify';
 import { useChannels } from '@/shared/hooks/useChannels';
 
 const bannerSchema = z.object({
-    thread_id: z.string().min(17, '帖子ID必须是17-20位数字').max(20, '帖子ID必须是17-20位数字').regex(/^\d+$/, '帖子ID必须是纯数字'),
-    cover_image_url: z.string().url('请输入有效的图片链接'),
+    thread_link: z.string().trim().min(17, '请输入帖子 ID 或 Discord 帖子链接').max(150, '帖子链接过长'),
+    cover_image_url: z.string().trim().refine(
+        (value) => value === '' || z.string().url().safeParse(value).success,
+        '请输入有效的图片链接',
+    ),
     target_scope: z.string().min(1, '请选择展示范围'),
 });
 
@@ -38,6 +41,8 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
     } = useForm<BannerFormValues>({
         resolver: zodResolver(bannerSchema),
         defaultValues: {
+            thread_link: '',
+            cover_image_url: '',
             target_scope: 'global',
         },
     });
@@ -56,7 +61,10 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
 
         setIsSubmitting(true);
         try {
-            const result = await bannerApi.apply(data);
+            const result = await bannerApi.apply({
+                ...data,
+                cover_image_url: data.cover_image_url || undefined,
+            });
             if (result.success) {
                 notifySuccess('Banner 申请已提交，请等待审核');
                 reset();
@@ -147,15 +155,15 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
                         <div className="space-y-2">
                             <label className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
                                 <Hash className="h-4 w-4" />
-                                帖子 ID <span className="text-(--od-error)">*</span>
+                                帖子 ID 或链接 <span className="text-(--od-error)">*</span>
                             </label>
                             <input
-                                {...register('thread_id')}
-                                placeholder="请输入帖子的 Thread ID (纯数字)"
+                                {...register('thread_link')}
+                                placeholder="纯数字 ID 或 Discord 帖子链接"
                                 className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) placeholder:text-(--od-text-tertiary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"
                             />
-                            {errors.thread_id && (
-                                <p className="text-xs text-(--od-error)">{errors.thread_id.message}</p>
+                            {errors.thread_link && (
+                                <p className="text-xs text-(--od-error)">{errors.thread_link.message}</p>
                             )}
                             <p className="text-xs text-(--od-text-tertiary)">只能为自己的帖子申请 Banner</p>
                         </div>
@@ -164,17 +172,17 @@ export function BannerApplicationModal({ isOpen, onClose }: BannerApplicationMod
                         <div className="space-y-2">
                             <label className="flex items-center gap-2 text-sm font-medium text-(--od-text-secondary)">
                                 <ImageIcon className="h-4 w-4" />
-                                封面图链接 <span className="text-(--od-error)">*</span>
+                                封面图链接（可选）
                             </label>
                             <input
                                 {...register('cover_image_url')}
-                                placeholder="https://..."
+                                placeholder="留空时尝试使用作品首图"
                                 className="w-full rounded-lg border border-(--od-border) bg-(--od-bg-secondary) px-3 py-2 text-sm text-(--od-text-primary) placeholder:text-(--od-text-tertiary) focus:border-(--od-accent) focus:outline-hidden focus:ring-1 focus:ring-(--od-accent)"
                             />
                             {errors.cover_image_url && (
                                 <p className="text-xs text-(--od-error)">{errors.cover_image_url.message}</p>
                             )}
-                            <p className="text-xs text-(--od-text-tertiary)">推荐尺寸 16:9，支持 JPG/PNG/WebP</p>
+                            <p className="text-xs text-(--od-text-tertiary)">留空时由后端尝试使用当前作品首图；没有可用图片时会拒绝申请。</p>
                         </div>
 
                         {/* Target Scope */}

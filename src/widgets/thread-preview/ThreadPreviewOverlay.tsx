@@ -282,6 +282,7 @@ export function ThreadPreviewOverlay({
               <AuthorIdentityLink
                 author={thread.author}
                 currentThreadId={thread.thread_id}
+                viewerFlags={thread.viewer_flags}
                 showName={false}
                 avatarClassName="h-10 w-10"
                 className="shrink-0"
@@ -294,6 +295,7 @@ export function ThreadPreviewOverlay({
                 <AuthorIdentityLink
                   author={thread.author}
                   currentThreadId={thread.thread_id}
+                  viewerFlags={thread.viewer_flags}
                   showAvatar={false}
                   nameClassName="max-w-36 font-bold text-(--od-text-primary) sm:max-w-56"
                   className="max-w-full"
@@ -384,8 +386,7 @@ export function ThreadPreviewOverlay({
 
             <div className="mb-6 mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-(--od-text-tertiary)">
               <ThreadStatusBadges
-                isFollowing={thread.collected_flag}
-                hasUpdate={thread.has_update}
+                viewerFlags={thread.viewer_flags}
                 variant="detail"
               />
               <span className="inline-flex items-center gap-1">

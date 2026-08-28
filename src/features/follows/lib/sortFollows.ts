@@ -1,4 +1,5 @@
 import type { FollowedThread } from "@/entities/thread/types";
+import { hasViewerFlag } from "@/entities/thread/lib/viewerFlags";
 
 export type FollowSort =
   | "updated"
@@ -14,7 +15,10 @@ function timestamp(value?: string | null) {
 
 function latestActivity(thread: FollowedThread) {
   return timestamp(
-    thread.latest_update_at || thread.last_active_at || thread.created_at,
+    thread.latest_update?.published_at ||
+      thread.latest_update_at ||
+      thread.last_active_at ||
+      thread.created_at,
   );
 }
 
@@ -25,9 +29,9 @@ export function sortFollowedThreads(
   return [...threads].sort((left, right) => {
     if (
       sort === "unread" &&
-      Boolean(left.has_update) !== Boolean(right.has_update)
+      hasViewerFlag(left, "unread") !== hasViewerFlag(right, "unread")
     ) {
-      return left.has_update ? -1 : 1;
+      return hasViewerFlag(left, "unread") ? -1 : 1;
     }
 
     let difference = 0;

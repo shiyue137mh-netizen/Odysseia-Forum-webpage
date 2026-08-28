@@ -89,6 +89,7 @@ pnpm dev
 - [大家住的房间分布 (Structure)](docs/architecture/structure.md)
 - [每个房间的门牌号功能 (Pages Overview)](docs/architecture/pages_overview.md)
 - [动态 Open Graph 跨端实施方案](docs/architecture/dynamic_open_graph.md)
+- [作品更新、作者关注与动态通知前端接入计划](docs/development/content_update_follow_notification_frontend_plan.md)
 - [该怎么开发这个网站 (Development Guide)](docs/development/)
 - [怎么保护大家不要被抢走 (Security)](docs/development/security.md)
 - [给大家的代码做定期的体格检查 (Testing & CI)](docs/testing/vitest_ci_process.md)

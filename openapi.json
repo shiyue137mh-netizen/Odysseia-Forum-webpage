@@ -230,6 +230,172 @@
         }
       }
     },
+    "/v1/author-follows/{author_id}": {
+      "post": {
+        "tags": [
+          "作者关注"
+        ],
+        "summary": "关注作者",
+        "description": "幂等关注指定作者且不补发历史通知。",
+        "operationId": "follow_author_v1_author_follows__author_id__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "author_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Author Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorFollowState"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "作者关注"
+        ],
+        "summary": "取消关注作者",
+        "description": "软取消作者关注且保留已有通知。",
+        "operationId": "unfollow_author_v1_author_follows__author_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "author_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Author Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/author-follows": {
+      "get": {
+        "tags": [
+          "作者关注"
+        ],
+        "summary": "获取关注作者列表",
+        "description": "按最近关注时间分页返回作者关注关系。",
+        "operationId": "list_author_follows_v1_author_follows_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": true,
+              "title": "Active"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorFollowList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/preferences/users/{user_id}": {
       "get": {
         "tags": [
@@ -411,7 +577,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ThreadDetail"
+                  "$ref": "#/components/schemas/ThreadDetail-Output"
                 }
               }
             }
@@ -803,6 +969,180 @@
             }
           }
         }
+      }
+    },
+    "/v1/notifications": {
+      "get": {
+        "tags": [
+          "动态通知"
+        ],
+        "summary": "获取动态通知列表",
+        "description": "分页返回作品更新与作者新作通知。",
+        "operationId": "list_notifications_v1_notifications_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "unread_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Unread Only"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/unread-count": {
+      "get": {
+        "tags": [
+          "动态通知"
+        ],
+        "summary": "获取动态通知未读数",
+        "description": "返回当前用户全部动态通知的未读数量。",
+        "operationId": "get_unread_count_v1_notifications_unread_count_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/notifications/threads/{thread_id}/read": {
+      "post": {
+        "tags": [
+          "动态通知"
+        ],
+        "summary": "按作品标记动态通知已读",
+        "description": "幂等标记用户在指定作品下的全部动态通知。",
+        "operationId": "mark_thread_read_v1_notifications_threads__thread_id__read_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/notifications/read-all": {
+      "post": {
+        "tags": [
+          "动态通知"
+        ],
+        "summary": "将全部动态通知标为已读",
+        "description": "幂等标记当前用户的全部动态通知。",
+        "operationId": "mark_all_read_v1_notifications_read_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/meta/channels": {
@@ -2928,7 +3268,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ThreadDetail"
+                    "$ref": "#/components/schemas/ThreadDetail-Output"
                   },
                   "title": "Response Get Random Threads V1 Discovery Random Get"
                 }
@@ -3056,7 +3396,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ThreadDetail"
+                    "$ref": "#/components/schemas/ThreadDetail-Output"
                   },
                   "title": "Response Get Single Rail V1 Discovery Rails  Rail Name  Get"
                 }
@@ -3858,6 +4198,122 @@
         "title": "AuthorDetail",
         "description": "API 响应中作者的详细信息模型"
       },
+      "AuthorFollowItem-Input": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AuthorDetail-Input",
+            "description": "被关注作者的详细信息"
+          },
+          "followed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Followed At",
+            "description": "最近一次关注该作者的时间"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "description": "当前是否仍在关注该作者"
+          }
+        },
+        "type": "object",
+        "required": [
+          "author",
+          "followed_at",
+          "active"
+        ],
+        "title": "AuthorFollowItem",
+        "description": "关注作者列表中的单项数据。"
+      },
+      "AuthorFollowItem-Output": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AuthorDetail-Output",
+            "description": "被关注作者的详细信息"
+          },
+          "followed_at": {
+            "type": "string",
+            "title": "Followed At",
+            "description": "最近一次关注该作者的时间"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "description": "当前是否仍在关注该作者"
+          }
+        },
+        "type": "object",
+        "required": [
+          "author",
+          "followed_at",
+          "active"
+        ],
+        "title": "AuthorFollowItem",
+        "description": "关注作者列表中的单项数据。"
+      },
+      "AuthorFollowList": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorFollowItem-Output"
+            },
+            "type": "array",
+            "title": "Results",
+            "description": "当前页的作者关注关系列表"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "符合当前筛选条件的作者关注总数"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "当前请求的分页大小"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "当前请求的分页偏移量"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AuthorFollowList",
+        "description": "分页作者关注列表。"
+      },
+      "AuthorFollowState": {
+        "properties": {
+          "author_id": {
+            "type": "string",
+            "title": "Author Id",
+            "description": "作者 Discord ID"
+          },
+          "followed_at": {
+            "type": "string",
+            "title": "Followed At",
+            "description": "最近一次关注该作者的时间"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active",
+            "description": "当前是否仍在关注该作者"
+          }
+        },
+        "type": "object",
+        "required": [
+          "author_id",
+          "followed_at",
+          "active"
+        ],
+        "title": "AuthorFollowState",
+        "description": "作者关注操作后的关系状态。"
+      },
       "AuthorProfileResponse": {
         "properties": {
           "id": {
@@ -4114,9 +4570,16 @@
             "description": "Discord 跳转链接（https://discord.com/channels/{guild_id}/{id}）或纯数字 ID"
           },
           "cover_image_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Cover Image Url",
-            "description": "封面图链接"
+            "description": "可选封面图链接；帖子留空时动态使用当前首图，频道不可留空"
           },
           "target_scope": {
             "type": "string",
@@ -4127,7 +4590,6 @@
         "type": "object",
         "required": [
           "thread_link",
-          "cover_image_url",
           "target_scope"
         ],
         "title": "BannerApplicationRequest",
@@ -4174,7 +4636,14 @@
             "title": "Title"
           },
           "cover_image_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Cover Image Url"
           },
           "channel_id": {
@@ -4224,7 +4693,6 @@
         "required": [
           "thread_id",
           "title",
-          "cover_image_url",
           "channel_id"
         ],
         "title": "BannerItem",
@@ -4241,7 +4709,14 @@
             "title": "Title"
           },
           "cover_image_url": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Cover Image Url"
           },
           "channel_id": {
@@ -4288,7 +4763,6 @@
         "required": [
           "thread_id",
           "title",
-          "cover_image_url",
           "channel_id"
         ],
         "title": "BannerItem",
@@ -4763,6 +5237,31 @@
             "title": "Collected Flag",
             "description": "当前用户是否收藏了该帖子",
             "default": false
+          },
+          "viewer_flags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "collected",
+                "followed",
+                "followed_author",
+                "unread"
+              ]
+            },
+            "type": "array",
+            "title": "Viewer Flags",
+            "description": "当前查看者与作品的关系标记"
+          },
+          "latest_update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Output"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品最新一次正式发布的更新"
           }
         },
         "type": "object",
@@ -5962,7 +6461,7 @@
         "properties": {
           "latest": {
             "items": {
-              "$ref": "#/components/schemas/ThreadDetail"
+              "$ref": "#/components/schemas/ThreadDetail-Output"
             },
             "type": "array",
             "title": "Latest",
@@ -5970,7 +6469,7 @@
           },
           "reaction_surge": {
             "items": {
-              "$ref": "#/components/schemas/ThreadDetail"
+              "$ref": "#/components/schemas/ThreadDetail-Output"
             },
             "type": "array",
             "title": "Reaction Surge",
@@ -5978,7 +6477,7 @@
           },
           "discussion_surge": {
             "items": {
-              "$ref": "#/components/schemas/ThreadDetail"
+              "$ref": "#/components/schemas/ThreadDetail-Output"
             },
             "type": "array",
             "title": "Discussion Surge",
@@ -5986,7 +6485,7 @@
           },
           "collection_surge": {
             "items": {
-              "$ref": "#/components/schemas/ThreadDetail"
+              "$ref": "#/components/schemas/ThreadDetail-Output"
             },
             "type": "array",
             "title": "Collection Surge",
@@ -6224,6 +6723,31 @@
             "description": "当前用户是否收藏了该帖子",
             "default": false
           },
+          "viewer_flags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "collected",
+                "followed",
+                "followed_author",
+                "unread"
+              ]
+            },
+            "type": "array",
+            "title": "Viewer Flags",
+            "description": "当前查看者与作品的关系标记"
+          },
+          "latest_update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Input"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品最新一次正式发布的更新"
+          },
           "is_tournament": {
             "type": "boolean",
             "title": "Is Tournament",
@@ -6423,6 +6947,31 @@
             "description": "当前用户是否收藏了该帖子",
             "default": false
           },
+          "viewer_flags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "collected",
+                "followed",
+                "followed_author",
+                "unread"
+              ]
+            },
+            "type": "array",
+            "title": "Viewer Flags",
+            "description": "当前查看者与作品的关系标记"
+          },
+          "latest_update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Output"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品最新一次正式发布的更新"
+          },
           "is_tournament": {
             "type": "boolean",
             "title": "Is Tournament",
@@ -6554,6 +7103,122 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "LatestUpdate-Input": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "作品更新的数据库主键 ID"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "作者提交的更新说明"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "可选的人类可读版本号"
+          },
+          "message_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Link",
+            "description": "Discord 更新来源消息链接"
+          },
+          "source_message_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Source Message At",
+            "description": "Discord 来源消息发布时间"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Published At",
+            "description": "更新正式发布到索引页的时间"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "source_message_at",
+          "published_at"
+        ],
+        "title": "LatestUpdate",
+        "description": "API 响应中的作品最新更新。"
+      },
+      "LatestUpdate-Output": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "作品更新的数据库主键 ID"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "作者提交的更新说明"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "可选的人类可读版本号"
+          },
+          "message_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Link",
+            "description": "Discord 更新来源消息链接"
+          },
+          "source_message_at": {
+            "type": "string",
+            "title": "Source Message At",
+            "description": "Discord 来源消息发布时间"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At",
+            "description": "更新正式发布到索引页的时间"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "source_message_at",
+          "published_at"
+        ],
+        "title": "LatestUpdate",
+        "description": "API 响应中的作品最新更新。"
+      },
       "MappedSourceChannelDetail-Input": {
         "properties": {
           "guild_id": {
@@ -6635,6 +7300,195 @@
         ],
         "title": "MappedSourceChannelDetail",
         "description": "虚拟标签映射来源频道的详细信息"
+      },
+      "MarkReadResponse": {
+        "properties": {
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id",
+            "description": "作品 Discord ID"
+          },
+          "marked_read": {
+            "type": "integer",
+            "title": "Marked Read",
+            "description": "本次实际标记为已读的通知数量"
+          }
+        },
+        "type": "object",
+        "required": [
+          "marked_read"
+        ],
+        "title": "MarkReadResponse",
+        "description": "按作品标记动态通知已读的响应。"
+      },
+      "NotificationItem-Input": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "通知的数据库主键 ID"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "thread_update",
+              "author_new_thread"
+            ],
+            "title": "Type",
+            "description": "动态通知类型：作品更新或作者新作"
+          },
+          "thread": {
+            "$ref": "#/components/schemas/ThreadDetail-Input",
+            "description": "通知关联作品的完整信息"
+          },
+          "update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Input"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品更新详情；作者新作通知固定为空"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "通知产生时间"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At",
+            "description": "用户阅读时间；为空表示未读"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "thread",
+          "created_at"
+        ],
+        "title": "NotificationItem",
+        "description": "动态通知列表中的单项数据。"
+      },
+      "NotificationItem-Output": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "通知的数据库主键 ID"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "thread_update",
+              "author_new_thread"
+            ],
+            "title": "Type",
+            "description": "动态通知类型：作品更新或作者新作"
+          },
+          "thread": {
+            "$ref": "#/components/schemas/ThreadDetail-Output",
+            "description": "通知关联作品的完整信息"
+          },
+          "update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Output"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品更新详情；作者新作通知固定为空"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At",
+            "description": "通知产生时间"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At",
+            "description": "用户阅读时间；为空表示未读"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "thread",
+          "created_at"
+        ],
+        "title": "NotificationItem",
+        "description": "动态通知列表中的单项数据。"
+      },
+      "NotificationList": {
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationItem-Output"
+            },
+            "type": "array",
+            "title": "Results",
+            "description": "当前页的动态通知列表"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "符合当前筛选条件的通知总数"
+          },
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count",
+            "description": "当前用户全部动态通知的未读数量"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit",
+            "description": "当前请求的分页大小"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset",
+            "description": "当前请求的分页偏移量"
+          }
+        },
+        "type": "object",
+        "required": [
+          "results",
+          "total",
+          "unread_count",
+          "limit",
+          "offset"
+        ],
+        "title": "NotificationList",
+        "description": "分页动态通知列表。"
       },
       "OpenGraphAuthorDTO": {
         "properties": {
@@ -7203,7 +8057,7 @@
           },
           "results": {
             "items": {
-              "$ref": "#/components/schemas/ThreadDetail"
+              "$ref": "#/components/schemas/ThreadDetail-Output"
             },
             "type": "array",
             "title": "Results"
@@ -7281,7 +8135,7 @@
           },
           "results": {
             "items": {
-              "$ref": "#/components/schemas/ThreadDetail"
+              "$ref": "#/components/schemas/ThreadDetail-Output"
             },
             "type": "array",
             "title": "Results",
@@ -7468,7 +8322,177 @@
         "title": "TagStatsResponse",
         "description": "标签聚合统计的完整响应体"
       },
-      "ThreadDetail": {
+      "ThreadDetail-Input": {
+        "properties": {
+          "thread_id": {
+            "type": "integer",
+            "title": "Thread Id",
+            "description": "帖子的 Discord ID"
+          },
+          "guild_id": {
+            "type": "integer",
+            "title": "Guild Id",
+            "description": "帖子所属的 Discord 服务器 ID",
+            "default": 0
+          },
+          "channel_id": {
+            "type": "integer",
+            "title": "Channel Id",
+            "description": "帖子所在频道的 Discord ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "帖子标题"
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorDetail-Input"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "帖子作者的详细信息"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At",
+            "description": "帖子创建时间"
+          },
+          "last_active_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Active At",
+            "description": "帖子最后活跃时间"
+          },
+          "reaction_count": {
+            "type": "integer",
+            "title": "Reaction Count",
+            "description": "帖子点赞数"
+          },
+          "reply_count": {
+            "type": "integer",
+            "title": "Reply Count",
+            "description": "帖子回复数"
+          },
+          "collection_count": {
+            "type": "integer",
+            "title": "Collection Count",
+            "description": "帖子被收藏的总次数",
+            "default": 0
+          },
+          "display_count": {
+            "type": "integer",
+            "title": "Display Count",
+            "description": "在搜索结果中的展示次数",
+            "default": 0
+          },
+          "first_message_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Message Excerpt",
+            "description": "帖子首条消息摘要"
+          },
+          "thumbnail_urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Thumbnail Urls",
+            "description": "帖子首楼图片URL列表"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "帖子关联的标签列表"
+          },
+          "virtual_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Virtual Tags",
+            "description": "帖子匹配的虚拟映射标签名列表"
+          },
+          "collected_flag": {
+            "type": "boolean",
+            "title": "Collected Flag",
+            "description": "当前用户是否收藏了该帖子",
+            "default": false
+          },
+          "viewer_flags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "collected",
+                "followed",
+                "followed_author",
+                "unread"
+              ]
+            },
+            "type": "array",
+            "title": "Viewer Flags",
+            "description": "当前查看者与作品的关系标记"
+          },
+          "latest_update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Input"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品最新一次正式发布的更新"
+          },
+          "is_tournament": {
+            "type": "boolean",
+            "title": "Is Tournament",
+            "description": "该帖子是否为参赛帖子",
+            "default": false
+          },
+          "tournament_info_list": {
+            "items": {
+              "$ref": "#/components/schemas/TournamentInfo-Input"
+            },
+            "type": "array",
+            "title": "Tournament Info List",
+            "description": "所属赛事书单信息列表"
+          }
+        },
+        "type": "object",
+        "required": [
+          "thread_id",
+          "channel_id",
+          "title",
+          "created_at",
+          "reaction_count",
+          "reply_count",
+          "thumbnail_urls"
+        ],
+        "title": "ThreadDetail",
+        "description": "API 响应中单个帖子的详细信息模型"
+      },
+      "ThreadDetail-Output": {
         "properties": {
           "thread_id": {
             "type": "string",
@@ -7581,6 +8605,31 @@
             "title": "Collected Flag",
             "description": "当前用户是否收藏了该帖子",
             "default": false
+          },
+          "viewer_flags": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "collected",
+                "followed",
+                "followed_author",
+                "unread"
+              ]
+            },
+            "type": "array",
+            "title": "Viewer Flags",
+            "description": "当前查看者与作品的关系标记"
+          },
+          "latest_update": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestUpdate-Output"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品最新一次正式发布的更新"
           },
           "is_tournament": {
             "type": "boolean",
@@ -8053,6 +9102,21 @@
         "type": "object",
         "title": "TournamentUpdateRequest",
         "description": "更新赛事书单请求"
+      },
+      "UnreadCountResponse": {
+        "properties": {
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count",
+            "description": "当前用户全部动态通知的未读数量"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unread_count"
+        ],
+        "title": "UnreadCountResponse",
+        "description": "动态通知未读数响应。"
       },
       "UserPreferencesResponse": {
         "properties": {

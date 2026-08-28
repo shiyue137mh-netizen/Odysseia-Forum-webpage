@@ -1,4 +1,4 @@
-import { components } from "@shared-types/openapi";
+import type { components } from "@shared-types/openapi";
 
 // --- 基础领域模型 (从 OpenAPI 自动生成类型映射) ---
 
@@ -11,7 +11,7 @@ export type Author = components["schemas"]["AuthorDetail-Output"];
  * 帖子核心实体 (扩展了后端 OpenAPI 定义以支持前端状态)
  */
 export type Thread = Omit<
-  components["schemas"]["ThreadDetail"],
+  components["schemas"]["ThreadDetail-Output"],
   "collection_count" | "tags" | "is_tournament" | "tournament_info_list"
 > & {
   tags: string[];
@@ -25,6 +25,12 @@ export type Thread = Omit<
   active_flag?: boolean; // 关注状态（True=当前关注，False=过去关注），来自 FollowedThreadResponse
   has_update?: boolean; // 兼容旧版未读更新状态
 };
+
+export type ViewerFlag = NonNullable<
+  components["schemas"]["ThreadDetail-Output"]["viewer_flags"]
+>[number];
+
+export type LatestUpdate = components["schemas"]["LatestUpdate-Output"];
 
 export type FollowedThread = Thread &
   Pick<

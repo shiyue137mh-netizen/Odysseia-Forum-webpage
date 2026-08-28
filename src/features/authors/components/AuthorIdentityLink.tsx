@@ -1,12 +1,13 @@
 import { useNavigate } from "react-router-dom";
 
-import type { Author } from "@/entities/thread/types";
+import type { Author, Thread } from "@/entities/thread/types";
 import { AuthorAvatar } from "@/entities/user/AuthorAvatar";
 import { AuthorWorksHoverCard } from "@/features/authors/components/AuthorWorksHoverCard";
 
 interface AuthorIdentityLinkProps {
   author?: Author | null;
   currentThreadId?: string;
+  viewerFlags?: Thread["viewer_flags"];
   showName?: boolean;
   showAvatar?: boolean;
   onNavigate?: (author: { id: string; name: string }) => void;
@@ -25,6 +26,7 @@ function getAuthorName(author?: Author | null) {
 export function AuthorIdentityLink({
   author,
   currentThreadId,
+  viewerFlags,
   showName = true,
   showAvatar = true,
   onNavigate,
@@ -64,7 +66,15 @@ export function AuthorIdentityLink({
   }
 
   return (
-    <AuthorWorksHoverCard author={author} currentThreadId={currentThreadId}>
+    <AuthorWorksHoverCard
+      author={author}
+      currentThreadId={currentThreadId}
+      initialFollowed={
+        viewerFlags === undefined
+          ? undefined
+          : viewerFlags.includes("followed_author")
+      }
+    >
       <button
         type="button"
         onClick={(event) => {

@@ -277,6 +277,7 @@ function ThreadListItemImpl({
             <AuthorIdentityLink
               author={thread.author}
               currentThreadId={thread.thread_id}
+              viewerFlags={thread.viewer_flags}
               avatarClassName="h-6 w-6 md:h-7 md:w-7"
               nameClassName="max-w-36 font-medium text-(--od-text-secondary)"
               onNavigate={onAuthorClick}
@@ -366,8 +367,7 @@ function ThreadListItemImpl({
       <div className="absolute right-0 top-3 flex items-center gap-3">
         {trailingAction && <div className="hidden md:block">{trailingAction}</div>}
         <ThreadStatusBadges
-          isFollowing={thread.collected_flag}
-          hasUpdate={thread.has_update}
+          viewerFlags={thread.viewer_flags}
           variant="list"
         />
         <div className="hidden items-center gap-2 md:flex">

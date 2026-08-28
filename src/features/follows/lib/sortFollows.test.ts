@@ -9,14 +9,14 @@ const followedThreads = [
     created_at: "2026-01-01T00:00:00Z",
     followed_at: "2026-03-01T00:00:00Z",
     latest_update_at: "2026-04-01T00:00:00Z",
-    has_update: false,
+    viewer_flags: [],
   },
   {
     thread_id: "2",
     created_at: "2026-02-01T00:00:00Z",
     followed_at: "2026-01-01T00:00:00Z",
     latest_update_at: "2026-03-01T00:00:00Z",
-    has_update: true,
+    viewer_flags: ["unread"],
   },
 ] as FollowedThread[];
 

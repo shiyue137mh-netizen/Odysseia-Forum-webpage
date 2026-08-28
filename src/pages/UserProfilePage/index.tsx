@@ -1,11 +1,14 @@
 import {
   ArrowUpDown,
+  Bell,
+  BellOff,
   BookOpen,
   FileText,
   Filter,
   Hash,
   Heart,
   LayoutGrid,
+  Loader2,
   MessageCircle,
   RefreshCw,
   Share2,
@@ -24,10 +27,15 @@ import {
   useAuthorProfile,
   useAuthorThreads,
 } from "@/features/authors/hooks/useAuthorsData";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import {
   useBooklistsList,
   useToggleBooklistCollection,
 } from "@/features/booklists/hooks/useBooklistsData";
+import {
+  useAuthorFollowState,
+  useToggleAuthorFollow,
+} from "@/features/follows/hooks/useAuthorFollow";
 import { resolveAuthorKeywordTrigger } from "@/features/mascot/lib/messageResolver";
 import { useMascotStore } from "@/features/mascot/store/mascotStore";
 import { type UISortMethod } from "@/features/search/api/searchApi";
@@ -75,6 +83,7 @@ export function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { openPreview } = usePreviewThread();
+  const { isAuthenticated } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [shareText, setShareText] = useState<string | null>(null);
 
@@ -188,6 +197,14 @@ export function UserProfilePage() {
   const animateIn = useListEntranceAnimation(threadsQuery.isLoading);
 
   const profileQuery = useAuthorProfile(userId);
+  const authorFollowQuery = useAuthorFollowState(userId, {
+    enabled: isAuthenticated,
+  });
+  const isAuthorFollowed = authorFollowQuery.data;
+  const toggleAuthorFollow = useToggleAuthorFollow(
+    userId,
+    isAuthorFollowed ?? false,
+  );
 
   const booklistsQuery = useBooklistsList({
     scope: "public",
@@ -346,6 +363,54 @@ export function UserProfilePage() {
               </div>
 
               <div className="flex w-full flex-col justify-center gap-2 sm:w-auto sm:flex-row">
+                <button
+                  type="button"
+                  disabled={
+                    !isAuthenticated ||
+                    (!authorFollowQuery.isError &&
+                      isAuthorFollowed === undefined) ||
+                    authorFollowQuery.isFetching ||
+                    toggleAuthorFollow.isPending
+                  }
+                  aria-pressed={isAuthorFollowed ?? false}
+                  onClick={() => {
+                    if (authorFollowQuery.isError) {
+                      void authorFollowQuery.refetch();
+                      return;
+                    }
+                    toggleAuthorFollow.mutate();
+                  }}
+                  className={`od-inline-action w-full justify-center sm:w-auto ${
+                    isAuthorFollowed
+                      ? "od-inline-action-soft text-(--od-accent)"
+                      : "od-inline-action-ghost"
+                  }`}
+                  title={
+                    !isAuthenticated
+                      ? "登录后关注作者"
+                      : authorFollowQuery.isError
+                        ? "重新加载关注状态"
+                        : isAuthorFollowed
+                          ? "取消关注作者"
+                          : "关注作者"
+                  }
+                >
+                  {authorFollowQuery.isFetching ||
+                  toggleAuthorFollow.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : isAuthorFollowed ? (
+                    <BellOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Bell className="h-3.5 w-3.5" />
+                  )}
+                  {!isAuthenticated
+                    ? "登录后关注"
+                    : authorFollowQuery.isError
+                      ? "重试关注状态"
+                      : isAuthorFollowed
+                        ? "已关注"
+                        : "关注作者"}
+                </button>
                 <button
                   type="button"
                   onClick={() => {
