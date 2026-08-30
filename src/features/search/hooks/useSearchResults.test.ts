@@ -30,6 +30,16 @@ describe('computeNextExcludeIds', () => {
     expect(computeNextExcludeIds([page(['1', '2'], 2)])).toBeUndefined();
   });
 
+  it('当后端后续分页返回剩余 total 时，不会因为已累积 ID 大于当页 total 而提前终止', () => {
+    // 模拟 74 条数据：前 3 页各 24 条（共 72 条），后端在第 3 页返回剩余 total 为 26
+    const p1 = page(Array.from({ length: 24 }, (_, i) => String(i + 1)), 74);
+    const p2 = page(Array.from({ length: 24 }, (_, i) => String(i + 25)), 50);
+    const p3 = page(Array.from({ length: 24 }, (_, i) => String(i + 49)), 26);
+
+    const next = computeNextExcludeIds([p1, p2, p3]);
+    expect(next).toHaveLength(72);
+  });
+
   // 回归：后端过滤 / 权限差异会让某一页返回 0 条但 total 仍然偏大。
   // 旧实现此时会返回与上一次完全相同的 exclude_thread_ids，
   // hasNextPage 恒为 true，IntersectionObserver 持续触发同一个请求，形成死循环。

@@ -202,9 +202,14 @@ export function useSearchURLParams() {
       if (updates.tagLogic) {
         setSearchTagLogicPreference(updates.tagLogic);
       }
-      const isQueryChange =
-        updates.query !== undefined && updates.query !== current.query;
-      setSearchParams(newSP, { replace: !isQueryChange });
+      const isSignificantChange =
+        (updates.query !== undefined && updates.query !== current.query) ||
+        (updates.channel !== undefined && updates.channel !== current.channel) ||
+        (updates.type !== undefined && updates.type !== current.type) ||
+        (updates.sortMethod !== undefined && updates.sortMethod !== current.sortMethod) ||
+        (updates.page !== undefined && updates.page !== current.page);
+
+      setSearchParams(newSP, { replace: !isSignificantChange });
     },
     [searchParams, setSearchParams],
   );

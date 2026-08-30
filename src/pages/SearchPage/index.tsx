@@ -213,13 +213,14 @@ export function SearchPage() {
 
   useEffect(() => {
     if (
+      !isInfiniteMode ||
       !visibleRateLimit ||
       loadedPageCount === 0 ||
       currentSearchPage <= loadedPageCount
     )
       return;
     setParams({ page: loadedPageCount });
-  }, [currentSearchPage, loadedPageCount, setParams, visibleRateLimit]);
+  }, [currentSearchPage, loadedPageCount, setParams, visibleRateLimit, isInfiniteMode]);
 
   // 这些回调会传给 memo 化的 ThreadResultsCollection / ThreadCard，
   // 必须保持引用稳定，否则任何一次页面重渲染都会击穿整个列表的 memo。

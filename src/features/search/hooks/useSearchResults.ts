@@ -56,9 +56,9 @@ export function computeNextExcludeIds(
   if (allPages.length === 0) return undefined;
 
   const loadedThreadIds = collectThreadIds(allPages);
-  const lastTotal = Number(allPages[allPages.length - 1]?.total || 0);
+  const initialTotal = Number(allPages[0]?.total || 0);
 
-  if (loadedThreadIds.size === 0 || loadedThreadIds.size >= lastTotal) {
+  if (loadedThreadIds.size === 0 || (initialTotal > 0 && loadedThreadIds.size >= initialTotal)) {
     return undefined;
   }
 
@@ -170,7 +170,7 @@ export function useSearchResults({
   const infiniteQueryState = useInfiniteQuery<SearchResponse, Error, InfiniteData<SearchResponse>, ReturnType<typeof searchKeys.results>, string[]>({
     queryKey: searchKeys.results({
       ...params,
-      page: 1,
+      page: resultPagingMode === 'pagination' ? currentPage : 1,
       applyPreferences,
       preferenceSignature: discoveryPreferenceContext?.signature,
       resultPagingMode,
@@ -190,8 +190,8 @@ export function useSearchResults({
           sort_order: sortOrder,
           apply_preferences: applyPreferences,
           limit: PAGE_SIZE,
-          offset: 0,
-          exclude_thread_ids: excludeThreadIds,
+          offset: resultPagingMode === 'pagination' ? (currentPage - 1) * PAGE_SIZE : 0,
+          exclude_thread_ids: resultPagingMode === 'pagination' ? undefined : excludeThreadIds,
           created_after: timeFrom || undefined,
           created_before: timeTo || undefined,
           reaction_min: reactionMin,
@@ -202,7 +202,8 @@ export function useSearchResults({
       );
     },
     initialPageParam: [],
-    getNextPageParam: (_lastPage, allPages = []) => computeNextExcludeIds(allPages),
+    getNextPageParam: (_lastPage, allPages = []) =>
+      resultPagingMode === 'pagination' ? undefined : computeNextExcludeIds(allPages),
     staleTime: RESULTS_STALE_TIME,
     enabled,
   });
@@ -309,6 +310,7 @@ export function useSearchResults({
     : null;
 
   useEffect(() => {
+    if (resultPagingMode === 'pagination') return;
     const needsForegroundPage = loadedPageCount < viewedPage;
     if (
       !enabled ||
@@ -446,8 +448,8 @@ export function useSearchResults({
       return infiniteQueryState.data?.pages.flatMap((pageData) => (pageData?.results || []) as Thread[]) || [];
     }
 
-    return (infiniteQueryState.data?.pages[currentPage - 1]?.results || []) as Thread[];
-  }, [currentPage, infiniteQueryState.data, resultPagingMode]);
+    return (infiniteQueryState.data?.pages[0]?.results || []) as Thread[];
+  }, [infiniteQueryState.data, resultPagingMode]);
   const pageByThreadId = useMemo(() => {
     return buildResultPageMap(infiniteQueryState.data?.pages || []);
   }, [infiniteQueryState.data]);
