@@ -62,18 +62,10 @@ export function useChannels() {
         
         // 我们需要把后端的平铺频道，和前端静态配置的"分组(Category)"映射起来
         // 如果后端频道在静态配置中找不到分组，我们就给个默认的"其他区"分组
-        const channels: UnifiedChannel[] = [];
-        
-        // 建立静态映射加速查找
-        const dynamicMap = new Map<string, { groupId: string; groupName: string }>();
-        CHANNEL_CATEGORIES.forEach((category, catIndex) => {
-          category.channels.forEach((c) => {
-            dynamicMap.set(c.id, { 
-              groupId: `cat-${catIndex}`, 
-              groupName: category.name 
-            });
-          });
-        });
+        const apiChannelMap = new Map<string, ApiChannel>();
+        for (const ac of apiChannels) {
+          apiChannelMap.set(ac.channel_id, ac);
+        }
 
         // 收集所有被主频道映射的子服务器源频道 ID
         // 这些源频道不应该被独立展示在侧边栏中
@@ -86,23 +78,36 @@ export function useChannels() {
           }
         }
 
+        const channels: UnifiedChannel[] = [];
         const seen = new Set<string>();
+
+        // 1. 优先严格按照 CHANNEL_CATEGORIES 定义的分组和频道顺序组织
+        CHANNEL_CATEGORIES.forEach((category, catIndex) => {
+          category.channels.forEach((c) => {
+            const ac = apiChannelMap.get(c.id);
+            if (ac && !hiddenSourceChannels.has(c.id) && !seen.has(c.id)) {
+              seen.add(c.id);
+              channels.push({
+                id: c.id,
+                name: ac.name || c.name,
+                groupId: `cat-${catIndex}`,
+                groupName: category.name,
+              });
+            }
+          });
+        });
+
+        // 2. 兜底：若后端返回了未在静态配置中声明的频道，统一追加到“其他区”
         for (const ac of apiChannels) {
-          // 避免重复渲染
           if (seen.has(ac.channel_id)) continue;
-          
-          // 如果该频道已经被映射到其他主频道下面（作为虚拟标签的来源），就不要在左侧展示了
           if (hiddenSourceChannels.has(ac.channel_id)) continue;
 
           seen.add(ac.channel_id);
-
-          const cat = dynamicMap.get(ac.channel_id);
-          // 在静态表里没有配置的主频道，展示进"其他区"
           channels.push({
             id: ac.channel_id,
             name: ac.name,
-            groupId: cat?.groupId || 'cat-other',
-            groupName: cat?.groupName || '其他区',
+            groupId: 'cat-other',
+            groupName: '其他区',
           });
         }
         
