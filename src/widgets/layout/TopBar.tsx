@@ -432,12 +432,12 @@ export function TopBar({
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
         <button
           onClick={onMenuClick}
-          className="p-2 text-(--od-text-secondary) transition-colors duration-200 hover:text-(--od-text-primary) lg:hidden"
+          className="relative flex h-8 w-8 shrink-0 items-center justify-center text-(--od-text-tertiary) transition-colors hover:text-(--od-text-primary) sm:h-[34px] sm:w-[34px] lg:hidden"
           aria-label="打开菜单"
         >
           <AnimatedIcon
             icon={Menu}
-            className="h-5 w-5"
+            className="h-4 w-4"
             animation="rotate"
             trigger="click"
           />
