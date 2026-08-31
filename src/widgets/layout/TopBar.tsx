@@ -74,6 +74,11 @@ interface BreadcrumbState {
   segments: BreadcrumbSegment[];
 }
 
+function canHover(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
 export function TopBar({
   onMenuClick,
   onSidebarToggle,
@@ -100,6 +105,7 @@ export function TopBar({
   const browseHistoryTimerRef = useRef<number | null>(null);
 
   const handleNotificationMouseEnter = useCallback(() => {
+    if (!canHover()) return;
     if (notificationTimerRef.current !== null) {
       window.clearTimeout(notificationTimerRef.current);
     }
@@ -127,6 +133,7 @@ export function TopBar({
   }, []);
 
   const handleBrowseHistoryMouseEnter = useCallback(() => {
+    if (!canHover()) return;
     if (browseHistoryTimerRef.current) {
       window.clearTimeout(browseHistoryTimerRef.current);
     }
@@ -670,6 +677,9 @@ export function TopBar({
           <button
             type="button"
             onClick={() => {
+              if (browseHistoryTimerRef.current !== null) {
+                window.clearTimeout(browseHistoryTimerRef.current);
+              }
               handleCloseBrowseHistory();
               navigate("/me?tab=history");
             }}
