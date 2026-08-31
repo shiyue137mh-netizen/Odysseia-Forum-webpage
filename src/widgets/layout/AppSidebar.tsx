@@ -28,6 +28,12 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
+function formatThreadCount(count: number): string {
+  if (count < 10000) return String(count);
+  const formatted = (count / 10000).toFixed(1);
+  return `${formatted.endsWith('.0') ? formatted.slice(0, -2) : formatted}w`;
+}
+
 export function AppSidebar() {
   const { user } = useAuth();
   const location = useLocation();
@@ -132,7 +138,7 @@ export function AppSidebar() {
   };
 
   const navItemClass = (active: boolean) =>
-    `group flex w-full items-center gap-2 px-2 py-1.5 text-sm transition-colors duration-200 ${
+    `group relative flex w-full items-center gap-2 px-2 py-1.5 text-sm transition-colors duration-200 ${
       active
         ? 'font-medium text-(--od-text-primary)'
         : 'text-(--od-text-secondary) hover:text-(--od-text-primary)'
@@ -345,8 +351,8 @@ export function AppSidebar() {
               <span className={navIndicatorClass(!activeChannelId)} />
               <span className="min-w-0 flex-1 truncate text-left">全频道</span>
               {typeof totalAllThreads === 'number' && totalAllThreads > 0 && (
-                <span className="ml-auto shrink-0 rounded-full bg-(--od-surface-hover) px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-(--od-text-tertiary) opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  {totalAllThreads.toLocaleString()}
+                <span className="pointer-events-none absolute right-1.5 shrink-0 rounded-full border border-white/15 dark:border-white/12 bg-[color-mix(in_srgb,var(--od-bg)_75%,white_25%)] dark:bg-[color-mix(in_srgb,var(--od-bg)_82%,white_18%)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-(--od-text-primary) opacity-0 shadow-xs backdrop-blur-md transition-all duration-200 scale-95 group-hover:opacity-100 group-hover:scale-100">
+                  {formatThreadCount(totalAllThreads)}
                 </span>
               )}
             </button>
@@ -396,8 +402,8 @@ export function AppSidebar() {
                         <span aria-hidden="true" className={navIndicatorClass(active)} />
                         <span className="min-w-0 flex-1 truncate text-left">{channel.name}</span>
                         {typeof channel.totalThreadCount === 'number' && (
-                          <span className="ml-auto shrink-0 rounded-full bg-(--od-surface-hover) px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-(--od-text-tertiary) opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                            {channel.totalThreadCount.toLocaleString()}
+                          <span className="pointer-events-none absolute right-1.5 shrink-0 rounded-full border border-white/15 dark:border-white/12 bg-[color-mix(in_srgb,var(--od-bg)_75%,white_25%)] dark:bg-[color-mix(in_srgb,var(--od-bg)_82%,white_18%)] px-1.5 py-0.5 text-[10px] font-semibold tabular-nums leading-none text-(--od-text-primary) opacity-0 shadow-xs backdrop-blur-md transition-all duration-200 scale-95 group-hover:opacity-100 group-hover:scale-100">
+                            {formatThreadCount(channel.totalThreadCount)}
                           </span>
                         )}
                       </button>
