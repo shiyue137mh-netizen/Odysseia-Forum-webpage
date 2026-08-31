@@ -188,7 +188,7 @@ export function RootLayout() {
       >
         {/* 主滚动区 — 圆角面板 + 独立背景色，形成视觉层级 */}
         <div
-          className={`od-content-surface relative z-10 mt-13 min-h-0 flex-1 sm:mt-17 sm:overflow-hidden ${
+          className={`od-content-surface relative z-10 mt-13 min-h-0 flex-1 overflow-hidden sm:mt-17 ${
             sidebarCollapsed ? "" : "lg:rounded-tl-[2.5rem]"
           }`}
         >

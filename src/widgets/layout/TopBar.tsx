@@ -425,7 +425,7 @@ export function TopBar({
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-40 flex h-13 shrink-0 items-center justify-between bg-transparent px-3 transition-[left] duration-300 sm:h-17 sm:px-4 ${
+      className={`fixed left-0 right-0 top-0 z-40 flex h-13 shrink-0 items-center justify-between border-b border-white/6 bg-[color-mix(in_srgb,var(--od-bg-secondary)_88%,transparent)] px-3 backdrop-blur-xl transition-[left] duration-300 sm:h-17 sm:px-4 lg:border-b-0 lg:bg-transparent lg:backdrop-blur-none ${
         sidebarCollapsed ? "lg:left-0" : "lg:left-[170px]"
       }`}
     >
