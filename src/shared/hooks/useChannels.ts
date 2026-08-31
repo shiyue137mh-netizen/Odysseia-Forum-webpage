@@ -19,6 +19,9 @@ export interface UnifiedChannel {
   name: string;
   groupId?: string;
   groupName?: string;
+  totalThreadCount?: number;
+  realThreadCount?: number;
+  virtualThreadCount?: number;
 }
 
 export interface ChannelTagCatalogItem {
@@ -92,6 +95,9 @@ export function useChannels() {
                 name: ac.name || c.name,
                 groupId: `cat-${catIndex}`,
                 groupName: category.name,
+                totalThreadCount: ac.total_thread_count,
+                realThreadCount: ac.real_thread_count,
+                virtualThreadCount: ac.virtual_thread_count,
               });
             }
           });
@@ -108,6 +114,9 @@ export function useChannels() {
             name: ac.name,
             groupId: 'cat-other',
             groupName: '其他区',
+            totalThreadCount: ac.total_thread_count,
+            realThreadCount: ac.real_thread_count,
+            virtualThreadCount: ac.virtual_thread_count,
           });
         }
         

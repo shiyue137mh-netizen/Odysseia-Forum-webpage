@@ -58,6 +58,11 @@ export function AppSidebar() {
     return Array.from(map.values());
   }, [channelsData]);
 
+  const totalAllThreads = useMemo(() => {
+    if (!channelsData?.channels) return undefined;
+    return channelsData.channels.reduce((sum, c) => sum + (c.totalThreadCount || 0), 0);
+  }, [channelsData]);
+
   const currentURLParams = new URLSearchParams(location.search);
   const isFollowsPage = location.pathname === '/me' && currentURLParams.get('tab') === 'follows';
   const activeChannelId = params.channel;
@@ -330,10 +335,20 @@ export function AppSidebar() {
           <div className="space-y-0.5">
             <button
               onClick={clearChannelSelection}
+              title={
+                typeof totalAllThreads === 'number' && totalAllThreads > 0
+                  ? `全频道（共 ${totalAllThreads.toLocaleString()} 篇帖子）`
+                  : '全频道'
+              }
               className={navItemClass(!activeChannelId)}
             >
               <span className={navIndicatorClass(!activeChannelId)} />
-              <span>全频道</span>
+              <span className="min-w-0 flex-1 truncate text-left">全频道</span>
+              {typeof totalAllThreads === 'number' && totalAllThreads > 0 && (
+                <span className="ml-auto shrink-0 rounded-full bg-(--od-surface-hover) px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-(--od-text-tertiary) opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                  {totalAllThreads.toLocaleString()}
+                </span>
+              )}
             </button>
 
             {groupedChannels.map((category) => (
@@ -348,6 +363,13 @@ export function AppSidebar() {
                       <button
                         aria-pressed={active}
                         key={channel.id}
+                        title={
+                          typeof channel.totalThreadCount === 'number'
+                            ? channel.virtualThreadCount && channel.virtualThreadCount > 0
+                              ? `${channel.name}（共 ${channel.totalThreadCount.toLocaleString()} 篇，含 ${channel.virtualThreadCount.toLocaleString()} 篇子服复原）`
+                              : `${channel.name}（共 ${channel.totalThreadCount.toLocaleString()} 篇帖子）`
+                            : channel.name
+                        }
                         onClick={() => {
                           const nextChannel = active ? null : channel.id;
 
@@ -372,7 +394,12 @@ export function AppSidebar() {
                         className={navItemClass(active)}
                       >
                         <span aria-hidden="true" className={navIndicatorClass(active)} />
-                        <span className="truncate">{channel.name}</span>
+                        <span className="min-w-0 flex-1 truncate text-left">{channel.name}</span>
+                        {typeof channel.totalThreadCount === 'number' && (
+                          <span className="ml-auto shrink-0 rounded-full bg-(--od-surface-hover) px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-(--od-text-tertiary) opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                            {channel.totalThreadCount.toLocaleString()}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
