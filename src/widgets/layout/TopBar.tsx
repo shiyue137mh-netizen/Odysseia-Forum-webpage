@@ -432,10 +432,13 @@ export function TopBar({
 
   return (
     <header
-      className={`fixed left-0 right-0 top-0 z-40 flex h-13 shrink-0 items-center justify-between border-b border-white/6 bg-[color-mix(in_srgb,var(--od-bg-secondary)_88%,transparent)] px-3 backdrop-blur-xl transition-[left] duration-300 sm:h-17 sm:px-4 lg:border-b-0 lg:bg-transparent lg:backdrop-blur-none ${
+      className={`fixed left-0 right-0 top-0 z-40 flex h-13 shrink-0 items-center justify-between px-3 transition-[left] duration-300 sm:h-17 sm:px-4 ${
         sidebarCollapsed ? "lg:left-0" : "lg:left-[170px]"
       }`}
     >
+      {/* 移动端独立毛玻璃背景层：避免 header 产生 backdrop-filter containing block 破坏 fixed 面板定位 */}
+      <div className="pointer-events-none absolute inset-0 -z-10 border-b border-white/6 bg-[color-mix(in_srgb,var(--od-bg-secondary)_88%,transparent)] backdrop-blur-xl lg:hidden" />
+
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
         <button
           onClick={onMenuClick}
@@ -576,7 +579,7 @@ export function TopBar({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 320, damping: 26 }}
-                className={`${backgroundImageEnabled ? "od-floating-glass" : "od-floating-panel-solid"} fixed top-17 bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.75rem)] inset-x-3 z-50 mt-2 overflow-x-hidden overflow-y-auto rounded-2xl border border-(--od-border-strong) shadow-2xl mx-auto w-auto max-w-md sm:absolute sm:top-full sm:bottom-auto sm:inset-x-auto sm:left-auto sm:right-0 sm:mx-0 sm:max-h-[calc(100dvh-5.5rem)] sm:w-[560px] sm:max-w-none`}
+                className={`${backgroundImageEnabled ? "od-floating-glass" : "od-floating-panel-solid"} fixed top-15 bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.75rem)] inset-x-3 z-50 mt-1 overflow-x-hidden overflow-y-auto rounded-2xl border border-(--od-border-strong) shadow-2xl mx-auto w-auto max-w-md sm:absolute sm:top-full sm:bottom-auto sm:inset-x-auto sm:left-auto sm:right-0 sm:mx-0 sm:max-h-[calc(100dvh-5.5rem)] sm:w-[560px] sm:max-w-none`}
               >
                 {needsFilter && (
                   <div className="flex items-center gap-2 border-b border-white/6 p-2">
